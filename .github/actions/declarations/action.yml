@@ -1,0 +1,13 @@
+name: Tau Ceti declarations
+description: Check out Tau Ceti at the commit pinned in data/settings.json and read every declaration into data/declarations.json.
+runs:
+  using: composite
+  steps:
+    - name: Check out Tau Ceti at the pinned commit
+      shell: bash
+      run: |
+        commit=$(python3 -c "import json; print(json.load(open('data/settings.json'))['tauceti'])")
+        git init -q "$RUNNER_TEMP/TauCeti"
+        git -C "$RUNNER_TEMP/TauCeti" fetch -q --depth 1 https://github.com/TauCetiProject/TauCeti.git "$commit"
+        git -C "$RUNNER_TEMP/TauCeti" checkout -q FETCH_HEAD
+        python3 scripts/fetch_declarations.py --clone "$RUNNER_TEMP/TauCeti" --commit "$commit"

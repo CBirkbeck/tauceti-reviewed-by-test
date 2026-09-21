@@ -1,0 +1,103 @@
+"""Browser checks for the search page (scripts/build_site.py).
+
+Serves site/ as GitHub Pages would and checks what a reader does: search by
+name and by docstring, filter definitions, open a declaration and review it,
+follow a link to one, and read it on a phone. Build the site first:
+
+  python3 scripts/fetch_declarations.py --clone <Tau Ceti checkout>
+  python3 scripts/build_site.py
+  python3 tests/validate_site.py [screenshot folder]
+
+Prints PASS and exits 0, or names the failed check and exits 1.
+"""
+from __future__ import annotations
+
+import functools
+import http.server
+import sys
+import threading
+from pathlib import Path
+
+from playwright.sync_api import sync_playwright
+
+SITE = Path(__file__).resolve().parents[1] / "site"
+
+
+def main() -> int:
+    shots = Path(sys.argv[1]) if len(sys.argv) > 1 else None
+
+    class Quiet(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=str(SITE)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/index.html"
+    passed, errors = [], []
+
+    def check(name, value):
+        if not value:
+            raise AssertionError(name)
+        passed.append(name)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.on("pageerror", lambda error: errors.append(str(error)))
+            page.goto(url, wait_until="load")
+            page.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
+            check("the overview lists the areas", page.locator(".areas button").count() >= 10)
+            if shots:
+                page.screenshot(path=str(shots / "site-overview.png"))
+            page.fill("#search", "vonMangoldt")
+            page.wait_for_timeout(400)
+            names = page.evaluate("TauReview.results()")
+            check("a name finds its declarations, the closest first", names and names[0].split(".")[-1].lower().startswith("vonmangoldt"))
+            page.fill("#search", "Frobenius element")
+            page.wait_for_timeout(400)
+            check("words from a docstring find declarations", len(page.evaluate("TauReview.results()")) > 0)
+            page.click("[data-group='def']")
+            page.wait_for_timeout(300)
+            kinds = page.evaluate("Array.from(document.querySelectorAll('.result .kw')).map(e => e.textContent)")
+            check("the definitions filter shows only definitions", kinds and all(k in ("def", "abbrev", "structure", "class", "inductive", "instance") for k in kinds))
+            page.locator(".result").first.click()
+            page.wait_for_selector("#panel pre", timeout=15000)
+            href = page.locator("#panel a.primary").get_attribute("href")
+            check("a declaration opens with its source and a review link", "template=reviewed-by.yml" in href and "declaration=" in href and "version=" in href)
+            check("its module's other declarations are listed", page.locator("#panel .siblings button").count() >= 1)
+            if shots:
+                page.screenshot(path=str(shots / "site-declaration.png"))
+            name = page.evaluate("TauReview.state().d")
+            other = browser.new_page(viewport={"width": 1440, "height": 900})
+            other.on("pageerror", lambda error: errors.append(str(error)))
+            other.goto(url + "#d=" + name, wait_until="load")
+            other.wait_for_selector("#panel pre", timeout=30000)
+            check("a link to a declaration opens it", name in other.locator("#panel h2").inner_text().replace("\n", ""))
+            phone = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+            phone.on("pageerror", lambda error: errors.append(str(error)))
+            phone.goto(url, wait_until="load")
+            phone.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
+            phone.fill("#search", "absNorm")
+            phone.wait_for_timeout(400)
+            phone.locator(".result").first.tap()
+            phone.wait_for_selector("#panel pre", timeout=15000)
+            check("on a phone a declaration fills the screen", phone.evaluate("document.body.classList.contains('reading')") and phone.locator("#panel").is_visible())
+            check("and nothing overflows sideways", phone.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"))
+            if shots:
+                phone.screenshot(path=str(shots / "site-phone.png"))
+            phone.locator("#back").tap()
+            phone.wait_for_timeout(300)
+            check("back returns to the results", not phone.evaluate("document.body.classList.contains('reading')") and phone.locator(".result").count() > 0)
+            check("no errors in the page", not errors)
+            browser.close()
+    except AssertionError as failure:
+        print("FAIL:", failure, "| page errors:", errors)
+        return 1
+    finally:
+        server.shutdown()
+    print(f"PASS: {len(passed)} checks")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

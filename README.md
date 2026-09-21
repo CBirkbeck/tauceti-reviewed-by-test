@@ -3,10 +3,21 @@
 A test of **review marks** on Tau Ceti declarations: who has checked which
 definition, what they checked, and on which version. It is modelled on the
 Linux kernel's `Reviewed-by:` trailers, and every mark is left from a browser,
-without a pull request. Nothing here changes Tau Ceti: the page reads a sample
-of its declarations, read-only, at one pinned commit.
+without a pull request. Nothing here changes Tau Ceti: the page reads every
+declaration of Tau Ceti's main branch, read-only, at a pinned commit that
+follows main once a day.
 
 **Page:** https://cbirkbeck.github.io/tauceti-reviewed-by-test/
+
+## Finding a declaration
+
+Search every definition, structure, class, instance, theorem and lemma by
+name, part of a name, or words from its docstring; filter definitions from
+theorems and lemmas, by area (`NumberTheory`, `AlgebraicGeometry`, …) and by
+whether it has been reviewed. Open one to read its docstring and source, see
+its marks and the rest of its module, and review it. Every search and every
+declaration has its own link (`#q=…`, `#d=<full name>`); `/` jumps to the
+search box.
 
 ## Marks
 
@@ -24,7 +35,7 @@ people's.
 
 ## Leaving a mark, from a browser
 
-1. **Review this**, under any declaration on the page, opens the
+1. **Review this**, on any declaration the page opens, opens the
    [Review a definition](.github/ISSUE_TEMPLATE/reviewed-by.yml) form with the
    declaration and its version filled in. Choose a mark, say what you checked,
    and submit.
@@ -54,11 +65,23 @@ git trailer per mark.
 The marks as data, for the Tau Ceti atlas or Tau Ceti's own documentation:
 [`reviews.json`](https://cbirkbeck.github.io/tauceti-reviewed-by-test/reviews.json).
 
+## Following Tau Ceti
+
+`data/settings.json` pins the Tau Ceti commit the page shows. The
+[Follow Tau Ceti](.github/workflows/refresh.yml) workflow moves the pin to
+main once a day and rebuilds the page; marks keep the versions they were made
+on, so a declaration that changed shows its marks greyed.
+
 ## Files
 
-- `scripts/fetch_declarations.py` reads the modules in `data/modules.txt` at
-  one Tau Ceti commit into `data/declarations.json`.
+- `scripts/fetch_declarations.py` reads every module of a Tau Ceti checkout
+  into `data/declarations.json` (generated, not committed; the workflows check
+  out the pinned commit with `.github/actions/declarations`).
 - `scripts/reviews.py` records marks from forms and comments.
-- `scripts/build_site.py` builds the page and `reviews.json`.
+- `scripts/build_site.py` builds the page: `index.html`, the search index
+  `data/search.json` and docstring summaries `data/docs.json` it loads first,
+  one file per module in `data/m/` read when a declaration is opened, and
+  `reviews.json`.
 - `scripts/batch.py` prepares a batch.
-- `python3 -m unittest discover -s tests` runs the tests.
+- `python3 -m unittest discover -s tests` runs the tests;
+  `python3 tests/validate_site.py` checks the built page in a browser.

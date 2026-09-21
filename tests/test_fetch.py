@@ -94,5 +94,57 @@ class Declarations(unittest.TestCase):
         self.assertEqual(SOURCE.splitlines()[definition["line"] - 1], "noncomputable def vonMangoldt : IdealArithmeticFunction K := fun A ↦")
 
 
+COMMENTED = """/-!
+# Notes
+
+theorem of Faltings, recalled below.
+-/
+
+/- A comment /- with a nested one -/
+lemma is not a declaration here either.
+-/
+
+/-- A named instance. -/
+instance instFooBar : Foo Bar := ⟨⟩
+
+instance : Foo Baz := ⟨⟩
+
+/-- A lemma, kept as written. -/
+lemma two_eq : 2 = 2 := rfl
+"""
+
+
+class Kinds(unittest.TestCase):
+    def setUp(self):
+        self.found = {d["name"]: d for d in declarations(COMMENTED, "TauCeti/Y.lean", "abc")}
+
+    def test_comments_and_module_docs_hold_no_declarations(self):
+        self.assertEqual(sorted(self.found), ["instFooBar", "two_eq"])
+
+    def test_a_named_instance_is_reviewable(self):
+        self.assertEqual((self.found["instFooBar"]["kind"], self.found["instFooBar"]["keyword"]), ("instance", "instance"))
+        self.assertEqual(self.found["instFooBar"]["doc"], "A named instance.")
+
+    def test_the_keyword_is_kept_as_written(self):
+        self.assertEqual((self.found["two_eq"]["kind"], self.found["two_eq"]["keyword"]), ("theorem", "lemma"))
+
+
+class Clone(unittest.TestCase):
+    def test_every_module_of_a_clone_is_read(self):
+        import tempfile
+        from fetch_declarations import read_clone
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "TauCeti" / "A").mkdir(parents=True)
+            (root / "TauCeti" / "A" / "B.lean").write_text(SOURCE, encoding="utf-8")
+            (root / "TauCeti" / "C.lean").write_text(COMMENTED, encoding="utf-8")
+            (root / "Other.lean").write_text(SOURCE, encoding="utf-8")
+            index = read_clone(root, "abc")
+        self.assertEqual([m["module"] for m in index["modules"]], ["TauCeti.A.B", "TauCeti.C"])
+        self.assertEqual(index["tauceti"], "abc")
+        self.assertEqual(len(index["declarations"]), 8)
+        self.assertEqual(index["modules"][0]["doc"].splitlines()[0], "# Ideal arithmetic functions")
+
+
 if __name__ == "__main__":
     unittest.main()

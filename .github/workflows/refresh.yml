@@ -1,0 +1,55 @@
+name: Follow Tau Ceti
+
+# Moves the page to Tau Ceti's current main once a day. Marks stay pinned to
+# the versions they were made on: a declaration that changed shows its marks
+# greyed until someone reviews it again.
+on:
+  schedule:
+    - cron: '40 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ledger
+  cancel-in-progress: false
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    outputs:
+      moved: ${{ steps.pin.outputs.moved }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Pin Tau Ceti's current main
+        id: pin
+        run: |
+          latest=$(gh api repos/TauCetiProject/TauCeti/commits/main --jq .sha)
+          python3 - "$latest" <<'PY'
+          import json, sys
+          path = "data/settings.json"
+          settings = json.load(open(path))
+          settings["tauceti"] = sys.argv[1]
+          open(path, "w").write(json.dumps(settings, indent=1) + "\n")
+          PY
+          if git diff --quiet; then echo "moved=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -am "Follow Tau Ceti to ${latest:0:7}"
+          for attempt in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep $((attempt * 5)); done
+          echo "moved=true" >> "$GITHUB_OUTPUT"
+  site:
+    needs: pin
+    if: needs.pin.outputs.moved == 'true'
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

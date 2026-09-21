@@ -1,18 +1,28 @@
 #!/usr/bin/env python3
-"""Build the page of Tau Ceti declarations and their review marks.
+"""Build the search page of Tau Ceti declarations and their review marks.
 
   python3 scripts/build_site.py
 
-Reads data/declarations.json, reviews/records.jsonl and data/settings.json and
-writes site/index.html and site/reviews.json. The JSON is for other readers of
-the marks (the atlas, Tau Ceti's own docs): for each declaration, its current
-version and every mark, with whether the mark is on that version.
+Reads data/declarations.json (every declaration of Tau Ceti at the pinned
+commit, written by fetch_declarations.py), reviews/records.jsonl and
+data/settings.json, and writes site/:
+
+- index.html, the page: search every declaration by name or docstring, filter
+  definitions from theorems and lemmas, by area and by review, and open one to
+  read it and review it;
+- data/search.json, one row per declaration (name, keyword, module, line),
+  which the page loads first; data/docs.json, each declaration's docstring in
+  one sentence, which it loads next;
+- data/m/<n>.json, each module's declarations in full, read when one is opened;
+- reviews.json, the marks, for other readers too (the atlas, Tau Ceti's docs):
+  each marked declaration's current version and every mark on it.
 """
 from __future__ import annotations
 
 import html
 import json
 import re
+import shutil
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -22,7 +32,7 @@ from urllib.parse import urlencode
 ROOT = Path(__file__).resolve().parents[1]
 MEANING = {"Reviewed-by": "it is the intended mathematical notion", "Tested-by": "its examples and unit tests check out",
            "Acked-by": "happy with the design, without a full check"}
-DEFINITIONS = {"def", "structure", "class", "inductive"}
+DEFINITIONS = {"def", "structure", "class", "inductive", "instance"}
 
 
 def review_link(repo: str, item: dict) -> str:
@@ -41,183 +51,369 @@ def marks_by_declaration(index: dict, records: list) -> dict:
     return marks
 
 
-def prose(text: str) -> str:
-    """Docstring Markdown, enough of it: paragraphs, code and bold."""
-    out = []
-    for block in re.split(r"\n\s*\n", text.strip()):
-        block = html.escape(" ".join(block.split()), quote=False)
-        block = re.sub(r"`([^`]+)`", r"<code>\1</code>", block)
-        block = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", block)
-        out.append(f"<p>{block}</p>")
-    return "".join(out)
+def summary(doc: str, limit: int = 120) -> str:
+    """A docstring's first sentence, in plain text."""
+    text = " ".join(doc.split())
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    text = re.sub(r"\*\*([^*]+)\*\*|\*([^*]+)\*", lambda m: m.group(1) or m.group(2), text)
+    first = re.split(r"(?<=[.!?])\s+(?=[A-Z(])", text, maxsplit=1)[0]
+    return first if len(first) <= limit else first[:limit].rsplit(" ", 1)[0] + " …"
+
+
+def search_index(index: dict) -> dict:
+    modules = [module["module"] for module in index["modules"]]
+    position = {name: n for n, name in enumerate(modules)}
+    keywords = sorted({item.get("keyword", item["kind"]) for item in index["declarations"]})
+    column = {keyword: n for n, keyword in enumerate(keywords)}
+    rows = [[item["name"], column[item.get("keyword", item["kind"])], position[item["module"]], item.get("line", 0)]
+            for item in index["declarations"]]
+    return {"tauceti": index["tauceti"], "read": index["read"], "modules": modules, "keywords": keywords, "rows": rows}
 
 
 def module_summary(doc: str) -> str:
     paragraphs = [p for p in re.split(r"\n\s*\n", doc.strip()) if p.strip() and not p.lstrip().startswith("#")]
-    return prose(paragraphs[0]) if paragraphs else ""
+    return " ".join(paragraphs[0].split()) if paragraphs else ""
 
 
-def when(stamp: str) -> str:
-    try:
-        return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").strftime("%-d %b %Y")
-    except ValueError:
-        return stamp
+def shards(index: dict) -> dict:
+    """Each module's declarations in full, keyed by the module's position in the search index."""
+    position = {module["module"]: n for n, module in enumerate(index["modules"])}
+    out = {n: {"module": module["module"], "path": module["path"], "url": module["url"], "summary": module_summary(module["doc"]),
+               "declarations": []} for n, module in enumerate(index["modules"])}
+    for item in index["declarations"]:
+        out[position[item["module"]]]["declarations"].append(
+            {key: item.get(key) for key in ("name", "kind", "keyword", "line", "end", "doc", "source", "hash", "url")})
+    return out
 
 
-def mark_html(repo: str, mark: dict) -> str:
-    who = f"{html.escape(mark['agent'])} <span class=\"ai\">AI</span> via @{html.escape(mark['by'])}" if mark["kind"] == "agent" else f"@{html.escape(mark['by'])}"
-    issue = mark.get("source", {}).get("issue")
-    href = f"https://github.com/{repo}/issues/{issue}" if issue else "#"
-    tip = f"{mark['trailer']}: {MEANING[mark['trailer']]}. Version {mark['hash']}, {when(mark['at'])}." + (f" Evidence: {mark['evidence']}" if mark["evidence"] else "")
-    classes = "mark " + mark["kind"] + ("" if mark["current"] else " stale")
-    note = "" if mark["current"] else ' <span class="note">earlier version</span>'
-    return (f'<a class="{classes}" href="{href}" title="{html.escape(tip)}"><span class="tick" aria-hidden="true">✓</span>'
-            f'<span class="trailer">{mark["trailer"]}</span> <span class="who">{who}</span>{note}</a>')
-
-
-def declaration_html(repo: str, item: dict, marks: list) -> str:
-    group = "def" if item["kind"] in DEFINITIONS else "theorem"
-    reviewed = "yes" if any(m["current"] for m in marks) else "no"
-    lines = item["source"].splitlines()
-    shown = "\n".join(lines[:40]) + ("\n…" if len(lines) > 40 else "")
-    return f"""
-<article class="decl" id="{html.escape(item['name'])}" data-group="{group}" data-reviewed="{reviewed}">
-  <div class="decl-head"><span class="kind">{item['kind']}</span><h3><code>{html.escape(item['name'])}</code></h3><a class="src" href="{html.escape(item['url'])}">source</a></div>
-  {f'<div class="doc">{prose(item["doc"])}</div>' if item["doc"] else ''}
-  <pre><code>{html.escape(shown)}</code></pre>
-  <div class="marks">{''.join(mark_html(repo, m) for m in marks)}<a class="review" href="{html.escape(review_link(repo, item))}">Review this</a></div>
-</article>"""
+def data(index: dict, records: list) -> dict:
+    marks = marks_by_declaration(index, records)
+    by_name = {item["name"]: item for item in index["declarations"]}
+    return {"schema": "reviewed-by/v1", "tauceti": index["tauceti"], "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "declarations": {name: {"hash": by_name[name]["hash"], "kind": by_name[name]["kind"], "url": by_name[name]["url"],
+                                    "marks": [{**{k: m[k] for k in ("trailer", "by", "kind", "agent", "hash", "current", "at", "evidence")},
+                                               "issue": m.get("source", {}).get("issue")} for m in items]}
+                             for name, items in sorted(marks.items())}}
 
 
 STYLE = """
 :root { color-scheme: light dark; --bg: #f8f7f4; --surface: #ffffff; --ink: #1c2025; --muted: #59626c; --faint: #8b939b; --line: #e3e0da;
-  --code: #f3f1ec; --accent: #2b6a99; --person: #2f7d4f; --agent: #6a58b8; --stale: #9aa0a6; }
+  --code: #f3f1ec; --accent: #2b6a99; --person: #2f7d4f; --agent: #6a58b8; --stale: #9aa0a6; --hit: #fff4c2; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0e1114; --surface: #151a1f; --ink: #e5e8eb; --muted: #a5aeb6;
-  --faint: #7b848d; --line: #252b32; --code: #1a1f25; --accent: #82b6de; --person: #6fcf97; --agent: #b2a4f1; --stale: #6b737b; } }
+  --faint: #7b848d; --line: #252b32; --code: #1a1f25; --accent: #82b6de; --person: #6fcf97; --agent: #b2a4f1; --stale: #6b737b; --hit: #3a3417; } }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-main { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
 a { color: var(--accent); }
-code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
-.eyebrow { text-transform: uppercase; letter-spacing: 1.4px; font-size: 11.5px; color: var(--faint); margin: 0 0 6px; }
-h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.3px; }
-.lede { color: var(--muted); margin: 0 0 6px; font-size: 16px; }
-.meta { color: var(--faint); font-size: 13px; margin: 0 0 24px; }
-.how { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
-.how ol { margin: 0 0 10px; padding-left: 20px; } .how li { margin: 4px 0; } .how p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
-.legend { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
+code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+header { max-width: 1280px; margin: 0 auto; padding: 22px 16px 6px; }
+.eyebrow { text-transform: uppercase; letter-spacing: 1.4px; font-size: 11.5px; color: var(--faint); margin: 0 0 4px; }
+h1 { font-size: 24px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.3px; }
+.lede { color: var(--muted); margin: 0 0 4px; }
+.meta { color: var(--faint); font-size: 13px; margin: 0; }
+details.how { max-width: 1280px; margin: 10px auto 0; padding: 0 16px; color: var(--muted); font-size: 14px; }
+details.how > summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+details.how ol { margin: 8px 0; padding-left: 20px; } details.how li { margin: 3px 0; }
+.legend { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 8px 0; }
 .legend dt { font-weight: 600; color: var(--ink); } .legend dd { margin: 0; }
-.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
-.filters button { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
-.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); font-weight: 600; }
-.module { margin-top: 28px; }
-.module h2 { font-size: 13px; font-weight: 600; margin: 0 0 4px; word-break: break-word; } .module h2 code { font-size: 13.5px; }
-.module-doc { color: var(--muted); font-size: 14px; } .module-doc p { margin: 2px 0; }
-.count { font-size: 12.5px; color: var(--faint); margin: 2px 0 10px; }
-.decl { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 12px; margin: 10px 0; }
-.decl-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.decl-head h3 { margin: 0; font-size: 14.5px; font-weight: 600; word-break: break-word; flex: 1 1 auto; min-width: 0; }
-.decl-head h3 code { font-size: 14px; }
-:not(pre) > code { overflow-wrap: anywhere; }
-.kind { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--faint); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
-.decl[data-group="def"] .kind { color: var(--accent); border-color: currentColor; }
-.src { font-size: 12.5px; color: var(--faint); }
-.doc { color: var(--muted); font-size: 14px; margin-top: 6px; } .doc p { margin: 4px 0; } .doc code { font-size: 12.5px; }
+.bar { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar-inner { max-width: 1280px; margin: 0 auto; padding: 12px 16px 10px; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+#search { flex: 1 1 360px; min-width: 0; font: inherit; font-size: 16px; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+#search:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); border-color: var(--accent); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button, select { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+.chips button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); font-weight: 600; }
+select { border-radius: 8px; max-width: 220px; }
+.layout { max-width: 1280px; margin: 0 auto; padding: 10px 16px 60px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 18px; align-items: start; }
+.status { color: var(--faint); font-size: 13px; margin: 4px 0 8px; }
+.results { display: flex; flex-direction: column; gap: 6px; }
+.result { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; cursor: pointer; }
+.result:hover, .result:focus-visible { border-color: var(--faint); }
+.result[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.result .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px; overflow-wrap: anywhere; }
+.result .ns { color: var(--faint); } .result .leaf { font-weight: 600; }
+.result .line2 { display: flex; gap: 8px; align-items: baseline; margin-top: 2px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.result .doc1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.kw { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .7px; color: var(--faint); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+.kw.def { color: var(--accent); border-color: currentColor; }
+.tickmini { flex: none; font-size: 11px; font-weight: 700; color: var(--person); }
+.more { font: inherit; font-size: 13px; margin: 6px 0; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; }
+.panel { position: sticky; top: 70px; max-height: calc(100vh - 86px); overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.panel h2 { font-size: 16px; margin: 6px 0 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; font-weight: 600; }
+.panel .where { color: var(--faint); font-size: 13px; margin: 0 0 8px; overflow-wrap: anywhere; }
+.panel .doc { color: var(--muted); font-size: 14.5px; } .panel .doc p { margin: 6px 0; } .panel .doc code { font-size: 12.5px; }
 pre { background: var(--code); border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 10px 0 8px; line-height: 1.45; }
-.marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
+.primary { font-size: 13.5px; font-weight: 600; text-decoration: none; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); }
+.quiet { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; text-decoration: none; }
+.marks { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 8px 0; }
 .mark { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px 2px 3px; }
-.mark:hover { border-color: var(--faint); }
 .tick { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: 700; }
 .mark.person .tick { background: var(--person); color: var(--surface); }
 .mark.agent .tick { border: 1.5px solid var(--agent); color: var(--agent); }
 .trailer { font-weight: 600; } .ai { font-size: 10.5px; font-weight: 700; letter-spacing: .6px; color: var(--agent); }
 .mark.stale { color: var(--stale); } .mark.stale .tick { background: none; border: 1.5px solid var(--stale); color: var(--stale); } .mark.stale .ai { color: var(--stale); }
 .note { font-size: 11.5px; font-style: italic; }
-.review { margin-left: auto; font-size: 13px; font-weight: 600; text-decoration: none; padding: 3px 12px; border-radius: 6px; border: 1px solid var(--accent); }
-.review:hover { background: var(--accent); color: var(--surface); }
-footer { margin-top: 40px; color: var(--faint); font-size: 13px; }
-body[data-filter="def"] .decl[data-group="theorem"], body[data-filter="reviewed"] .decl[data-reviewed="no"], body[data-filter="open"] .decl[data-reviewed="yes"] { display: none; }
-body[data-filter="def"] .module:not(:has(.decl[data-group="def"])), body[data-filter="reviewed"] .module:not(:has(.decl[data-reviewed="yes"])),
-body[data-filter="open"] .module:not(:has(.decl[data-reviewed="no"])) { display: none; }
-@media (max-width: 560px) { h1 { font-size: 23px; } .how { padding: 14px 14px; } .decl { padding: 12px 12px 10px; } .review { margin-left: 0; } }
+.sub { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--faint); margin: 16px 0 6px; }
+.siblings { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.siblings button { font: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; text-align: left; background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; overflow-wrap: anywhere; }
+.siblings button[aria-current="true"] { color: var(--ink); font-weight: 600; }
+.areas { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 14px; }
+.areas button { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.areas button span { color: var(--faint); margin-left: 4px; }
+.empty { color: var(--muted); }
+.back { display: none; }
+footer { max-width: 1280px; margin: 0 auto; padding: 0 16px 40px; color: var(--faint); font-size: 13px; }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .panel { display: none; position: fixed; inset: 0; top: 0; max-height: none; border-radius: 0; z-index: 10; padding: 14px 16px 40px; }
+  body.reading .panel { display: block; }
+  .back { display: inline-block; }
+  h1 { font-size: 21px; }
+}
 """
 
-SCRIPT = """
-document.querySelectorAll('button[data-filter]').forEach(button => button.addEventListener('click', () => {
-  document.body.dataset.filter = button.dataset.filter;
-  document.querySelectorAll('button[data-filter]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
-}));
+SCRIPT = r"""
+const SETTINGS = JSON.parse(document.getElementById('settings').textContent);
+const $ = id => document.getElementById(id);
+const DEFS = new Set(['def', 'abbrev', 'structure', 'class', 'inductive', 'instance', 'class inductive']);
+const MEANING = {'Reviewed-by': 'it is the intended mathematical notion', 'Tested-by': 'its examples and unit tests check out', 'Acked-by': 'happy with the design, without a full check'};
+const PAGE = 60;
+let index = null, lower = [], leafLower = [], area = [], docs = null, docsLower = null, marks = {}, reviewed = new Set();
+let state = {q: '', group: 'all', status: 'all', area: '', d: ''}, shown = PAGE, results = [];
+const shardCache = new Map();
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+function prose(text) {
+  return String(text || '').trim().split(/\n\s*\n/).filter(Boolean).map(block => '<p>' + esc(block.replace(/\s+/g, ' '))
+    .replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>') + '</p>').join('');
+}
+const when = s => { const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'}); };
+function reviewLink(name, hash) {
+  const q = new URLSearchParams({template: 'reviewed-by.yml', title: 'Review: ' + name, declaration: name, version: hash});
+  return 'https://github.com/' + SETTINGS.repo + '/issues/new?' + q.toString();
+}
+
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  state = {q: p.get('q') || '', group: p.get('kind') || 'all', status: p.get('status') || 'all', area: p.get('area') || '', d: p.get('d') || ''};
+}
+function writeHash(replace) {
+  const p = new URLSearchParams();
+  if (state.q) p.set('q', state.q); if (state.group !== 'all') p.set('kind', state.group); if (state.status !== 'all') p.set('status', state.status);
+  if (state.area) p.set('area', state.area); if (state.d) p.set('d', state.d);
+  const hash = '#' + p.toString();
+  if (location.hash !== hash) history[replace ? 'replaceState' : 'pushState'](null, '', hash || '#');
+}
+
+function passes(i) {
+  const kw = index.keywords[index.rows[i][1]];
+  if (state.group === 'def' && !DEFS.has(kw)) return false;
+  if (state.group === 'thm' && DEFS.has(kw)) return false;
+  if (state.area && area[i] !== state.area) return false;
+  if (state.status === 'reviewed' && !reviewed.has(index.rows[i][0])) return false;
+  if (state.status === 'open' && reviewed.has(index.rows[i][0])) return false;
+  return true;
+}
+function search() {
+  const tokens = state.q.toLowerCase().split(/\s+/).filter(Boolean), joined = tokens.join('');
+  const found = [];
+  for (let i = 0; i < index.rows.length; i++) {
+    if (!passes(i)) continue;
+    if (!tokens.length) { found.push([0, i]); continue; }
+    let score = 0;
+    for (const t of tokens) {
+      const leaf = leafLower[i], full = lower[i];
+      const s = leaf === t ? 100 : leaf.startsWith(t) ? 60 : leaf.includes(t) ? 40 : full.includes(t) ? 25 : docsLower && docsLower[i].includes(t) ? 8 : 0;
+      if (!s) { score = -1; break; }
+      score += s;
+    }
+    if (score < 0) continue;
+    if (lower[i] === joined) score += 1000;
+    found.push([score, i]);
+  }
+  if (tokens.length) found.sort((a, b) => b[0] - a[0] || lower[a[1]].length - lower[b[1]].length);
+  return found.map(x => x[1]);
+}
+
+function nameHtml(name) {
+  const cut = name.lastIndexOf('.');
+  return cut < 0 ? '<span class="leaf">' + esc(name) + '</span>' : '<span class="ns">' + esc(name.slice(0, cut + 1)) + '</span><span class="leaf">' + esc(name.slice(cut + 1)) + '</span>';
+}
+function resultHtml(i) {
+  const [name, k] = index.rows[i], kw = index.keywords[k];
+  const doc = docs ? docs[i] : '';
+  return '<button class="result" data-i="' + i + '"' + (state.d === name ? ' aria-current="true"' : '') + '><div class="name">' + nameHtml(name) + '</div>' +
+    '<div class="line2"><span class="kw' + (DEFS.has(kw) ? ' def' : '') + '">' + esc(kw) + '</span>' + (reviewed.has(name) ? '<span class="tickmini" title="Reviewed">✓</span>' : '') +
+    '<span class="doc1">' + esc(doc || index.modules[index.rows[i][2]]) + '</span></div></button>';
+}
+function renderResults() {
+  const box = $('results');
+  const filtered = state.q || state.group !== 'all' || state.status !== 'all' || state.area;
+  if (!filtered) {
+    const counts = {};
+    area.forEach(a => { counts[a] = (counts[a] || 0) + 1; });
+    const recent = Object.entries(marks).flatMap(([name, entry]) => entry.marks.map(m => ({name, ...m}))).sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 12);
+    $('status').textContent = index.rows.length.toLocaleString() + ' declarations. Search by name or by words from their docstrings.';
+    box.innerHTML = '<p class="sub">Areas</p><div class="areas">' + Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([a, n]) =>
+      '<button data-area="' + esc(a) + '">' + esc(a) + '<span>' + n.toLocaleString() + '</span></button>').join('') + '</div>' +
+      '<p class="sub">Recently reviewed</p>' + (recent.length ? '<div class="results">' + recent.map(m => {
+        const i = rowOf.get(m.name); return i === undefined ? '' : resultHtml(i); }).join('') + '</div>' : '<p class="empty">No marks yet.</p>');
+    return;
+  }
+  results = search();
+  const n = results.length;
+  $('status').textContent = n ? n.toLocaleString() + ' match' + (n === 1 ? '' : 'es') + (state.q && !docs ? ' by name (docstrings still loading)' : '') : 'No matches.';
+  box.innerHTML = '<div class="results">' + results.slice(0, shown).map(resultHtml).join('') + '</div>' + (n > shown ? '<button class="more" id="more">Show more</button>' : '');
+}
+
+async function shard(m) {
+  if (!shardCache.has(m)) shardCache.set(m, fetch('data/m/' + m + '.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }));
+  return shardCache.get(m);
+}
+function markHtml(m) {
+  const who = m.kind === 'agent' ? esc(m.agent) + ' <span class="ai">AI</span> via @' + esc(m.by) : '@' + esc(m.by);
+  const tip = m.trailer + ': ' + (MEANING[m.trailer] || '') + '. Version ' + m.hash + ', ' + when(m.at) + '.' + (m.evidence ? ' Evidence: ' + m.evidence : '');
+  const href = m.issue ? 'https://github.com/' + SETTINGS.repo + '/issues/' + m.issue : '#';
+  return '<a class="mark ' + esc(m.kind) + (m.current ? '' : ' stale') + '" href="' + esc(href) + '" title="' + esc(tip) + '"><span class="tick" aria-hidden="true">✓</span>' +
+    '<span class="trailer">' + esc(m.trailer) + '</span> <span class="who">' + who + '</span>' + (m.current ? '' : ' <span class="note">earlier version</span>') + '</a>';
+}
+async function renderPanel() {
+  const panel = $('panel');
+  document.body.classList.toggle('reading', !!state.d);
+  if (!state.d) { panel.innerHTML = '<p class="empty">Choose a declaration to read it, see its marks and review it.</p>'; return; }
+  const i = rowOf.get(state.d);
+  if (i === undefined) { panel.innerHTML = '<button class="quiet back" id="back">← Back</button><p class="empty">' + esc(state.d) + ' is not a declaration at this commit.</p>'; return; }
+  const [name, k, m, line] = index.rows[i];
+  panel.innerHTML = '<button class="quiet back" id="back">← Back</button><h2>' + esc(name) + '</h2><p class="where">' + esc(index.keywords[k]) + ' in ' + esc(index.modules[m]) + ', line ' + line + '</p><p class="empty">Loading…</p>';
+  let data;
+  try { data = await shard(m); } catch (e) { panel.querySelector('.empty').textContent = 'Could not load this module.'; return; }
+  if (state.d !== name) return;
+  const item = data.declarations.find(d => d.name === name);
+  const entry = marks[name];
+  const lines = item.source.split('\n'), long = lines.length > 60;
+  panel.innerHTML = '<button class="quiet back" id="back">← Back</button>' +
+    '<span class="kw' + (DEFS.has(item.keyword) ? ' def' : '') + '">' + esc(item.keyword) + '</span><h2>' + nameHtml(name) + '</h2>' +
+    '<p class="where"><a href="' + esc(data.url) + '">' + esc(data.module) + '</a>, lines ' + item.line + '–' + item.end + ' · version <span class="mono">' + esc(item.hash) + '</span></p>' +
+    (item.doc ? '<div class="doc">' + prose(item.doc) + '</div>' : '') +
+    '<pre><code id="src">' + esc(long ? lines.slice(0, 60).join('\n') + '\n…' : item.source) + '</code></pre>' +
+    '<div class="actions"><a class="primary" href="' + esc(reviewLink(name, item.hash)) + '">Review this</a>' +
+    '<button class="quiet" id="copy">Copy name</button><a class="quiet" href="' + esc(item.url) + '">Source on GitHub</a>' + (long ? '<button class="quiet" id="all">Show all ' + lines.length + ' lines</button>' : '') + '</div>' +
+    '<p class="sub">Marks</p>' + (entry && entry.marks.length ? '<div class="marks">' + entry.marks.map(markHtml).join('') + '</div>' : '<p class="empty">No marks yet.</p>') +
+    '<p class="sub">In ' + esc(data.module.split('.').slice(-1)[0]) + '</p><div class="siblings">' + data.declarations.map(d =>
+      '<button data-name="' + esc(d.name) + '"' + (d.name === name ? ' aria-current="true"' : '') + '>' + esc(d.name.split('.').slice(-1)[0]) + '</button>').join('') + '</div>';
+  const all = $('all');
+  if (all) all.addEventListener('click', () => { $('src').textContent = item.source; all.remove(); });
+  $('copy').addEventListener('click', () => navigator.clipboard && navigator.clipboard.writeText(name).then(() => { $('copy').textContent = 'Copied'; }));
+}
+let rowOf = new Map();
+function render() { renderResults(); renderPanel(); syncControls(); }
+function syncControls() {
+  if (document.activeElement !== $('search') && $('search').value !== state.q) $('search').value = state.q;
+  document.querySelectorAll('[data-group]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.group === state.group)));
+  $('state-filter').value = state.status; $('area-filter').value = state.area;
+}
+function update(change, replace) { state = {...state, ...change}; shown = PAGE; writeHash(replace); render(); }
+
+document.addEventListener('click', event => {
+  const result = event.target.closest('.result');
+  if (result) { update({d: index.rows[+result.dataset.i][0]}); return; }
+  const sibling = event.target.closest('.siblings button');
+  if (sibling) { update({d: sibling.dataset.name}); return; }
+  const chip = event.target.closest('[data-group]');
+  if (chip) { update({group: chip.dataset.group}, true); return; }
+  const areaButton = event.target.closest('[data-area]');
+  if (areaButton) { update({area: areaButton.dataset.area}); return; }
+  if (event.target.id === 'more') { shown += PAGE * 2; renderResults(); return; }
+  if (event.target.closest('#back')) { update({d: ''}); }
+});
+let timer;
+$('search').addEventListener('input', event => { clearTimeout(timer); timer = setTimeout(() => update({q: event.target.value.trim()}, true), 120); });
+$('search').addEventListener('keydown', event => { if (event.key === 'Enter' && results.length) update({q: event.target.value.trim(), d: index.rows[results[0]][0]}); });
+$('state-filter').addEventListener('change', event => update({status: event.target.value}, true));
+$('area-filter').addEventListener('change', event => update({area: event.target.value}, true));
+document.addEventListener('keydown', event => {
+  if (event.key === '/' && document.activeElement !== $('search')) { event.preventDefault(); $('search').focus(); }
+  if (event.key === 'Escape' && state.d) update({d: ''});
+});
+window.addEventListener('popstate', () => { readHash(); render(); });
+
+(async () => {
+  readHash();
+  $('status').textContent = 'Loading ' + SETTINGS.count.toLocaleString() + ' declarations…';
+  const [loaded, reviews] = await Promise.all([fetch('data/search.json').then(r => r.json()), fetch('reviews.json').then(r => r.json()).catch(() => ({declarations: {}}))]);
+  index = loaded;
+  marks = reviews.declarations || {};
+  reviewed = new Set(Object.entries(marks).filter(([, e]) => e.marks.some(m => m.current)).map(([name]) => name));
+  lower = index.rows.map(r => r[0].toLowerCase());
+  leafLower = lower.map(n => n.slice(n.lastIndexOf('.') + 1));
+  area = index.rows.map(r => (index.modules[r[2]].split('.')[1] || index.modules[r[2]]));
+  rowOf = new Map(index.rows.map((r, i) => [r[0], i]));
+  const areas = [...new Set(area)].sort();
+  $('area-filter').innerHTML = '<option value="">Every area</option>' + areas.map(a => '<option value="' + esc(a) + '">' + esc(a) + '</option>').join('');
+  window.TauReview = {state: () => ({...state}), results: () => results.map(i => index.rows[i][0]), ready: false};
+  render();
+  const loadedDocs = await fetch('data/docs.json').then(r => r.json()).catch(() => null);
+  if (loadedDocs) { docs = loadedDocs; docsLower = docs.map(d => d.toLowerCase()); renderResults(); }
+  window.TauReview.ready = true;
+})();
 """
 
 
 def page(index: dict, records: list, settings: dict) -> str:
-    repo, marks = settings["repo"], marks_by_declaration(index, records)
-    by_module = defaultdict(list)
-    for item in index["declarations"]:
-        by_module[item["module"]].append(item)
-    sections = []
-    for module in index["modules"]:
-        items = sorted(by_module[module["module"]], key=lambda d: d["kind"] not in DEFINITIONS)
-        reviewed = sum(1 for d in items if any(m["current"] for m in marks.get(d["name"], [])))
-        sections.append(f"""
-<section class="module">
-  <h2><code>{html.escape(module['module'])}</code></h2>
-  <div class="module-doc">{module_summary(module['doc'])}</div>
-  <p class="count">{reviewed} of {len(items)} reviewed · <a href="{html.escape(module['url'])}">source</a></p>
-  {''.join(declaration_html(repo, d, marks.get(d['name'], [])) for d in items)}
-</section>""")
-    bulk = f"https://github.com/{repo}/issues/{settings['bulk_issue']}"
-    legend = "".join(f"<dt>{t}</dt><dd>{m}</dd>" for t, m in MEANING.items())
     total = len(index["declarations"])
+    config = json.dumps({"repo": settings["repo"], "bulk_issue": settings["bulk_issue"], "count": total, "tauceti": index["tauceti"]})
+    config = config.replace("<", "\\u003c")
+    bulk = f"https://github.com/{settings['repo']}/issues/{settings['bulk_issue']}"
+    legend = "".join(f"<dt>{t}</dt><dd>{m}</dd>" for t, m in MEANING.items())
+    repo = html.escape(settings["repo"])
     return f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reviewed-by marks</title>
-<meta name="description" content="A test of review marks on Tau Ceti declarations, left from the browser without pull requests.">
+<meta name="description" content="Search every Tau Ceti declaration and leave review marks from the browser, without pull requests. A test.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✓</text></svg>">
 <style>{STYLE}</style>
 </head>
-<body data-filter="all">
-<main>
+<body>
 <header>
   <p class="eyebrow">Test · review marks</p>
   <h1>Reviewed-by for Tau Ceti</h1>
-  <p class="lede">Who has checked which Tau Ceti declarations, what they checked, and on which version, recorded from the browser without pull requests.</p>
-  <p class="meta">Tau Ceti <a href="https://github.com/TauCetiProject/TauCeti/tree/{index['tauceti']}">{index['tauceti'][:7]}</a> · {total} declarations in {len(index['modules'])} modules · {len(records)} mark{'s' if len(records) != 1 else ''}</p>
+  <p class="lede">Every declaration of Tau Ceti, searchable, with who has checked which and on which version, recorded from the browser without pull requests.</p>
+  <p class="meta">Tau Ceti <a href="https://github.com/TauCetiProject/TauCeti/tree/{html.escape(index['tauceti'])}">{html.escape(index['tauceti'][:7])}</a> · {total:,} declarations in {len(index['modules']):,} modules · {len(records)} mark{'s' if len(records) != 1 else ''}</p>
 </header>
-<section class="how" aria-label="How to leave a mark">
+<details class="how">
+  <summary>How to leave a mark</summary>
   <ol>
-    <li><strong>Review this</strong> under a declaration opens a GitHub form with its name and version filled in. Choose a mark, say what you checked, and submit.</li>
-    <li>A bot records the mark, answers on the issue and closes it. There is no pull request, and this page updates within a minute or two.</li>
+    <li>Find the declaration, open it and press <strong>Review this</strong>: a GitHub form opens with its name and version filled in. Choose a mark, say what you checked, and submit.</li>
+    <li>A bot records the mark, answers on the issue and closes it. There is no pull request, and this page updates within a few minutes.</li>
     <li>If the declaration changes later, the mark stays but is greyed: it applies to the earlier version until someone reviews the new one.</li>
   </ol>
-  <p>Marking many at once: comment lines like <code>Reviewed-by: TauCeti.X.y — what you checked</code> on <a href="{bulk}">issue #{settings['bulk_issue']}</a>. AI agents use the same routes and name the agent, model and session; their marks are shown apart from people's.</p>
+  <p>Marking many at once: comment lines like <code>Reviewed-by: TauCeti.X.y — what you checked</code> on <a href="{html.escape(bulk)}">issue #{settings['bulk_issue']}</a>. AI agents use the same routes and name the agent, model and session; their marks are shown apart from people's.</p>
   <dl class="legend">{legend}</dl>
-</section>
-<nav class="filters" aria-label="Filter">
-  <button data-filter="all" aria-pressed="true">All</button><button data-filter="def" aria-pressed="false">Definitions</button>
-  <button data-filter="reviewed" aria-pressed="false">Reviewed</button><button data-filter="open" aria-pressed="false">Not yet reviewed</button>
-</nav>
-{''.join(sections)}
+</details>
+<div class="bar"><div class="bar-inner">
+  <input id="search" type="search" placeholder="Search {total:,} declarations: a name, part of one, or words from a docstring" autocomplete="off" spellcheck="false" aria-label="Search declarations">
+  <div class="chips" role="group" aria-label="Kind">
+    <button data-group="all" aria-pressed="true">All</button><button data-group="def" aria-pressed="false">Definitions</button><button data-group="thm" aria-pressed="false">Theorems and lemmas</button>
+  </div>
+  <select id="state-filter" aria-label="Review"><option value="all">Reviewed or not</option><option value="reviewed">Reviewed</option><option value="open">Not yet reviewed</option></select>
+  <select id="area-filter" aria-label="Area"><option value="">Every area</option></select>
+</div></div>
+<div class="layout">
+  <section aria-label="Results"><p class="status" id="status"></p><div id="results"></div></section>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</div>
 <footer>
   <p>The marks as data, for the atlas or Tau Ceti's own documentation: <a href="reviews.json">reviews.json</a>. The ledger: <a href="https://github.com/{repo}/blob/main/reviews/records.jsonl">reviews/records.jsonl</a>. A test in <a href="https://github.com/{repo}">{repo}</a>; nothing here changes Tau Ceti.</p>
 </footer>
-</main>
+<script type="application/json" id="settings">{config}</script>
 <script>{SCRIPT}</script>
 </body>
 </html>
 """
-
-
-def data(index: dict, records: list) -> dict:
-    marks = marks_by_declaration(index, records)
-    return {"schema": "reviewed-by/v1", "tauceti": index["tauceti"], "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "declarations": {item["name"]: {"hash": item["hash"], "kind": item["kind"], "url": item["url"],
-                                            "marks": [{k: m[k] for k in ("trailer", "by", "kind", "agent", "hash", "current", "at", "evidence")}
-                                                      for m in marks.get(item["name"], [])]}
-                             for item in index["declarations"]}}
 
 
 def main() -> int:
@@ -226,10 +422,17 @@ def main() -> int:
     ledger = ROOT / "reviews" / "records.jsonl"
     records = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines() if line.strip()] if ledger.exists() else []
     out = ROOT / "site"
-    out.mkdir(exist_ok=True)
+    if (out / "data").exists():
+        shutil.rmtree(out / "data")
+    (out / "data" / "m").mkdir(parents=True)
+    compact = {"ensure_ascii": False, "separators": (",", ":")}
     (out / "index.html").write_text(page(index, records, settings), encoding="utf-8")
+    (out / "data" / "search.json").write_text(json.dumps(search_index(index), **compact), encoding="utf-8")
+    (out / "data" / "docs.json").write_text(json.dumps([summary(item["doc"]) for item in index["declarations"]], **compact), encoding="utf-8")
+    for n, shard in shards(index).items():
+        (out / "data" / "m" / f"{n}.json").write_text(json.dumps(shard, **compact), encoding="utf-8")
     (out / "reviews.json").write_text(json.dumps(data(index, records), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"site: {len(index['declarations'])} declarations, {len(records)} marks")
+    print(f"site: {len(index['declarations'])} declarations in {len(index['modules'])} modules, {len(records)} marks")
     return 0
 
 

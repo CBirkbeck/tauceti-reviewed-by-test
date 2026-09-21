@@ -1,1 +1,5 @@
-{"repo": "CBirkbeck/tauceti-reviewed-by-test", "bulk_issue": 1}
+{
+ "repo": "CBirkbeck/tauceti-reviewed-by-test",
+ "bulk_issue": 1,
+ "tauceti": "9f9110eac76cf96fbea81f1a817e8bc3852de0ec"
+}

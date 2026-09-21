@@ -1,6 +1,7 @@
 name: Page
 
-# Builds the page of declarations and marks from main and publishes it.
+# Builds the search page of every Tau Ceti declaration (at the commit pinned in
+# data/settings.json) and its marks, and publishes it.
 on:
   push:
     branches: [main]
@@ -26,6 +27,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: ./.github/actions/declarations
       - run: python3 -m unittest discover -s tests
       - run: python3 scripts/build_site.py
       - uses: actions/upload-pages-artifact@v3
