@@ -25,7 +25,6 @@ search box.
 |---|---|
 | `Reviewed-by` | it is the intended mathematical notion |
 | `Tested-by` | its examples and unit tests check out |
-| `Acked-by` | happy with the design, without a full check |
 
 A mark is pinned to a hash of the declaration's source (a definition whole, a
 theorem by its statement). When the declaration changes, the mark stays but is

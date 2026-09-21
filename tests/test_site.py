@@ -21,7 +21,7 @@ INDEX = {"tauceti": "c0ffee1234567", "read": "2026-09-21T15:00:00Z",
 RECORDS = [
     {"decl": "TauCeti.X.f", "hash": "aaaaaaaaaaaa", "trailer": "Reviewed-by", "by": "alice", "kind": "person", "agent": "", "evidence": "Matches Neukirch.", "source": {"issue": 3}, "at": "2026-09-21T15:10:00Z"},
     {"decl": "TauCeti.X.f", "hash": "000000000000", "trailer": "Tested-by", "by": "bob", "kind": "agent", "agent": "Codex, session c1", "evidence": "", "source": {"issue": 5, "comment": 9}, "at": "2026-09-20T10:00:00Z"},
-    {"decl": "TauCeti.Gone", "hash": "dddddddddddd", "trailer": "Acked-by", "by": "carol", "kind": "person", "agent": "", "evidence": "", "source": {"issue": 6}, "at": "2026-09-19T10:00:00Z"}]
+    {"decl": "TauCeti.Gone", "hash": "dddddddddddd", "trailer": "Tested-by", "by": "carol", "kind": "person", "agent": "", "evidence": "", "source": {"issue": 6}, "at": "2026-09-19T10:00:00Z"}]
 SETTINGS = {"repo": "CBirkbeck/test", "bulk_issue": 1, "tauceti": "c0ffee1234567"}
 
 
@@ -39,6 +39,11 @@ class Marks(unittest.TestCase):
     def test_marks_on_an_earlier_version_are_stale(self):
         marks = marks_by_declaration(INDEX, RECORDS)["TauCeti.X.f"]
         self.assertEqual([(m["trailer"], m["current"]) for m in marks], [("Reviewed-by", True), ("Tested-by", False)])
+
+    def test_a_mark_of_a_kind_no_longer_used_is_not_shown(self):
+        retired = dict(RECORDS[0], trailer="Acked-by", by="dave")
+        marks = marks_by_declaration(INDEX, RECORDS + [retired])["TauCeti.X.f"]
+        self.assertEqual([m["by"] for m in marks], ["alice", "bob"])
 
     def test_the_marks_file_lists_only_declarations_with_marks(self):
         out = data(INDEX, RECORDS)

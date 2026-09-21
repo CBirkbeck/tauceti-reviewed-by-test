@@ -64,9 +64,15 @@ class Comments(unittest.TestCase):
 
     def test_an_agent_says_so_in_a_marker(self):
         text = ('<!--reviewed-by:v1 {"agent": "Codex, GPT-6, session codex-a71f92"}-->\n'
-                "Acked-by: NumberField.Set.HasNaturalDensity")
+                "Tested-by: NumberField.Set.HasNaturalDensity")
         mark = comment_marks(text)[0]
-        self.assertEqual((mark["kind"], mark["agent"], mark["trailer"]), ("agent", "Codex, GPT-6, session codex-a71f92", "Acked-by"))
+        self.assertEqual((mark["kind"], mark["agent"], mark["trailer"]), ("agent", "Codex, GPT-6, session codex-a71f92", "Tested-by"))
+
+    def test_a_mark_that_is_not_used_is_refused_with_the_marks_there_are(self):
+        [mark] = comment_marks("Acked-by: NumberField.Set.HasNaturalDensity — looks right")
+        record, problem = make_record(mark, INDEX, "someone", {"issue": 1, "comment": 2}, "now")
+        self.assertIsNone(record)
+        self.assertEqual(problem, "the mark is one of Reviewed-by, Tested-by")
 
 
 class Records(unittest.TestCase):

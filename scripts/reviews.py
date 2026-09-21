@@ -4,8 +4,8 @@
   python3 scripts/reviews.py from-event <event.json> --reply reply.md --out <file>
 
 A mark is a kernel-style trailer: Reviewed-by (it is the intended mathematical
-notion), Tested-by (its examples and unit tests check out) or Acked-by (happy
-with the design, without a full check). Two ways in, both from a browser:
+notion) or Tested-by (its examples and unit tests check out). Two ways in, both
+from a browser:
 
 - the "Review a definition" issue form (label `review`), usually opened from a
   "Review this" link that fills in the declaration and the version shown;
@@ -31,8 +31,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "reviews" / "records.jsonl"
 INDEX = ROOT / "data" / "declarations.json"
-TRAILERS = ("Reviewed-by", "Tested-by", "Acked-by")
-LINE = re.compile(r"^\s*(Reviewed-by|Tested-by|Acked-by)\s*:\s*`?([^\s`]+)`?(?:\s+(?:—|–|--|-)\s+(.*?))?\s*$")
+TRAILERS = ("Reviewed-by", "Tested-by")
+# Any "<Word>-by:" line is read, so that one that is not a mark here (Acked-by,
+# say) is answered with the marks there are rather than ignored.
+LINE = re.compile(r"^\s*([A-Z][a-z]+-by)\s*:\s*`?([^\s`]+)`?(?:\s+(?:—|–|--|-)\s+(.*?))?\s*$")
 MARKER = re.compile(r"<!--\s*reviewed-by:v1\s+(\{.*?\})\s*-->", re.S)
 AGENT_FIELD = "Agent, model and session (AI reviews only)"
 

@@ -1,5 +1,5 @@
 name: Review a definition
-description: Leave a Reviewed-by, Tested-by or Acked-by mark on one Tau Ceti declaration. A bot records it; there is no pull request.
+description: Leave a Reviewed-by or Tested-by mark on one Tau Ceti declaration. A bot records it; there is no pull request.
 title: "Review: "
 labels: ["review"]
 body:
@@ -27,7 +27,6 @@ body:
       options:
         - "Reviewed-by: it is the intended mathematical notion"
         - "Tested-by: its examples and unit tests check out"
-        - "Acked-by: happy with the design, without a full check"
       default: 0
     validations:
       required: true

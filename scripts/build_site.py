@@ -30,8 +30,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
-MEANING = {"Reviewed-by": "it is the intended mathematical notion", "Tested-by": "its examples and unit tests check out",
-           "Acked-by": "happy with the design, without a full check"}
+MEANING = {"Reviewed-by": "it is the intended mathematical notion", "Tested-by": "its examples and unit tests check out"}
 DEFINITIONS = {"def", "structure", "class", "inductive", "instance"}
 
 
@@ -44,7 +43,7 @@ def marks_by_declaration(index: dict, records: list) -> dict:
     current = {item["name"]: item["hash"] for item in index["declarations"]}
     marks = defaultdict(list)
     for record in records:
-        if record["decl"] in current:
+        if record["decl"] in current and record["trailer"] in MEANING:
             marks[record["decl"]].append({**record, "current": record["hash"] == current[record["decl"]]})
     for items in marks.values():
         items.sort(key=lambda m: (not m["current"], list(MEANING).index(m["trailer"]), m["at"]))
@@ -176,7 +175,7 @@ SCRIPT = r"""
 const SETTINGS = JSON.parse(document.getElementById('settings').textContent);
 const $ = id => document.getElementById(id);
 const DEFS = new Set(['def', 'abbrev', 'structure', 'class', 'inductive', 'instance', 'class inductive']);
-const MEANING = {'Reviewed-by': 'it is the intended mathematical notion', 'Tested-by': 'its examples and unit tests check out', 'Acked-by': 'happy with the design, without a full check'};
+const MEANING = {'Reviewed-by': 'it is the intended mathematical notion', 'Tested-by': 'its examples and unit tests check out'};
 const PAGE = 60;
 let index = null, lower = [], leafLower = [], area = [], docs = null, docsLower = null, marks = {}, reviewed = new Set();
 let state = {q: '', group: 'all', status: 'all', area: '', d: ''}, shown = PAGE, results = [];
