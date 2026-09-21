@@ -109,7 +109,7 @@ h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.3px; 
 .legend dt { font-weight: 600; color: var(--ink); } .legend dd { margin: 0; }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 .filters button { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
-.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); font-weight: 600; }
 .module { margin-top: 28px; }
 .module h2 { font-size: 13px; font-weight: 600; margin: 0 0 4px; word-break: break-word; } .module h2 code { font-size: 13.5px; }
 .module-doc { color: var(--muted); font-size: 14px; } .module-doc p { margin: 2px 0; }
@@ -137,13 +137,15 @@ pre { background: var(--code); border-radius: 6px; padding: 10px 12px; overflow-
 .review:hover { background: var(--accent); color: var(--surface); }
 footer { margin-top: 40px; color: var(--faint); font-size: 13px; }
 body[data-filter="def"] .decl[data-group="theorem"], body[data-filter="reviewed"] .decl[data-reviewed="no"], body[data-filter="open"] .decl[data-reviewed="yes"] { display: none; }
+body[data-filter="def"] .module:not(:has(.decl[data-group="def"])), body[data-filter="reviewed"] .module:not(:has(.decl[data-reviewed="yes"])),
+body[data-filter="open"] .module:not(:has(.decl[data-reviewed="no"])) { display: none; }
 @media (max-width: 560px) { h1 { font-size: 23px; } .how { padding: 14px 14px; } .decl { padding: 12px 12px 10px; } .review { margin-left: 0; } }
 """
 
 SCRIPT = """
-document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => {
+document.querySelectorAll('button[data-filter]').forEach(button => button.addEventListener('click', () => {
   document.body.dataset.filter = button.dataset.filter;
-  document.querySelectorAll('[data-filter]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+  document.querySelectorAll('button[data-filter]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
 }));
 """
 
