@@ -1,0 +1,70 @@
+name: Record review marks
+
+# Records marks from the "Review a definition" form (label `review`) and from
+# `Reviewed-by:` lines in comments on an issue labelled `reviews`, then
+# rebuilds the page. The ledger is committed directly: no pull request.
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pages: write
+  id-token: write
+
+# One writer of the ledger at a time.
+concurrency:
+  group: ledger
+  cancel-in-progress: false
+
+jobs:
+  record:
+    if: >-
+      (github.event_name == 'issues' && github.event.issue.state == 'open' && contains(github.event.issue.labels.*.name, 'review')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request == null && github.event.comment.user.type != 'Bot' &&
+       contains(github.event.issue.labels.*.name, 'reviews'))
+    runs-on: ubuntu-latest
+    outputs:
+      recorded: ${{ steps.record.outputs.recorded }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read the marks
+        id: record
+        run: python3 scripts/reviews.py from-event "$GITHUB_EVENT_PATH" --reply "$RUNNER_TEMP/reply.md" --out "$GITHUB_OUTPUT"
+      - name: Save the ledger
+        if: steps.record.outputs.recorded != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reviews/records.jsonl
+          git commit -q -m "Record review marks from #${{ steps.record.outputs.number }}"
+          for attempt in 1 2 3 4 5; do git pull --rebase -q && git push -q && exit 0; sleep $((attempt * 5)); done
+          exit 1
+      - name: Answer on the issue
+        if: always() && steps.record.outcome == 'success'
+        env:
+          NUMBER: ${{ steps.record.outputs.number }}
+          CLOSE: ${{ steps.record.outputs.close }}
+          PROBLEMS: ${{ steps.record.outputs.problems }}
+        run: |
+          if [ -s "$RUNNER_TEMP/reply.md" ]; then gh issue comment "$NUMBER" --body-file "$RUNNER_TEMP/reply.md"; fi
+          if [ "$CLOSE" = "true" ]; then gh issue close "$NUMBER" --reason completed; fi
+          if [ "${PROBLEMS:-0}" != "0" ] && [ "${{ github.event_name }}" = "issues" ]; then gh issue edit "$NUMBER" --add-label needs-fix; fi
+  site:
+    needs: record
+    if: needs.record.outputs.recorded != '0'
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

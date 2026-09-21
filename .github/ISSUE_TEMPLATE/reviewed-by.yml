@@ -1,0 +1,55 @@
+name: Review a definition
+description: Leave a Reviewed-by, Tested-by or Acked-by mark on one Tau Ceti declaration. A bot records it; there is no pull request.
+title: "Review: "
+labels: ["review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A mark records that you checked **one declaration, at one version**. When you submit, a bot records the mark, replies here and closes this issue; the page updates within a minute or two. The **Review this** link on the page fills in the declaration and its version for you.
+  - type: input
+    id: declaration
+    attributes:
+      label: Declaration
+      description: The full Lean name.
+      placeholder: TauCeti.IdealArithmeticFunction.vonMangoldt
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version reviewed
+      description: Filled in by the Review this link, from the version the page showed you. Leave it empty to mean the current version.
+  - type: dropdown
+    id: mark
+    attributes:
+      label: Mark
+      options:
+        - "Reviewed-by: it is the intended mathematical notion"
+        - "Tested-by: its examples and unit tests check out"
+        - "Acked-by: happy with the design, without a full check"
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who reviewed
+      options:
+        - "I did (a person)"
+        - "An AI agent (details below)"
+      default: 0
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent, model and session (AI reviews only)
+      placeholder: Claude Code, Opus 5, session 095781b9
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: What you compared the declaration with (a source, and its definition or theorem number), or what you checked.
+    validations:
+      required: true

@@ -1,0 +1,6 @@
+TauCeti/NumberTheory/ArithmeticDirichletSeries/Basic.lean
+TauCeti/NumberTheory/ArithmeticDirichletSeries/VonMangoldt.lean
+TauCeti/NumberTheory/ArithmeticDirichletSeries/NaturalDensity.lean
+TauCeti/NumberTheory/Chebotarev/SplitsCompletely.lean
+TauCeti/NumberTheory/Chebotarev/FrobeniusPrimeSet.lean
+TauCeti/NumberTheory/ClassFieldTheory/ClassField.lean
