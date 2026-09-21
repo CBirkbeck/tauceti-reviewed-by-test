@@ -129,7 +129,7 @@ def from_event(event: dict, index: dict, ledger: Path, site: str, at: str) -> tu
         record, problem = make_record(mark, index, login, source, at)
         if problem:
             problems += 1
-            lines.append(f"- ✗ {problem}.")
+            lines.append(f"- ✗ {problem}" + ("" if problem.endswith(("?", ".")) else "."))
         elif add(ledger, record):
             recorded += 1
             lines.append(f"- ✓ **{record['trailer']}:** {who(record)} on `{record['decl']}`, version `{record['hash']}`"
