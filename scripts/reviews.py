@@ -173,6 +173,28 @@ def report_state(events: list, number: int):
     return reports(events).get(number)
 
 
+def tally(marks: list) -> dict:
+    """For each kind of mark: how many people and how many AI agents gave it on
+    the current version (each counted once), and how many marks are on earlier
+    versions. What the page and the code show instead of every name."""
+    out = {}
+    for trailer in TRAILERS:
+        given = [mark for mark in marks if mark["trailer"] == trailer]
+        now = [mark for mark in given if mark.get("current", True)]
+        if given:
+            out[trailer] = {"people": len({mark["by"] for mark in now if mark["kind"] == "person"}),
+                            "ai": len({mark["agent"] for mark in now if mark["kind"] == "agent"}),
+                            "earlier": len(given) - len(now)}
+    return out
+
+
+def count_text(people: int, ai: int) -> str:
+    """'3 people and 2 AI agents', '1 person', '1 AI agent'."""
+    parts = ([f"{people} {'person' if people == 1 else 'people'}"] if people else []) + (
+        [f"{ai} AI agent{'' if ai == 1 else 's'}"] if ai else [])
+    return " and ".join(parts) or "nobody"
+
+
 def identity(record: dict) -> tuple:
     return record["decl"], record["hash"], record["trailer"], record["by"], record["kind"], record["agent"]
 

@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from reviews import add, comment_marks, form_mark, form_report, from_event, make_record, make_report  # noqa: E402
+from reviews import add, comment_marks, count_text, form_mark, form_report, from_event, make_record, make_report, tally  # noqa: E402
 
 INDEX = {"tauceti": "c0ffee", "declarations": [
     {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt", "hash": "aaaaaaaaaaaa"},
@@ -73,6 +73,39 @@ class Comments(unittest.TestCase):
         record, problem = make_record(mark, INDEX, "someone", {"issue": 1, "comment": 2}, "now")
         self.assertIsNone(record)
         self.assertEqual(problem, "the mark is one of Reviewed-by, Tested-by")
+
+
+class Tally(unittest.TestCase):
+    """How many people and AI agents gave each mark: what the page and the code show instead of every name."""
+
+    def mark(self, trailer, kind, by, agent="", current=True):
+        return {"trailer": trailer, "kind": kind, "by": by, "agent": agent, "current": current}
+
+    def test_people_and_ai_agents_are_counted_apart_on_the_current_version(self):
+        marks = [self.mark("Reviewed-by", "person", "alice"), self.mark("Reviewed-by", "person", "bob"),
+                 self.mark("Reviewed-by", "agent", "alice", "Claude Code, Opus 5, session a1"),
+                 self.mark("Reviewed-by", "agent", "bob", "Codex, GPT-6, session c1"),
+                 self.mark("Tested-by", "person", "carol"),
+                 self.mark("Reviewed-by", "person", "dave", current=False)]
+        self.assertEqual(tally(marks), {"Reviewed-by": {"people": 2, "ai": 2, "earlier": 1},
+                                        "Tested-by": {"people": 1, "ai": 0, "earlier": 0}})
+
+    def test_the_same_reviewer_twice_counts_once(self):
+        marks = [self.mark("Reviewed-by", "person", "alice"), self.mark("Reviewed-by", "person", "alice"),
+                 self.mark("Reviewed-by", "agent", "alice", "Claude Code, Opus 5, session a1"),
+                 self.mark("Reviewed-by", "agent", "bob", "Claude Code, Opus 5, session a1")]
+        self.assertEqual(tally(marks)["Reviewed-by"], {"people": 1, "ai": 1, "earlier": 0})
+
+    def test_marks_without_a_version_flag_are_current(self):
+        # The batch passes only current marks, without the flag.
+        self.assertEqual(tally([{"trailer": "Tested-by", "kind": "person", "by": "alice", "agent": ""}]),
+                         {"Tested-by": {"people": 1, "ai": 0, "earlier": 0}})
+
+    def test_the_counts_read_as_words(self):
+        self.assertEqual(count_text(3, 2), "3 people and 2 AI agents")
+        self.assertEqual(count_text(1, 0), "1 person")
+        self.assertEqual(count_text(0, 1), "1 AI agent")
+        self.assertEqual(count_text(0, 0), "nobody")
 
 
 class Records(unittest.TestCase):

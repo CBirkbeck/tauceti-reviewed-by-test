@@ -99,6 +99,12 @@ def main() -> int:
                 entry["problems"] = [{"issue": 999, "status": "open", "what": "wrong", "why": "A test report: it misses the prime powers.",
                                       "fix": "", "by": "tester", "kind": "person", "agent": "", "hash": entry["hash"], "current": True,
                                       "at": "2026-09-22T15:00:00Z"}]
+                # Seventeen marks: the page should count them and keep the names one click away.
+                entry["marks"] = ([{"trailer": "Reviewed-by", "by": f"person{n}", "kind": "person", "agent": "", "hash": entry["hash"],
+                                    "current": True, "at": "2026-09-22T15:00:00Z", "evidence": "", "issue": 1} for n in range(12)]
+                                  + [{"trailer": "Reviewed-by", "by": "someone", "kind": "agent", "agent": f"Agent {n}", "hash": entry["hash"],
+                                      "current": True, "at": "2026-09-22T15:00:00Z", "evidence": "Checked.", "issue": 1} for n in range(5)])
+                entry["tally"] = {"Reviewed-by": {"people": 12, "ai": 5, "earlier": 0}}
                 route.fulfill(response=response, json=body)
             flagged = browser.new_page(viewport={"width": 1440, "height": 900})
             flagged.on("pageerror", lambda error: errors.append(str(error)))
@@ -114,6 +120,11 @@ def main() -> int:
             flagged.wait_for_selector("#panel .problem", timeout=15000)
             check("its page shows the report and links to its issue", "misses the prime powers" in flagged.locator("#panel .problem").inner_text()
                   and flagged.locator("#panel .problem a[href$='/issues/999']").count() == 1)
+            check("many marks are counted, people apart from AI agents",
+                  "12 people · 5 AI" in flagged.locator("#panel .mark.summary").first.text_content())
+            check("the names are folded away", not flagged.evaluate("document.querySelector('#panel details.who').open"))
+            flagged.locator("#panel details.who summary").click()
+            check("one click shows who gave each mark", flagged.locator("#panel details.who .mark").count() == 17)
             report = flagged.locator("#panel a.warn").get_attribute("href")
             check("a declaration offers Report a problem, filled in", "template=problem.yml" in report and "declaration=" in report and "version=" in report)
             if shots:

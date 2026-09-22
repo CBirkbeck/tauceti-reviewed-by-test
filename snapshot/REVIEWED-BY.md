@@ -1,9 +1,9 @@
 # Reviewed-by
 
-Current marks on Tau Ceti 39286e7, one row per reviewed declaration.
+Current marks on Tau Ceti 39286e7: how many people and AI agents gave each mark on each reviewed declaration's current version. Each declaration's link shows who.
 
-| Declaration | Marks |
-|---|---|
-| `HeckeRing.GL2.heckeSlashModularFormEnd` | Reviewed-by: @CBirkbeck |
-| `NumberField.Set.HasNaturalDensity` | Reviewed-by: @CBirkbeck |
-| `TauCeti.IdealArithmeticFunction.vonMangoldt` | Reviewed-by: Claude Code, Opus 5, session 095781b9 (AI) via @CBirkbeck, Reviewed-by: @CBirkbeck |
+| Declaration | Reviewed-by | Tested-by |
+|---|---|---|
+| [`HeckeRing.GL2.heckeSlashModularFormEnd`](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=HeckeRing.GL2.heckeSlashModularFormEnd) | 1 person | — |
+| [`NumberField.Set.HasNaturalDensity`](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=NumberField.Set.HasNaturalDensity) | 1 person | — |
+| [`TauCeti.IdealArithmeticFunction.vonMangoldt`](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.IdealArithmeticFunction.vonMangoldt) | 1 person and 1 AI agent | — |

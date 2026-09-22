@@ -91,6 +91,11 @@ class Marks(unittest.TestCase):
         self.assertEqual(entry["hash"], "aaaaaaaaaaaa")
         self.assertEqual([(m["trailer"], m["current"], m["issue"]) for m in entry["marks"]], [("Reviewed-by", True, 3), ("Tested-by", False, 5)])
 
+    def test_the_marks_file_counts_people_and_ai_agents_for_each_mark(self):
+        entry = data(INDEX, RECORDS)["declarations"]["TauCeti.X.f"]
+        self.assertEqual(entry["tally"], {"Reviewed-by": {"people": 1, "ai": 0, "earlier": 0},
+                                          "Tested-by": {"people": 0, "ai": 0, "earlier": 1}})
+
     def test_the_marks_file_carries_the_problem_reports_too(self):
         out = data(INDEX, RECORDS, PROBLEMS)
         self.assertEqual(list(out["declarations"]), ["TauCeti.X.f", "TauCeti.Y.g"])

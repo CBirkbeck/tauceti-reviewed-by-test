@@ -34,6 +34,10 @@ Marks by AI agents name the agent, model and session and are shown apart from
 people's. A person need not say why a declaration is right; an AI agent must
 give its evidence.
 
+However many marks a declaration collects, the page shows one line per kind of
+mark, counting people apart from AI agents ("Reviewed-by · 12 people · 5 AI");
+**Who** opens the full list, with each mark's date, version and evidence.
+
 ## Leaving a mark, from a browser
 
 1. **Review this**, on any declaration the page opens, opens the
@@ -81,9 +85,17 @@ as the kernel's do. This test keeps the reports in its own repository.
 weekly in real use) collects the marks since the last batch into one pull
 request, as the kernel's `b4 trailers -u` collects Reviewed-by replies. The pull
 request shows two forms such a batch into Tau Ceti could take: a data file
-(`snapshot/REVIEWED-BY.md`) and the declarations' docstrings with their marks
-as trailer lines (`snapshot/docstrings.lean`). Its commit message ends in one
-git trailer per mark.
+(`snapshot/REVIEWED-BY.md`) and the declarations' docstrings
+(`snapshot/docstrings.lean`). Both count the marks, so a docstring gains one
+line per kind of mark however many there are, with a link to the page that says
+who:
+
+```lean
+Reviewed-by: 12 people and 5 AI agents ([who](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.X.y))
+```
+
+The full record stays in the ledger and in the git history: the batch's commit
+message ends in one git trailer per new mark.
 
 ## For other readers
 

@@ -16,8 +16,9 @@ site/:
   one sentence, which it loads next;
 - data/m/<n>.json, each module's declarations in full, read when one is opened;
 - reviews.json, the marks and problem reports, for other readers too (the
-  atlas, Tau Ceti's docs): each declaration's current version, every mark on it
-  and every report of a problem with it.
+  atlas, Tau Ceti's docs): each declaration's current version, how many people
+  and AI agents gave each mark, every mark on it and every report of a problem
+  with it.
 """
 from __future__ import annotations
 
@@ -32,7 +33,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from reviews import load, reports  # noqa: E402
+from reviews import load, reports, tally  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 MEANING = {"Reviewed-by": "it is the intended mathematical notion", "Tested-by": "its examples and unit tests check out"}
@@ -71,7 +72,7 @@ def marks_by_declaration(index: dict, records: list) -> dict:
         if record["decl"] in current and record["trailer"] in MEANING:
             marks[record["decl"]].append({**record, "current": record["hash"] == current[record["decl"]]})
     for items in marks.values():
-        items.sort(key=lambda m: (not m["current"], list(MEANING).index(m["trailer"]), m["at"]))
+        items.sort(key=lambda m: (not m["current"], list(MEANING).index(m["trailer"]), m["kind"] == "agent", m["at"]))
     return marks
 
 
@@ -116,6 +117,7 @@ def data(index: dict, records: list, problems: list = ()) -> dict:
     by_name = {item["name"]: item for item in index["declarations"]}
     return {"schema": "reviewed-by/v1", "tauceti": index["tauceti"], "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "declarations": {name: {"hash": by_name[name]["hash"], "kind": by_name[name]["kind"], "url": by_name[name]["url"],
+                                    "tally": tally(marks.get(name, [])),
                                     "marks": [{**{k: m[k] for k in ("trailer", "by", "kind", "agent", "hash", "current", "at", "evidence")},
                                                "issue": m.get("source", {}).get("issue")} for m in marks.get(name, [])],
                                     "problems": [{k: p[k] for k in PROBLEM_KEYS if k in p} for p in found.get(name, [])]}
@@ -181,6 +183,9 @@ pre { background: var(--code); border-radius: 6px; padding: 10px 12px; overflow-
 .trailer { font-weight: 600; } .ai { font-size: 10.5px; font-weight: 700; letter-spacing: .6px; color: var(--agent); }
 .mark.stale { color: var(--stale); } .mark.stale .tick { background: none; border: 1.5px solid var(--stale); color: var(--stale); } .mark.stale .ai { color: var(--stale); }
 .note { font-size: 11.5px; font-style: italic; }
+.mark.summary { padding-right: 12px; } .mark.summary .who { color: var(--muted); }
+details.who { margin: 2px 0 8px; } details.who > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+details.who .head { font-size: 12.5px; font-weight: 600; margin: 8px 0 2px; }
 .quiet.warn { color: var(--problem); border-color: color-mix(in srgb, var(--problem) 40%, var(--line)); }
 .problem { border: 1px solid color-mix(in srgb, var(--problem) 45%, var(--line)); border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 14px; }
 .problem.closed { border-color: var(--line); color: var(--muted); }
@@ -288,7 +293,7 @@ function resultHtml(i) {
   const doc = docs ? docs[i] : '';
   return '<button class="result" data-i="' + i + '"' + (state.d === name ? ' aria-current="true"' : '') + '><div class="name">' + nameHtml(name) + '</div>' +
     '<div class="line2"><span class="kw' + (DEFS.has(kw) ? ' def' : '') + '">' + esc(kw) + '</span>' + (flagged.has(name) ? '<span class="flag" title="A problem is reported">!</span>' : '') +
-    (reviewed.has(name) ? '<span class="tickmini" title="Reviewed">✓</span>' : '') +
+    (reviewed.has(name) ? '<span class="tickmini" title="' + esc(reviewedTip(name)) + '">✓</span>' : '') +
     '<span class="doc1">' + esc(doc || index.modules[index.rows[i][2]]) + '</span></div></button>';
 }
 function renderResults() {
@@ -318,12 +323,36 @@ async function shard(m) {
   if (!shardCache.has(m)) shardCache.set(m, fetch('data/m/' + m + '.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }));
   return shardCache.get(m);
 }
-function markHtml(m) {
+function countText(t) {
+  const parts = [];
+  if (t.people) parts.push(t.people + (t.people === 1 ? ' person' : ' people'));
+  if (t.ai) parts.push(t.ai + ' AI');
+  return parts.join(' · ');
+}
+function tallyHtml(entry) {
+  return Object.entries(entry.tally || {}).map(([trailer, t]) => {
+    const now = countText(t), kind = t.people ? 'person' : t.ai ? 'agent' : 'stale';
+    const earlier = t.earlier ? '<span class="note">' + t.earlier + ' on earlier versions</span>' : '';
+    return '<span class="mark summary ' + kind + '" title="' + esc(trailer + ': ' + (MEANING[trailer] || '')) + '"><span class="tick" aria-hidden="true">✓</span>' +
+      '<span class="trailer">' + esc(trailer) + '</span> <span class="who">' + esc(now) + '</span>' + (now && earlier ? ' · ' : '') + earlier + '</span>';
+  }).join('');
+}
+function reviewedTip(name) {
+  const t = ((marks[name] || {}).tally || {})['Reviewed-by'];
+  return t && countText(t) ? 'Reviewed by ' + countText(t).replace(' · ', ' and ') : 'Reviewed';
+}
+function whoHtml(entry) {
+  return Object.keys(MEANING).map(trailer => {
+    const given = entry.marks.filter(m => m.trailer === trailer);
+    return given.length ? '<p class="head">' + esc(trailer) + '</p><div class="marks">' + given.map(m => markHtml(m, false)).join('') + '</div>' : '';
+  }).join('');
+}
+function markHtml(m, named = true) {
   const who = m.kind === 'agent' ? esc(m.agent) + ' <span class="ai">AI</span> via @' + esc(m.by) : '@' + esc(m.by);
   const tip = m.trailer + ': ' + (MEANING[m.trailer] || '') + '. Version ' + m.hash + ', ' + when(m.at) + '.' + (m.evidence ? ' Evidence: ' + m.evidence : '');
   const href = m.issue ? 'https://github.com/' + SETTINGS.repo + '/issues/' + m.issue : '#';
   return '<a class="mark ' + esc(m.kind) + (m.current ? '' : ' stale') + '" href="' + esc(href) + '" title="' + esc(tip) + '"><span class="tick" aria-hidden="true">✓</span>' +
-    '<span class="trailer">' + esc(m.trailer) + '</span> <span class="who">' + who + '</span>' + (m.current ? '' : ' <span class="note">earlier version</span>') + '</a>';
+    (named ? '<span class="trailer">' + esc(m.trailer) + '</span> ' : '') + '<span class="who">' + who + '</span>' + (m.current ? '' : ' <span class="note">earlier version</span>') + '</a>';
 }
 function problemHtml(p) {
   const who = p.kind === 'agent' ? esc(p.agent) + ' <span class="ai">AI</span> via @' + esc(p.by) : '@' + esc(p.by);
@@ -357,7 +386,9 @@ async function renderPanel() {
     '<a class="quiet warn" href="' + esc(problemLink(name, item.hash)) + '">Report a problem</a>' +
     '<button class="quiet" id="copy">Copy name</button><a class="quiet" href="' + esc(item.url) + '">Source on GitHub</a>' + (long ? '<button class="quiet" id="all">Show all ' + lines.length + ' lines</button>' : '') + '</div>' +
     (entry && entry.problems && entry.problems.length ? '<p class="sub">Problems</p>' + entry.problems.map(problemHtml).join('') : '') +
-    '<p class="sub">Marks</p>' + (entry && entry.marks.length ? '<div class="marks">' + entry.marks.map(markHtml).join('') + '</div>' : '<p class="empty">No marks yet.</p>') +
+    '<p class="sub">Marks</p>' + (entry && entry.marks.length ? '<div class="marks">' + tallyHtml(entry) + '</div>' +
+      '<details class="who"' + (entry.marks.length <= 3 ? ' open' : '') + '><summary>Who (' + entry.marks.length + ')</summary>' +
+      whoHtml(entry) + '</details>' : '<p class="empty">No marks yet.</p>') +
     '<p class="sub">In ' + esc(data.module.split('.').slice(-1)[0]) + '</p><div class="siblings">' + data.declarations.map(d =>
       '<button data-name="' + esc(d.name) + '"' + (d.name === name ? ' aria-current="true"' : '') + '>' + esc(d.name.split('.').slice(-1)[0]) + '</button>').join('') + '</div>';
   const all = $('all');
@@ -450,6 +481,7 @@ def page(index: dict, records: list, settings: dict, problems: list = ()) -> str
     <li>Find the declaration, open it and press <strong>Review this</strong>: a GitHub form opens with its name and version filled in. Choose a mark and submit. Saying what you checked is optional for people; AI agents must.</li>
     <li>A bot records the mark, answers on the issue and closes it. There is no pull request, and this page updates within a few minutes.</li>
     <li>If the declaration changes later, the mark stays but is greyed: it applies to the earlier version until someone reviews the new one.</li>
+    <li>Each declaration counts its marks, people apart from AI agents; <strong>Who</strong> lists them, with dates, versions and evidence.</li>
   </ol>
   <p>If a declaration is wrong, press <strong>Report a problem</strong> instead and say why. The report is the issue for fixing it: it stays open, and the page flags the declaration, until it is closed as fixed or as not a problem.</p>
   <p>Marking many at once: comment lines like <code>Reviewed-by: TauCeti.X.y — what you checked</code> on <a href="{html.escape(bulk)}">issue #{settings['bulk_issue']}</a>. AI agents use the same routes and name the agent, model and session; their marks are shown apart from people's.</p>
