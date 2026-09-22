@@ -1,10 +1,11 @@
 name: Record review marks
 
 # Records marks from the "Review a definition" form (label `review`) and from
-# `Reviewed-by:` lines in comments on an issue labelled `reviews`, and problem
-# reports from the "Report a problem" form (label `problem`): when a report is
-# opened or edited, and when its issue is closed (fixed, or not) or reopened.
-# Then rebuilds the page. The ledgers are committed directly: no pull request.
+# `Reviewed-by:` and `Test:` lines in comments on an issue labelled `reviews`;
+# and the issues that stay open, problem reports (label `problem`) and suggested
+# tests (label `test-suggestion`): when one is opened or edited, and when it is
+# closed (done, or not) or reopened. Then rebuilds the page. The ledgers are
+# committed directly: no pull request.
 on:
   issues:
     types: [opened, edited, closed, reopened]
@@ -27,7 +28,7 @@ jobs:
     if: >-
       (github.event_name == 'issues' && github.event.issue.state == 'open' && contains(github.event.issue.labels.*.name, 'review') &&
        (github.event.action == 'opened' || github.event.action == 'edited')) ||
-      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'problem') &&
+      (github.event_name == 'issues' && (contains(github.event.issue.labels.*.name, 'problem') || contains(github.event.issue.labels.*.name, 'test-suggestion')) &&
        (github.event.issue.state == 'open' || github.event.action == 'closed')) ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request == null && github.event.comment.user.type != 'Bot' &&
        contains(github.event.issue.labels.*.name, 'reviews'))

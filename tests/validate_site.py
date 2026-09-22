@@ -105,6 +105,14 @@ def main() -> int:
                                   + [{"trailer": "Reviewed-by", "by": "someone", "kind": "agent", "agent": f"Agent {n}", "hash": entry["hash"],
                                       "current": True, "at": "2026-09-22T15:00:00Z", "evidence": "Checked.", "issue": 1} for n in range(5)])
                 entry["tally"] = {"Reviewed-by": {"people": 12, "ai": 5, "earlier": 0}}
+                # A unit test, a key result and a suggested test.
+                entry["tests"] = {
+                    "unit": [{"statement": "example : vonMangoldt (K := ℚ) 1 = 0", "path": "TauCeti/X.lean", "line": 5, "url": "u", "passes": True}],
+                    "results": [{"test": "TauCeti.IdealArithmeticFunction.vonMangoldt_one", "status": "passes", "statement": "theorem vonMangoldt_one : vonMangoldt 1 = 0",
+                                 "url": "u", "checks": "The unit ideal gets 0.", "by": "someone", "kind": "agent", "agent": "Agent 1", "at": "2026-09-22T15:00:00Z"}],
+                    "suggested": [{"issue": 998, "status": "open", "test": "At a prime ideal it is log N(P).", "catches": "", "by": "tester", "kind": "person",
+                                   "agent": "", "at": "2026-09-22T15:00:00Z"}],
+                    "tally": {"unit": 1, "results": 1, "suggested": 1}}
                 route.fulfill(response=response, json=body)
             flagged = browser.new_page(viewport={"width": 1440, "height": 900})
             flagged.on("pageerror", lambda error: errors.append(str(error)))
@@ -112,6 +120,9 @@ def main() -> int:
             flagged.goto(url, wait_until="load")
             flagged.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
             check("the overview lists open problems", "Open problems" in flagged.locator("#results").text_content())
+            flagged.select_option("#state-filter", "tested")
+            flagged.wait_for_timeout(300)
+            check("the Tested filter finds declarations whose examples in Tau Ceti test them", len(flagged.evaluate("TauReview.results()")) > 10)
             flagged.select_option("#state-filter", "problem")
             flagged.wait_for_timeout(300)
             check("the reported problems filter lists the reported declaration", flagged.evaluate("TauReview.results()") == [reported])
@@ -125,6 +136,11 @@ def main() -> int:
             check("the names are folded away", not flagged.evaluate("document.querySelector('#panel details.who').open"))
             flagged.locator("#panel details.who summary").click()
             check("one click shows who gave each mark", flagged.locator("#panel details.who .mark").count() == 17)
+            check("its tests are counted", "1 unit test · 1 key result · 1 suggested" in flagged.locator("#panel .mark.tested").text_content())
+            check("each test shows its statement and whether it passes",
+                  flagged.locator("#panel details.which .test").count() == 3 and flagged.locator("#panel details.which .pass").count() == 2)
+            suggest = flagged.locator("#panel a[href*='template=test.yml']").get_attribute("href")
+            check("a declaration offers Suggest a test, filled in", "declaration=" in suggest and "version=" in suggest)
             report = flagged.locator("#panel a.warn").get_attribute("href")
             check("a declaration offers Report a problem, filled in", "template=problem.yml" in report and "declaration=" in report and "version=" in report)
             if shots:

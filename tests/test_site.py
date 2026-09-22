@@ -6,7 +6,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from build_site import data, marks_by_declaration, page, problem_link, problems_by_declaration, review_link, search_index, shards, summary  # noqa: E402
+from build_site import (data, marks_by_declaration, page, problem_link, problems_by_declaration, review_link, search_index,  # noqa: E402
+                        shards, suggest_link, summary)
+from reviews import tests_by_declaration  # noqa: E402
 
 INDEX = {"tauceti": "c0ffee1234567", "read": "2026-09-21T15:00:00Z",
          "modules": [{"module": "TauCeti.NumberTheory.X", "path": "TauCeti/NumberTheory/X.lean", "doc": "# X\n\nAbout X.", "url": "u", "declarations": 2},
@@ -20,7 +22,7 @@ INDEX = {"tauceti": "c0ffee1234567", "read": "2026-09-21T15:00:00Z",
               "line": 1, "end": 1, "doc": "A map.", "source": "def g := 2", "hash": "cccccccccccc", "url": "u3"}]}
 RECORDS = [
     {"decl": "TauCeti.X.f", "hash": "aaaaaaaaaaaa", "trailer": "Reviewed-by", "by": "alice", "kind": "person", "agent": "", "evidence": "Matches Neukirch.", "source": {"issue": 3}, "at": "2026-09-21T15:10:00Z"},
-    {"decl": "TauCeti.X.f", "hash": "000000000000", "trailer": "Tested-by", "by": "bob", "kind": "agent", "agent": "Codex, session c1", "evidence": "", "source": {"issue": 5, "comment": 9}, "at": "2026-09-20T10:00:00Z"},
+    {"decl": "TauCeti.X.f", "hash": "000000000000", "trailer": "Reviewed-by", "by": "bob", "kind": "agent", "agent": "Codex, session c1", "evidence": "Checked.", "source": {"issue": 5, "comment": 9}, "at": "2026-09-20T10:00:00Z"},
     {"decl": "TauCeti.Gone", "hash": "dddddddddddd", "trailer": "Tested-by", "by": "carol", "kind": "person", "agent": "", "evidence": "", "source": {"issue": 6}, "at": "2026-09-19T10:00:00Z"}]
 SETTINGS = {"repo": "CBirkbeck/test", "bulk_issue": 1, "tauceti": "c0ffee1234567"}
 PROBLEMS = [
@@ -74,10 +76,56 @@ class Problems(unittest.TestCase):
         self.assertEqual([(p["issue"], p["status"]) for p in found], [(14, "open"), (13, "fixed")])
 
 
+EXAMPLES = [{"statement": "example : TauCeti.X.f = 1", "path": "TauCeti/NumberTheory/X.lean", "line": 8, "url": "u8", "sorry": False,
+             "tests": ["TauCeti.X.f"]},
+            {"statement": "example : TauCeti.X.f + TauCeti.Y.g = 3", "path": "TauCeti/Algebra/Y.lean", "line": 4, "url": "u4", "sorry": True,
+             "tests": ["TauCeti.X.f", "TauCeti.Y.g"]}]
+TESTED = dict(INDEX, examples=EXAMPLES)
+LISTED = [{"schema": "tests/v1", "decl": "TauCeti.X.f", "test": "TauCeti.X.f_one", "checks": "its value is one", "by": "bob", "kind": "agent",
+           "agent": "Codex, session c1", "source": {"issue": 1, "comment": 7}, "at": "2026-09-22T10:00:00Z"},
+          {"schema": "tests/v1", "decl": "TauCeti.X.f", "test": "TauCeti.Gone", "checks": "renamed since", "by": "bob", "kind": "agent",
+           "agent": "Codex, session c1", "source": {"issue": 1, "comment": 7}, "at": "2026-09-22T10:00:00Z"}]
+SUGGESTED = [{"schema": "suggestion/v1", "event": "reported", "issue": 30, "decl": "TauCeti.Y.g", "hash": "cccccccccccc", "tauceti": "c0ffee",
+              "test": "g is two", "catches": "g = 3", "by": "alice", "kind": "person", "agent": "", "at": "2026-09-22T11:00:00Z"}]
+
+
+class Tests(unittest.TestCase):
+    """What a declaration is tested by: its unit tests, listed key results and suggested tests."""
+
+    def test_examples_that_name_a_declaration_are_its_unit_tests(self):
+        found = tests_by_declaration(TESTED, [], [])
+        self.assertEqual([(t["line"], t["passes"]) for t in found["TauCeti.X.f"]["unit"]], [(8, True), (4, False)])
+        self.assertEqual([t["line"] for t in found["TauCeti.Y.g"]["unit"]], [4])
+
+    def test_a_listed_result_passes_while_it_is_in_tau_ceti(self):
+        results = tests_by_declaration(TESTED, LISTED, [])["TauCeti.X.f"]["results"]
+        self.assertEqual([(r["test"], r["status"], r["statement"]) for r in results],
+                         [("TauCeti.X.f_one", "passes", "lemma f_one : f = 1"), ("TauCeti.Gone", "missing", "")])
+
+    def test_a_suggested_test_is_listed_until_it_is_written(self):
+        closed = {"schema": "suggestion/v1", "event": "closed", "issue": 30, "resolution": "written", "by": "carol", "at": "2026-09-23T10:00:00Z"}
+        self.assertEqual(tests_by_declaration(TESTED, [], SUGGESTED)["TauCeti.Y.g"]["suggested"][0]["status"], "open")
+        self.assertEqual(tests_by_declaration(TESTED, [], SUGGESTED + [closed])["TauCeti.Y.g"]["suggested"][0]["status"], "written")
+
+    def test_the_counts_are_of_passing_tests_and_open_suggestions(self):
+        found = tests_by_declaration(TESTED, LISTED, SUGGESTED)
+        self.assertEqual(found["TauCeti.X.f"]["tally"], {"unit": 1, "results": 1, "suggested": 0})
+        self.assertEqual(found["TauCeti.Y.g"]["tally"], {"unit": 0, "results": 0, "suggested": 1})
+
+    def test_the_marks_file_carries_the_tests(self):
+        out = data(TESTED, RECORDS, (), LISTED, SUGGESTED)
+        self.assertEqual(out["declarations"]["TauCeti.X.f"]["tests"]["tally"], {"unit": 1, "results": 1, "suggested": 0})
+        self.assertEqual(out["declarations"]["TauCeti.Y.g"]["marks"], [])
+
+    def test_suggest_a_test_fills_in_the_declaration_and_the_version_shown(self):
+        query = parse_qs(urlparse(suggest_link("CBirkbeck/test", INDEX["declarations"][0])).query)
+        self.assertEqual((query["template"], query["declaration"], query["version"]), (["test.yml"], ["TauCeti.X.f"], ["aaaaaaaaaaaa"]))
+
+
 class Marks(unittest.TestCase):
     def test_marks_on_an_earlier_version_are_stale(self):
         marks = marks_by_declaration(INDEX, RECORDS)["TauCeti.X.f"]
-        self.assertEqual([(m["trailer"], m["current"]) for m in marks], [("Reviewed-by", True), ("Tested-by", False)])
+        self.assertEqual([(m["trailer"], m["current"]) for m in marks], [("Reviewed-by", True), ("Reviewed-by", False)])
 
     def test_a_mark_of_a_kind_no_longer_used_is_not_shown(self):
         retired = dict(RECORDS[0], trailer="Acked-by", by="dave")
@@ -89,12 +137,11 @@ class Marks(unittest.TestCase):
         self.assertEqual(list(out["declarations"]), ["TauCeti.X.f"])
         entry = out["declarations"]["TauCeti.X.f"]
         self.assertEqual(entry["hash"], "aaaaaaaaaaaa")
-        self.assertEqual([(m["trailer"], m["current"], m["issue"]) for m in entry["marks"]], [("Reviewed-by", True, 3), ("Tested-by", False, 5)])
+        self.assertEqual([(m["trailer"], m["current"], m["issue"]) for m in entry["marks"]], [("Reviewed-by", True, 3), ("Reviewed-by", False, 5)])
 
     def test_the_marks_file_counts_people_and_ai_agents_for_each_mark(self):
         entry = data(INDEX, RECORDS)["declarations"]["TauCeti.X.f"]
-        self.assertEqual(entry["tally"], {"Reviewed-by": {"people": 1, "ai": 0, "earlier": 0},
-                                          "Tested-by": {"people": 0, "ai": 0, "earlier": 1}})
+        self.assertEqual(entry["tally"], {"Reviewed-by": {"people": 1, "ai": 0, "earlier": 1}})
 
     def test_the_marks_file_carries_the_problem_reports_too(self):
         out = data(INDEX, RECORDS, PROBLEMS)
@@ -139,6 +186,7 @@ class Page(unittest.TestCase):
         html = page(INDEX, RECORDS, SETTINGS, PROBLEMS)
         self.assertIn("1 open problem", html)
         self.assertIn('<option value="problem">', html)
+        self.assertIn('<option value="tested">', html)
 
     def test_settings_cannot_close_the_script(self):
         html = page(INDEX, RECORDS, dict(SETTINGS, repo="</script><script>alert(1)</script>"))

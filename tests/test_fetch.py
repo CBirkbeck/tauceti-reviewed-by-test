@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from fetch_declarations import declarations  # noqa: E402
+from fetch_declarations import declarations, resolve_tests, scan  # noqa: E402
 
 SOURCE = '''/-!
 # Ideal arithmetic functions
@@ -129,6 +129,63 @@ class Kinds(unittest.TestCase):
         self.assertEqual((self.found["two_eq"]["kind"], self.found["two_eq"]["keyword"]), ("theorem", "lemma"))
 
 
+TESTED = '''namespace TauCeti
+
+open Classical
+
+namespace IdealArithmeticFunction
+
+/-- The **ideal von Mangoldt function**. -/
+noncomputable def vonMangoldt : IdealArithmeticFunction K := fun A ↦ 0
+
+theorem vonMangoldt_one : vonMangoldt (K := K) 1 = 0 := by
+  sorry
+
+example : vonMangoldt (K := ℚ) 1 = 0 := vonMangoldt_one
+
+end IdealArithmeticFunction
+
+example (f : IdealArithmeticFunction K) : IdealArithmeticFunction.vonMangoldt 1 = f 1 := by
+  sorry
+
+end TauCeti
+
+open TauCeti.IdealArithmeticFunction in
+example : (vonMangoldt : TauCeti.IdealArithmeticFunction ℚ) = vonMangoldt := rfl
+'''
+
+
+class Examples(unittest.TestCase):
+    """An `example` is a unit test: read with the names in its statement, resolved as Lean would."""
+
+    def setUp(self):
+        self.found, self.examples = scan(TESTED, "TauCeti/Y.lean", "abc")
+
+    def test_each_example_is_read_with_its_statement_and_lines(self):
+        self.assertEqual([(e["line"], e["statement"]) for e in self.examples], [
+            (13, "example : vonMangoldt (K := ℚ) 1 = 0"),
+            (17, "example (f : IdealArithmeticFunction K) : IdealArithmeticFunction.vonMangoldt 1 = f 1"),
+            (23, "example : (vonMangoldt : TauCeti.IdealArithmeticFunction ℚ) = vonMangoldt")])
+        self.assertEqual(self.examples[0]["url"], "https://github.com/TauCetiProject/TauCeti/blob/abc/TauCeti/Y.lean#L13-L13")
+
+    def test_a_proof_by_sorry_is_flagged(self):
+        self.assertEqual([e["sorry"] for e in self.examples], [False, True, False])
+        self.assertTrue(self.found[1]["sorry"])
+        self.assertFalse(self.found[0]["sorry"])
+
+    def test_names_resolve_through_namespaces_and_opens(self):
+        names = {d["name"] for d in self.found} | {"TauCeti.IdealArithmeticFunction"}
+        tests = resolve_tests(self.examples, names)
+        self.assertEqual([sorted(e["tests"]) for e in tests], [
+            ["TauCeti.IdealArithmeticFunction.vonMangoldt"],
+            ["TauCeti.IdealArithmeticFunction", "TauCeti.IdealArithmeticFunction.vonMangoldt"],
+            ["TauCeti.IdealArithmeticFunction", "TauCeti.IdealArithmeticFunction.vonMangoldt"]])
+
+    def test_a_local_name_does_not_resolve_to_a_declaration(self):
+        tests = resolve_tests(self.examples, {"TauCeti.f", "TauCeti.IdealArithmeticFunction.vonMangoldt"})
+        self.assertNotIn("TauCeti.f", tests[1]["tests"])
+
+
 class Clone(unittest.TestCase):
     def test_every_module_of_a_clone_is_read(self):
         import tempfile
@@ -144,6 +201,7 @@ class Clone(unittest.TestCase):
         self.assertEqual(index["tauceti"], "abc")
         self.assertEqual(len(index["declarations"]), 8)
         self.assertEqual(index["modules"][0]["doc"].splitlines()[0], "# Ideal arithmetic functions")
+        self.assertEqual(index["examples"], [])
 
 
 if __name__ == "__main__":

@@ -3,10 +3,10 @@
 
   python3 scripts/build_site.py
 
-Reads data/declarations.json (every declaration of Tau Ceti at the pinned
-commit, written by fetch_declarations.py), reviews/records.jsonl (the marks),
-reviews/problems.jsonl (the problem reports) and data/settings.json, and writes
-site/:
+Reads data/declarations.json (every declaration and example of Tau Ceti at the
+pinned commit, written by fetch_declarations.py), the ledgers in reviews/ (the
+marks, listed tests, suggested tests and problem reports) and
+data/settings.json, and writes site/:
 
 - index.html, the page: search every declaration by name or docstring, filter
   definitions from theorems and lemmas, by area and by review, and open one to
@@ -17,8 +17,8 @@ site/:
 - data/m/<n>.json, each module's declarations in full, read when one is opened;
 - reviews.json, the marks and problem reports, for other readers too (the
   atlas, Tau Ceti's docs): each declaration's current version, how many people
-  and AI agents gave each mark, every mark on it and every report of a problem
-  with it.
+  and AI agents gave each mark, every mark on it, the tests it passes and every
+  report of a problem with it.
 """
 from __future__ import annotations
 
@@ -33,10 +33,10 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from reviews import load, reports, tally  # noqa: E402
+from reviews import load, reports, tally, tests_by_declaration  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-MEANING = {"Reviewed-by": "it is the intended mathematical notion", "Tested-by": "its examples and unit tests check out"}
+MEANING = {"Reviewed-by": "it is the intended mathematical notion"}
 DEFINITIONS = {"def", "structure", "class", "inductive", "instance"}
 # What reviews.json says about each problem report.
 PROBLEM_KEYS = ("issue", "status", "what", "why", "fix", "by", "kind", "agent", "hash", "current", "at", "closedBy", "closedAt")
@@ -44,6 +44,11 @@ PROBLEM_KEYS = ("issue", "status", "what", "why", "fix", "by", "kind", "agent", 
 
 def review_link(repo: str, item: dict) -> str:
     query = urlencode({"template": "reviewed-by.yml", "title": f"Review: {item['name']}", "declaration": item["name"], "version": item["hash"]})
+    return f"https://github.com/{repo}/issues/new?{query}"
+
+
+def suggest_link(repo: str, item: dict) -> str:
+    query = urlencode({"template": "test.yml", "title": f"Test: {item['name']}", "declaration": item["name"], "version": item["hash"]})
     return f"https://github.com/{repo}/issues/new?{query}"
 
 
@@ -111,17 +116,19 @@ def shards(index: dict) -> dict:
     return out
 
 
-def data(index: dict, records: list, problems: list = ()) -> dict:
+def data(index: dict, records: list, problems: list = (), listed: list = (), suggestions: list = ()) -> dict:
     marks = marks_by_declaration(index, records)
     found = problems_by_declaration(index, list(problems))
+    tests = tests_by_declaration(index, list(listed), list(suggestions))
     by_name = {item["name"]: item for item in index["declarations"]}
     return {"schema": "reviewed-by/v1", "tauceti": index["tauceti"], "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "declarations": {name: {"hash": by_name[name]["hash"], "kind": by_name[name]["kind"], "url": by_name[name]["url"],
                                     "tally": tally(marks.get(name, [])),
                                     "marks": [{**{k: m[k] for k in ("trailer", "by", "kind", "agent", "hash", "current", "at", "evidence")},
                                                "issue": m.get("source", {}).get("issue")} for m in marks.get(name, [])],
-                                    "problems": [{k: p[k] for k in PROBLEM_KEYS if k in p} for p in found.get(name, [])]}
-                             for name in sorted(set(marks) | set(found))}}
+                                    "problems": [{k: p[k] for k in PROBLEM_KEYS if k in p} for p in found.get(name, [])],
+                                    **({"tests": tests[name]} if name in tests else {})}
+                             for name in sorted(set(marks) | set(found) | set(tests))}}
 
 
 STYLE = """
@@ -184,8 +191,13 @@ pre { background: var(--code); border-radius: 6px; padding: 10px 12px; overflow-
 .mark.stale { color: var(--stale); } .mark.stale .tick { background: none; border: 1.5px solid var(--stale); color: var(--stale); } .mark.stale .ai { color: var(--stale); }
 .note { font-size: 11.5px; font-style: italic; }
 .mark.summary { padding-right: 12px; } .mark.summary .who { color: var(--muted); }
-details.who { margin: 2px 0 8px; } details.who > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
-details.who .head { font-size: 12.5px; font-weight: 600; margin: 8px 0 2px; }
+details.who, details.which { margin: 2px 0 8px; }
+details.who > summary, details.which > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+details.who .head, details.which .head { font-size: 12.5px; font-weight: 600; margin: 8px 0 2px; }
+.mark.tested .tick { background: var(--accent); color: var(--surface); }
+.test { border-top: 1px solid var(--line); padding: 6px 0 2px; font-size: 13.5px; } .test p { margin: 3px 0; }
+.test .line { margin: 0; font-size: 12.5px; color: var(--muted); } .test pre { margin: 4px 0; white-space: pre-wrap; }
+.pass { color: var(--person); font-weight: 600; } .fail { color: var(--problem); font-weight: 600; }
 .quiet.warn { color: var(--problem); border-color: color-mix(in srgb, var(--problem) 40%, var(--line)); }
 .problem { border: 1px solid color-mix(in srgb, var(--problem) 45%, var(--line)); border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 14px; }
 .problem.closed { border-color: var(--line); color: var(--muted); }
@@ -220,7 +232,7 @@ const MEANING = {'Reviewed-by': 'it is the intended mathematical notion', 'Teste
 const WHAT = {wrong: 'Wrong', misleading: 'Misleading name or docstring', other: 'Something else is off'};
 const CLOSED = {fixed: 'Fixed', 'not planned': 'Closed without a fix', duplicate: 'Closed as a duplicate'};
 const PAGE = 60;
-let index = null, lower = [], leafLower = [], area = [], docs = null, docsLower = null, marks = {}, reviewed = new Set(), flagged = new Set();
+let index = null, lower = [], leafLower = [], area = [], docs = null, docsLower = null, marks = {}, reviewed = new Set(), flagged = new Set(), tested = new Set();
 let state = {q: '', group: 'all', status: 'all', area: '', d: ''}, shown = PAGE, results = [];
 const shardCache = new Map();
 
@@ -233,6 +245,10 @@ function prose(text) {
 const when = s => { const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'}); };
 function reviewLink(name, hash) {
   const q = new URLSearchParams({template: 'reviewed-by.yml', title: 'Review: ' + name, declaration: name, version: hash});
+  return 'https://github.com/' + SETTINGS.repo + '/issues/new?' + q.toString();
+}
+function suggestLink(name, hash) {
+  const q = new URLSearchParams({template: 'test.yml', title: 'Test: ' + name, declaration: name, version: hash});
   return 'https://github.com/' + SETTINGS.repo + '/issues/new?' + q.toString();
 }
 function problemLink(name, hash) {
@@ -261,6 +277,7 @@ function passes(i) {
   if (state.status === 'reviewed' && !reviewed.has(index.rows[i][0])) return false;
   if (state.status === 'open' && reviewed.has(index.rows[i][0])) return false;
   if (state.status === 'problem' && !flagged.has(index.rows[i][0])) return false;
+  if (state.status === 'tested' && !tested.has(index.rows[i][0])) return false;
   return true;
 }
 function search() {
@@ -302,7 +319,8 @@ function renderResults() {
   if (!filtered) {
     const counts = {};
     area.forEach(a => { counts[a] = (counts[a] || 0) + 1; });
-    const recent = Object.entries(marks).flatMap(([name, entry]) => entry.marks.map(m => ({name, ...m}))).sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 12);
+    const recent = Object.entries(marks).flatMap(([name, entry]) => entry.marks.map(m => ({name, ...m}))).sort((a, b) => (b.at || '').localeCompare(a.at || ''))
+      .filter((m, n, all) => all.findIndex(o => o.name === m.name) === n).slice(0, 12);
     const reported = Object.entries(marks).flatMap(([name, entry]) => (entry.problems || []).filter(p => p.status === 'open').map(p => ({name, ...p})))
       .sort((a, b) => (b.at || '').localeCompare(a.at || '')).filter((p, n, all) => all.findIndex(q => q.name === p.name) === n);
     const row = m => { const i = rowOf.get(m.name); return i === undefined ? '' : resultHtml(i); };
@@ -340,6 +358,33 @@ function tallyHtml(entry) {
 function reviewedTip(name) {
   const t = ((marks[name] || {}).tally || {})['Reviewed-by'];
   return t && countText(t) ? 'Reviewed by ' + countText(t).replace(' · ', ' and ') : 'Reviewed';
+}
+function byHtml(r) {
+  return r.kind === 'agent' ? esc(r.agent) + ' <span class="ai">AI</span> via @' + esc(r.by) : '@' + esc(r.by);
+}
+function testCount(t) {
+  const parts = [];
+  if (t.unit) parts.push(t.unit + (t.unit === 1 ? ' unit test' : ' unit tests'));
+  if (t.results) parts.push(t.results + (t.results === 1 ? ' key result' : ' key results'));
+  if (t.suggested) parts.push(t.suggested + ' suggested');
+  return parts.join(' · ');
+}
+const PASSES = {passes: '<span class="pass">passes</span>', sorry: '<span class="fail">has sorry</span>', missing: '<span class="fail">not in Tau Ceti at this commit</span>'};
+function testsHtml(tests) {
+  const total = tests.unit.length + tests.results.length + tests.suggested.length;
+  const unit = tests.unit.map(u => '<div class="test"><p class="line">' + PASSES[u.passes ? 'passes' : 'sorry'] + ' · <a href="' + esc(u.url) + '">' +
+    esc(u.path) + ', line ' + esc(u.line) + '</a></p><pre>' + esc(u.statement) + '</pre></div>').join('');
+  const results = tests.results.map(r => '<div class="test"><p class="line">' + (PASSES[r.status] || '') + ' · ' +
+    (r.url ? '<a class="mono" href="' + esc(r.url) + '">' + esc(r.test) + '</a>' : '<span class="mono">' + esc(r.test) + '</span>') + ' · listed by ' + byHtml(r) + '</p>' +
+    (r.statement ? '<pre>' + esc(r.statement) + '</pre>' : '') + (r.checks ? '<p>' + esc(r.checks) + '</p>' : '') + '</div>').join('');
+  const suggested = tests.suggested.map(t => '<div class="test"><p class="line">' + (t.status === 'open' ? 'Suggested' : esc(t.status)) + ' by ' + byHtml(t) +
+    ', ' + when(t.at) + ' · <a href="' + esc(issueUrl(t.issue)) + '">Issue #' + esc(t.issue) + '</a></p>' + prose(t.test) +
+    (t.catches ? '<p class="note">Would catch: ' + esc(t.catches) + '</p>' : '') + '</div>').join('');
+  return '<div class="marks"><span class="mark summary tested" title="What it passes: unit tests and key results in Tau Ceti"><span class="tick" aria-hidden="true">✓</span>' +
+    '<span class="trailer">Tested by</span> <span class="who">' + esc(testCount(tests.tally) || 'nothing that passes yet') + '</span></span></div>' +
+    '<details class="which"' + (total <= 3 ? ' open' : '') + '><summary>Which (' + total + ')</summary>' +
+    (unit ? '<p class="head">Unit tests: examples in Tau Ceti that name it</p>' + unit : '') +
+    (results ? '<p class="head">Key results listed as tests</p>' + results : '') + (suggested ? '<p class="head">Suggested tests</p>' + suggested : '') + '</details>';
 }
 function whoHtml(entry) {
   return Object.keys(MEANING).map(trailer => {
@@ -383,12 +428,14 @@ async function renderPanel() {
     (item.doc ? '<div class="doc">' + prose(item.doc) + '</div>' : '') +
     '<pre><code id="src">' + esc(long ? lines.slice(0, 60).join('\n') + '\n…' : item.source) + '</code></pre>' +
     '<div class="actions"><a class="primary" href="' + esc(reviewLink(name, item.hash)) + '">Review this</a>' +
+    '<a class="quiet" href="' + esc(suggestLink(name, item.hash)) + '">Suggest a test</a>' +
     '<a class="quiet warn" href="' + esc(problemLink(name, item.hash)) + '">Report a problem</a>' +
     '<button class="quiet" id="copy">Copy name</button><a class="quiet" href="' + esc(item.url) + '">Source on GitHub</a>' + (long ? '<button class="quiet" id="all">Show all ' + lines.length + ' lines</button>' : '') + '</div>' +
     (entry && entry.problems && entry.problems.length ? '<p class="sub">Problems</p>' + entry.problems.map(problemHtml).join('') : '') +
-    '<p class="sub">Marks</p>' + (entry && entry.marks.length ? '<div class="marks">' + tallyHtml(entry) + '</div>' +
+    '<p class="sub">Reviews</p>' + (entry && entry.marks.length ? '<div class="marks">' + tallyHtml(entry) + '</div>' +
       '<details class="who"' + (entry.marks.length <= 3 ? ' open' : '') + '><summary>Who (' + entry.marks.length + ')</summary>' +
-      whoHtml(entry) + '</details>' : '<p class="empty">No marks yet.</p>') +
+      whoHtml(entry) + '</details>' : '<p class="empty">No reviews yet.</p>') +
+    '<p class="sub">Tests</p>' + (entry && entry.tests ? testsHtml(entry.tests) : '<p class="empty">No tests yet: no example in Tau Ceti names it, and none is listed or suggested.</p>') +
     '<p class="sub">In ' + esc(data.module.split('.').slice(-1)[0]) + '</p><div class="siblings">' + data.declarations.map(d =>
       '<button data-name="' + esc(d.name) + '"' + (d.name === name ? ' aria-current="true"' : '') + '>' + esc(d.name.split('.').slice(-1)[0]) + '</button>').join('') + '</div>';
   const all = $('all');
@@ -435,6 +482,7 @@ window.addEventListener('popstate', () => { readHash(); render(); });
   marks = reviews.declarations || {};
   reviewed = new Set(Object.entries(marks).filter(([, e]) => e.marks.some(m => m.current)).map(([name]) => name));
   flagged = new Set(Object.entries(marks).filter(([, e]) => (e.problems || []).some(p => p.status === 'open')).map(([name]) => name));
+  tested = new Set(Object.entries(marks).filter(([, e]) => e.tests && (e.tests.tally.unit || e.tests.tally.results)).map(([name]) => name));
   lower = index.rows.map(r => r[0].toLowerCase());
   leafLower = lower.map(n => n.slice(n.lastIndexOf('.') + 1));
   area = index.rows.map(r => (index.modules[r[2]].split('.')[1] || index.modules[r[2]]));
@@ -478,11 +526,12 @@ def page(index: dict, records: list, settings: dict, problems: list = ()) -> str
 <details class="how">
   <summary>How to leave a mark</summary>
   <ol>
-    <li>Find the declaration, open it and press <strong>Review this</strong>: a GitHub form opens with its name and version filled in. Choose a mark and submit. Saying what you checked is optional for people; AI agents must.</li>
+    <li>Find the declaration, open it and press <strong>Review this</strong>: a GitHub form opens with its name and version filled in. Submit it to say it is the intended mathematical notion. Saying what you checked is optional for people; AI agents must.</li>
     <li>A bot records the mark, answers on the issue and closes it. There is no pull request, and this page updates within a few minutes.</li>
     <li>If the declaration changes later, the mark stays but is greyed: it applies to the earlier version until someone reviews the new one.</li>
-    <li>Each declaration counts its marks, people apart from AI agents; <strong>Who</strong> lists them, with dates, versions and evidence.</li>
+    <li>Each declaration counts its reviews, people apart from AI agents; <strong>Who</strong> lists them, with dates, versions and evidence.</li>
   </ol>
+  <p><strong>Tests</strong> are what a declaration passes, rather than a mark: its unit tests (the examples in Tau Ceti that name it), key results listed as its tests, mostly by AI agents, and tests anyone suggests with <strong>Suggest a test</strong>. A test passes while it is in Tau Ceti at the pinned commit without <code>sorry</code>. <strong>Which</strong> shows each with its statement.</p>
   <p>If a declaration is wrong, press <strong>Report a problem</strong> instead and say why. The report is the issue for fixing it: it stays open, and the page flags the declaration, until it is closed as fixed or as not a problem.</p>
   <p>Marking many at once: comment lines like <code>Reviewed-by: TauCeti.X.y — what you checked</code> on <a href="{html.escape(bulk)}">issue #{settings['bulk_issue']}</a>. AI agents use the same routes and name the agent, model and session; their marks are shown apart from people's.</p>
   <dl class="legend">{legend}</dl>
@@ -492,7 +541,7 @@ def page(index: dict, records: list, settings: dict, problems: list = ()) -> str
   <div class="chips" role="group" aria-label="Kind">
     <button data-group="all" aria-pressed="true">All</button><button data-group="def" aria-pressed="false">Definitions</button><button data-group="thm" aria-pressed="false">Theorems and lemmas</button>
   </div>
-  <select id="state-filter" aria-label="Review"><option value="all">Reviewed or not</option><option value="reviewed">Reviewed</option><option value="open">Not yet reviewed</option><option value="problem">Reported problems</option></select>
+  <select id="state-filter" aria-label="Review"><option value="all">Reviewed or not</option><option value="reviewed">Reviewed</option><option value="open">Not yet reviewed</option><option value="tested">Tested</option><option value="problem">Reported problems</option></select>
   <select id="area-filter" aria-label="Area"><option value="">Every area</option></select>
 </div></div>
 <div class="layout">
@@ -514,6 +563,7 @@ def main() -> int:
     settings = json.loads((ROOT / "data" / "settings.json").read_text(encoding="utf-8"))
     records = load(ROOT / "reviews" / "records.jsonl")
     problems = load(ROOT / "reviews" / "problems.jsonl")
+    listed, suggestions = load(ROOT / "reviews" / "tests.jsonl"), load(ROOT / "reviews" / "suggestions.jsonl")
     out = ROOT / "site"
     if (out / "data").exists():
         shutil.rmtree(out / "data")
@@ -524,7 +574,7 @@ def main() -> int:
     (out / "data" / "docs.json").write_text(json.dumps([summary(item["doc"]) for item in index["declarations"]], **compact), encoding="utf-8")
     for n, shard in shards(index).items():
         (out / "data" / "m" / f"{n}.json").write_text(json.dumps(shard, **compact), encoding="utf-8")
-    (out / "reviews.json").write_text(json.dumps(data(index, records, problems), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    (out / "reviews.json").write_text(json.dumps(data(index, records, problems, listed, suggestions), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"site: {len(index['declarations'])} declarations in {len(index['modules'])} modules, {len(records)} marks, "
           f"{len(reports(problems))} problem reports")
     return 0

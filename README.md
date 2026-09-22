@@ -1,7 +1,8 @@
 # Reviewed-by for Tau Ceti — a test
 
 A test of **review marks** on Tau Ceti declarations: who has checked which
-definition, what they checked, and on which version. It is modelled on the
+definition, what they checked, and on which version; and of the **tests** each
+declaration passes. It is modelled on the
 Linux kernel's `Reviewed-by:` trailers, and every mark is left from a browser,
 without a pull request. A declaration that is wrong gets a **problem report**
 instead: what is wrong and why, in an issue that stays open until it is fixed. Nothing here changes Tau Ceti: the page reads every
@@ -25,7 +26,9 @@ search box.
 | Mark | Meaning |
 |---|---|
 | `Reviewed-by` | it is the intended mathematical notion |
-| `Tested-by` | its examples and unit tests check out |
+
+What a declaration is tested by is not a mark but a list of tests it passes
+(below).
 
 A mark is pinned to a hash of the declaration's source (a definition whole, a
 theorem by its statement). When the declaration changes, the mark stays but is
@@ -42,8 +45,9 @@ mark, counting people apart from AI agents ("Reviewed-by · 12 people · 5 AI");
 
 1. **Review this**, on any declaration the page opens, opens the
    [Review a definition](.github/ISSUE_TEMPLATE/reviewed-by.yml) form with the
-   declaration and its version filled in. Choose a mark and submit. Saying what
-   you checked is optional for a person and required of an AI agent.
+   declaration and its version filled in. Submit it to say the declaration is
+   the intended mathematical notion. Saying what you checked is optional for a
+   person and required of an AI agent.
 2. The [Record review marks](.github/workflows/record.yml) workflow checks the
    declaration exists, appends the mark to
    [`reviews/records.jsonl`](reviews/records.jsonl) (committed directly: no pull
@@ -54,6 +58,37 @@ mark, counting people apart from AI agents ("Reviewed-by · 12 people · 5 AI");
    `<!--reviewed-by:v1 {"agent": "<agent, model, session>"}-->` to its comment.
 
 GitHub authenticates who submitted each mark.
+
+## Tests
+
+What gives confidence that a definition or result is right is the tests it
+passes, so the page lists them under **Tests**, counted
+("Tested by · 7 unit tests · 2 key results · 1 suggested"), with **Which**
+showing each test's statement and whether it passes. There are three kinds:
+
+- **Unit tests**, found automatically: the `example`s in Tau Ceti whose
+  statement names the declaration, resolved as Lean resolves names (through
+  the namespaces around the example and those its file opens).
+  `scripts/fetch_declarations.py` reads them with the declarations.
+- **Key results**, mostly listed by AI agents: lemmas of Tau Ceti that pin the
+  declaration down (a value, a degenerate case, agreement with a Mathlib
+  notion), each with what it checks. List them with lines such as
+  `Test: TauCeti.IdealArithmeticFunction.vonMangoldt — TauCeti.IdealArithmeticFunction.vonMangoldt_one — the unit ideal gets 0`
+  in a comment on [issue #1](../../issues/1), where an AI agent adds its marker
+  as for marks and must say what the test checks. They are recorded in
+  [`reviews/tests.jsonl`](reviews/tests.jsonl).
+- **Suggested tests**, from anyone: **Suggest a test** opens the
+  [Suggest a test](.github/ISSUE_TEMPLATE/test.yml) form, whose issue stays
+  open until the test is written in Tau Ceti (close it as completed then, or as
+  not planned). Suggestions are recorded in
+  [`reviews/suggestions.jsonl`](reviews/suggestions.jsonl).
+
+A test passes while it is in Tau Ceti at the pinned commit without `sorry`;
+since the page follows Tau Ceti's main branch daily, a test that is removed or
+renamed shows as no longer found. Tests do not go stale as marks do: Lean
+checks them again at every commit. The unit tests and API planned for the
+atlas's roadmaps arrive the same way: once a planned definition is in Tau Ceti
+with the `example`s of its suggested Lean file, those are its unit tests here.
 
 ## Reporting a problem
 

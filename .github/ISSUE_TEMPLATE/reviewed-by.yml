@@ -1,12 +1,12 @@
 name: Review a definition
-description: Leave a Reviewed-by or Tested-by mark on one Tau Ceti declaration. A bot records it; there is no pull request.
+description: Leave a Reviewed-by mark on one Tau Ceti declaration, saying it is the intended mathematical notion. A bot records it; there is no pull request.
 title: "Review: "
 labels: ["review"]
 body:
   - type: markdown
     attributes:
       value: |
-        A mark records that you checked **one declaration, at one version**. When you submit, a bot records the mark, replies here and closes this issue; the page updates within a minute or two. The **Review this** link on the page fills in the declaration and its version for you. If the declaration is wrong, use **Report a problem** on the page instead.
+        A mark records that you checked **one declaration, at one version**. When you submit, a bot records the mark, replies here and closes this issue; the page updates within a minute or two. The **Review this** link on the page fills in the declaration and its version for you. If the declaration is wrong, use **Report a problem** on the page instead; to add a test, use **Suggest a test**.
   - type: input
     id: declaration
     attributes:
@@ -20,16 +20,6 @@ body:
     attributes:
       label: Version reviewed
       description: Filled in by the Review this link, from the version the page showed you. Leave it empty to mean the current version.
-  - type: dropdown
-    id: mark
-    attributes:
-      label: Mark
-      options:
-        - "Reviewed-by: it is the intended mathematical notion"
-        - "Tested-by: its examples and unit tests check out"
-      default: 0
-    validations:
-      required: true
   - type: dropdown
     id: who
     attributes:

@@ -7,10 +7,12 @@ way the kernel's `b4 trailers -u` collects Reviewed-by replies into commits.
 Writes the marks into the tree in the two forms a batch into Tau Ceti could
 take, so the pull request shows both:
 
-- snapshot/REVIEWED-BY.md, a data file counting each declaration's current marks;
-- snapshot/docstrings.lean, each reviewed declaration's docstring as it would
-  read in the Lean source, with one line per kind of mark: how many people and
-  AI agents gave it, and a link to the page that says who.
+- snapshot/REVIEWED-BY.md, a data file counting each declaration's current marks
+  and the tests it passes;
+- snapshot/docstrings.lean, the docstring of each declaration with marks or
+  listed tests, as it would read in the Lean source: how many people and AI
+  agents reviewed it, and how many tests it passes, each with a link to the page
+  that says who and which.
 
 However many marks a declaration collects, the source keeps one line per kind.
 The full record is the ledger and the git history: the commit message ends in
@@ -25,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from reviews import TRAILERS, count_text, tally  # noqa: E402
+from reviews import TRAILERS, count_text, load, tally, test_count_text, tests_by_declaration  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "snapshot"
@@ -53,14 +55,24 @@ def current(index: dict, records: list) -> dict:
     return out
 
 
-def docstrings(index: dict, records: list, site: str) -> str:
-    marks = current(index, records)
+def summary_lines(name: str, marks: list, tests: dict, site: str) -> list:
+    """One line per kind of mark, and one for the tests: counts, with a link to who and which."""
+    lines = [f"{trailer}: {count_text(n['people'], n['ai'])} ([who]({site}#d={name}))" for trailer, n in tally(marks).items()]
+    counted = test_count_text(tests["tally"]["unit"], tests["tally"]["results"]) if tests else ""
+    return lines + ([f"Tested by: {counted} ([which]({site}#d={name}))"] if counted else [])
+
+
+def shown(index: dict, marks: dict, listed: list) -> list:
+    """The declarations the snapshot writes: those with current marks or listed tests."""
+    named = set(marks) | {record["decl"] for record in listed}
+    return [item for item in index["declarations"] if item["name"] in named]
+
+
+def docstrings(index: dict, records: list, site: str, listed: list) -> str:
+    marks, tests = current(index, records), tests_by_declaration(index, listed, [])
     blocks = []
-    for item in index["declarations"]:
-        if item["name"] not in marks:
-            continue
-        who = f"([who]({site}#d={item['name']}))"
-        lines = "\n".join(f"{trailer}: {count_text(n['people'], n['ai'])} {who}" for trailer, n in tally(marks[item["name"]]).items())
+    for item in shown(index, marks, listed):
+        lines = "\n".join(summary_lines(item["name"], marks.get(item["name"], []), tests.get(item["name"]), site))
         doc = f"{item['doc']}\n\n{lines}" if item["doc"] else lines
         first = item["source"].splitlines()[0]
         blocks.append(f"-- {item['path']}, line {item['line']}\n/-- {doc} -/\n{first}")
@@ -68,16 +80,17 @@ def docstrings(index: dict, records: list, site: str) -> str:
             + "\n\n".join(blocks) + "\n")
 
 
-def table(index: dict, records: list, site: str) -> str:
-    marks = current(index, records)
+def table(index: dict, records: list, site: str, listed: list) -> str:
+    marks, tests = current(index, records), tests_by_declaration(index, listed, [])
     rows = []
-    for name in sorted(marks):
-        counts = tally(marks[name])
+    for item in sorted(shown(index, marks, listed), key=lambda item: item["name"]):
+        name, counts, passing = item["name"], tally(marks.get(item["name"], [])), tests.get(item["name"])
         cells = [count_text(counts[t]["people"], counts[t]["ai"]) if t in counts else "—" for t in TRAILERS]
+        cells.append((test_count_text(passing["tally"]["unit"], passing["tally"]["results"]) if passing else "") or "—")
         rows.append(f"| [`{name}`]({site}#d={name}) | " + " | ".join(cells) + " |")
-    return (f"# Reviewed-by\n\nCurrent marks on Tau Ceti {index['tauceti'][:7]}: how many people and AI agents gave each mark on "
-            "each reviewed declaration's current version. Each declaration's link shows who.\n\n"
-            "| Declaration | " + " | ".join(TRAILERS) + " |\n|---|" + "---|" * len(TRAILERS) + "\n" + "\n".join(rows) + "\n")
+    return (f"# Reviewed-by\n\nCurrent marks on Tau Ceti {index['tauceti'][:7]}: how many people and AI agents reviewed each "
+            "declaration's current version, and how many tests it passes. Each declaration's link shows who and which.\n\n"
+            "| Declaration | " + " | ".join(TRAILERS) + " | Tested by |\n|---|" + "---|" * (len(TRAILERS) + 1) + "\n" + "\n".join(rows) + "\n")
 
 
 def main() -> int:
@@ -94,8 +107,9 @@ def main() -> int:
     new = records[done:]
     if new:
         SNAPSHOT.mkdir(exist_ok=True)
-        (SNAPSHOT / "REVIEWED-BY.md").write_text(table(index, records, site), encoding="utf-8")
-        (SNAPSHOT / "docstrings.lean").write_text(docstrings(index, records, site), encoding="utf-8")
+        listed = load(ROOT / "reviews" / "tests.jsonl")
+        (SNAPSHOT / "REVIEWED-BY.md").write_text(table(index, records, site, listed), encoding="utf-8")
+        (SNAPSHOT / "docstrings.lean").write_text(docstrings(index, records, site, listed), encoding="utf-8")
         mark_file.write_text(json.dumps({"records": len(records)}) + "\n")
         Path(args.message).write_text(commit_message(new, index), encoding="utf-8")
     print(len(new))

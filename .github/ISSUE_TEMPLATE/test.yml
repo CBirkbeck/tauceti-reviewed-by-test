@@ -1,0 +1,50 @@
+name: Suggest a test
+description: Suggest a test that a Tau Ceti declaration should pass. This issue stays open until the test is written.
+title: "Test: "
+labels: ["test-suggestion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A suggested test is something **one declaration** should satisfy, which a plausible wrong definition would fail: a small computed value, a degenerate case, agreement with a Mathlib notion, or a non-example. A bot records it and replies; the page lists it under the declaration's tests. This issue stays open until the test is written in Tau Ceti: close it as completed once it is, or as not planned if it should not be. The **Suggest a test** link on the page fills in the declaration and its version for you.
+  - type: input
+    id: declaration
+    attributes:
+      label: Declaration
+      description: The full Lean name.
+      placeholder: TauCeti.IdealArithmeticFunction.vonMangoldt
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Filled in by the Suggest a test link, from the version the page showed you. Leave it empty to mean the current version.
+  - type: textarea
+    id: test
+    attributes:
+      label: Test
+      description: What it should satisfy, in words or in Lean.
+      placeholder: At a prime ideal P it is log N(P), and at P² it is log N(P) too.
+    validations:
+      required: true
+  - type: textarea
+    id: catches
+    attributes:
+      label: What it would catch
+      description: Optional. Which plausible wrong definition would fail it.
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who is suggesting
+      options:
+        - "I am (a person)"
+        - "An AI agent (details below)"
+      default: 0
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent, model and session (AI suggestions only)
+      placeholder: Claude Code, Opus 5, session 095781b9

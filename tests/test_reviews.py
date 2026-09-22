@@ -6,10 +6,12 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from reviews import add, comment_marks, count_text, form_mark, form_report, from_event, make_record, make_report, tally  # noqa: E402
+from reviews import (add, comment_marks, comment_tests, count_text, form_mark, form_report, form_suggestion, from_event,  # noqa: E402
+                     make_record, make_report, make_suggestion, make_test, tally)
 
 INDEX = {"tauceti": "c0ffee", "declarations": [
     {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt", "hash": "aaaaaaaaaaaa"},
+    {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt_one", "hash": "dddddddddddd"},
     {"name": "NumberField.Set.HasNaturalDensity", "hash": "bbbbbbbbbbbb"}]}
 
 FORM = """### Declaration
@@ -19,10 +21,6 @@ TauCeti.IdealArithmeticFunction.vonMangoldt
 ### Version reviewed
 
 aaaaaaaaaaaa
-
-### Mark
-
-Reviewed-by: it is the intended mathematical notion
 
 ### Who reviewed
 
@@ -72,7 +70,13 @@ class Comments(unittest.TestCase):
         [mark] = comment_marks("Acked-by: NumberField.Set.HasNaturalDensity — looks right")
         record, problem = make_record(mark, INDEX, "someone", {"issue": 1, "comment": 2}, "now")
         self.assertIsNone(record)
-        self.assertEqual(problem, "the mark is one of Reviewed-by, Tested-by")
+        self.assertEqual(problem, "the mark is Reviewed-by")
+
+    def test_tested_by_is_now_the_tests_a_declaration_passes(self):
+        [mark] = comment_marks("Tested-by: NumberField.Set.HasNaturalDensity")
+        record, problem = make_record(mark, INDEX, "someone", {"issue": 1, "comment": 2}, "now")
+        self.assertIsNone(record)
+        self.assertIn("Test: <declaration> — <result that tests it>", problem)
 
 
 class Tally(unittest.TestCase):
@@ -85,10 +89,8 @@ class Tally(unittest.TestCase):
         marks = [self.mark("Reviewed-by", "person", "alice"), self.mark("Reviewed-by", "person", "bob"),
                  self.mark("Reviewed-by", "agent", "alice", "Claude Code, Opus 5, session a1"),
                  self.mark("Reviewed-by", "agent", "bob", "Codex, GPT-6, session c1"),
-                 self.mark("Tested-by", "person", "carol"),
                  self.mark("Reviewed-by", "person", "dave", current=False)]
-        self.assertEqual(tally(marks), {"Reviewed-by": {"people": 2, "ai": 2, "earlier": 1},
-                                        "Tested-by": {"people": 1, "ai": 0, "earlier": 0}})
+        self.assertEqual(tally(marks), {"Reviewed-by": {"people": 2, "ai": 2, "earlier": 1}})
 
     def test_the_same_reviewer_twice_counts_once(self):
         marks = [self.mark("Reviewed-by", "person", "alice"), self.mark("Reviewed-by", "person", "alice"),
@@ -98,14 +100,118 @@ class Tally(unittest.TestCase):
 
     def test_marks_without_a_version_flag_are_current(self):
         # The batch passes only current marks, without the flag.
-        self.assertEqual(tally([{"trailer": "Tested-by", "kind": "person", "by": "alice", "agent": ""}]),
-                         {"Tested-by": {"people": 1, "ai": 0, "earlier": 0}})
+        self.assertEqual(tally([{"trailer": "Reviewed-by", "kind": "person", "by": "alice", "agent": ""}]),
+                         {"Reviewed-by": {"people": 1, "ai": 0, "earlier": 0}})
 
     def test_the_counts_read_as_words(self):
         self.assertEqual(count_text(3, 2), "3 people and 2 AI agents")
         self.assertEqual(count_text(1, 0), "1 person")
         self.assertEqual(count_text(0, 1), "1 AI agent")
         self.assertEqual(count_text(0, 0), "nobody")
+
+
+class Tests(unittest.TestCase):
+    """A key result listed as a test: a lemma of Tau Ceti that pins the declaration down."""
+
+    LINE = ("Test: TauCeti.IdealArithmeticFunction.vonMangoldt — TauCeti.IdealArithmeticFunction.vonMangoldt_one"
+            " — the unit ideal gets 0")
+
+    def test_each_test_line_names_the_declaration_the_result_and_what_it_checks(self):
+        self.assertEqual(comment_tests("Two tests.\n" + self.LINE + "\nReviewed-by: X"), [
+            {"decl": "TauCeti.IdealArithmeticFunction.vonMangoldt", "test": "TauCeti.IdealArithmeticFunction.vonMangoldt_one",
+             "checks": "the unit ideal gets 0", "kind": "person", "agent": ""}])
+
+    def test_a_test_is_recorded_when_both_declarations_exist(self):
+        [entry] = comment_tests(self.LINE)
+        record, refusal = make_test(entry, INDEX, "alice", {"issue": 1, "comment": 9}, "now")
+        self.assertIsNone(refusal)
+        self.assertEqual({k: record[k] for k in ("schema", "decl", "test", "checks", "by", "kind")},
+                         {"schema": "tests/v1", "decl": "TauCeti.IdealArithmeticFunction.vonMangoldt",
+                          "test": "TauCeti.IdealArithmeticFunction.vonMangoldt_one", "checks": "the unit ideal gets 0", "by": "alice", "kind": "person"})
+
+    def test_the_result_must_be_in_tau_ceti(self):
+        [entry] = comment_tests(self.LINE.replace("vonMangoldt_one", "vonMangoldt_two"))
+        record, refusal = make_test(entry, INDEX, "alice", {"issue": 1, "comment": 9}, "now")
+        self.assertIsNone(record)
+        self.assertIn("vonMangoldt_two", refusal)
+
+    def test_a_declaration_does_not_test_itself(self):
+        entry = dict(comment_tests(self.LINE)[0], test="TauCeti.IdealArithmeticFunction.vonMangoldt")
+        self.assertIn("itself", make_test(entry, INDEX, "alice", {}, "now")[1])
+
+    def test_an_ai_says_what_its_test_checks(self):
+        text = '<!--reviewed-by:v1 {"agent": "Codex, GPT-6, session c1"}-->\n' + self.LINE.rsplit(" — ", 1)[0]
+        [entry] = comment_tests(text)
+        self.assertEqual((entry["kind"], entry["agent"], entry["checks"]), ("agent", "Codex, GPT-6, session c1", ""))
+        self.assertIn("checks", make_test(entry, INDEX, "alice", {}, "now")[1])
+
+    def test_a_comment_records_marks_and_tests_together(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = Path(folder) / "records.jsonl"
+            comment = {"id": 9, "user": {"login": "alice"}, "body": "Reviewed-by: NumberField.Set.HasNaturalDensity\n" + self.LINE}
+            reply, outputs = from_event({"issue": {"number": 1, "user": {"login": "alice"}, "body": ""}, "comment": comment}, INDEX, ledger,
+                                        "https://example.org/", "now")
+            tests = [json.loads(line) for line in (Path(folder) / "tests.jsonl").read_text().splitlines()]
+            self.assertEqual((outputs["recorded"], len(ledger.read_text().splitlines()), [t["test"] for t in tests]),
+                             (2, 1, ["TauCeti.IdealArithmeticFunction.vonMangoldt_one"]))
+            self.assertIn("✓ **Test:** `TauCeti.IdealArithmeticFunction.vonMangoldt_one`", reply)
+            # The same test again is recorded once.
+            reply, outputs = from_event({"issue": {"number": 1, "user": {"login": "bob"}, "body": ""}, "comment": dict(comment, id=10)}, INDEX, ledger,
+                                        "https://example.org/", "later")
+            self.assertEqual(len((Path(folder) / "tests.jsonl").read_text().splitlines()), 1)
+
+
+SUGGESTION = """### Declaration
+
+TauCeti.IdealArithmeticFunction.vonMangoldt
+
+### Version
+
+aaaaaaaaaaaa
+
+### Test
+
+At a prime ideal P it is log N(P); at P² it is log N(P) too.
+
+### What it would catch
+
+A definition that took log N(A) for every A, or only counted primes.
+
+### Who is suggesting
+
+I am (a person)
+
+### Agent, model and session (AI suggestions only)
+
+_No response_
+"""
+
+
+class Suggestions(unittest.TestCase):
+    """Anyone may suggest a test; the suggestion is an issue that stays open until the test is written."""
+
+    def test_the_suggestion_form_gives_one_suggestion(self):
+        self.assertEqual(form_suggestion(SUGGESTION), {
+            "decl": "TauCeti.IdealArithmeticFunction.vonMangoldt", "version": "aaaaaaaaaaaa",
+            "test": "At a prime ideal P it is log N(P); at P² it is log N(P) too.",
+            "catches": "A definition that took log N(A) for every A, or only counted primes.", "kind": "person", "agent": ""})
+
+    def test_a_suggestion_says_what_to_test(self):
+        suggestion = dict(form_suggestion(SUGGESTION), test="")
+        self.assertIn("what to test", make_suggestion(suggestion, INDEX, "alice", 20, "now")[1])
+
+    def test_a_suggestion_is_recorded_and_stays_open_until_the_test_is_written(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = Path(folder) / "records.jsonl"
+            issue = {"number": 20, "user": {"login": "alice"}, "body": SUGGESTION, "labels": [{"name": "test-suggestion"}], "state_reason": None}
+            reply, outputs = from_event({"action": "opened", "issue": issue, "sender": {"login": "alice"}}, INDEX, ledger, "https://example.org/", "now")
+            self.assertEqual((outputs["recorded"], outputs["close"]), (1, "false"))
+            self.assertIn("stays open until the test is written", reply)
+            reply, outputs = from_event({"action": "closed", "issue": dict(issue, state_reason="completed"), "sender": {"login": "carol"}},
+                                        INDEX, ledger, "https://example.org/", "later")
+            events = [json.loads(line) for line in (Path(folder) / "suggestions.jsonl").read_text().splitlines()]
+            self.assertEqual([(e["event"], e.get("resolution")) for e in events], [("reported", None), ("closed", "written")])
+            self.assertFalse((Path(folder) / "problems.jsonl").exists())
 
 
 class Records(unittest.TestCase):
@@ -147,7 +253,7 @@ class Records(unittest.TestCase):
         self.assertIn("evidence", problem)
 
     def test_an_ai_mark_in_a_comment_must_give_its_evidence_too(self):
-        [mark] = comment_marks('<!--reviewed-by:v1 {"agent": "Codex, GPT-6, session c1"}-->\nTested-by: NumberField.Set.HasNaturalDensity')
+        [mark] = comment_marks('<!--reviewed-by:v1 {"agent": "Codex, GPT-6, session c1"}-->\nReviewed-by: NumberField.Set.HasNaturalDensity')
         record, problem = make_record(mark, INDEX, "someone", {"issue": 1, "comment": 2}, "now")
         self.assertIsNone(record)
         self.assertIn("evidence", problem)
