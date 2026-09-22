@@ -63,7 +63,8 @@ class Apply(unittest.TestCase):
         _, text = self.run_apply()
         self.assertIn("/-- The **ideal von Mangoldt function**.\n\n"
                       "Reviewed-by: 2 people and 1 AI agent\n"
-                      "Tested by: 1 unit test and 3 key results -/\n"
+                      "Tested by: 1 unit test and 3 key results\n"
+                      "[Who and which](https://example.org/reviews/#d=TauCeti.vonMangoldt) -/\n"
                       "noncomputable def vonMangoldt", text)
 
     def test_a_declaration_with_no_marks_is_left_alone(self):
@@ -73,13 +74,17 @@ class Apply(unittest.TestCase):
 
     def test_a_reviewed_declaration_with_no_docstring_gets_one_holding_its_review(self):
         _, text = self.run_apply()
-        self.assertIn("/-- Reviewed-by: 1 person -/\ndef noDocstring : ℕ := 3", text)
+        self.assertIn("/-- Reviewed-by: 1 person\n"
+                      "[Who and which](https://example.org/reviews/#d=TauCeti.noDocstring) -/\n"
+                      "def noDocstring : ℕ := 3", text)
 
     def test_the_new_lines_go_above_the_attributes_the_docstring_would(self):
         _, text = self.run_apply()
         self.assertIn("/-- It vanishes at the unit ideal.\n\n"
                       "Reviewed-by: 1 AI agent\n"
-                      "Tested by: 2 unit tests -/\n@[simp]\ntheorem vonMangoldt_one", text)
+                      "Tested by: 2 unit tests\n"
+                      "[Who and which](https://example.org/reviews/#d=TauCeti.vonMangoldt_one) -/\n"
+                      "@[simp]\ntheorem vonMangoldt_one", text)
 
     def test_running_it_again_changes_nothing(self):
         first, text = self.run_apply()
@@ -92,7 +97,8 @@ class Apply(unittest.TestCase):
         fewer = {"declarations": {"TauCeti.vonMangoldt": {"tally": {"Reviewed-by": {"people": 1, "ai": 0, "earlier": 0}},
                                                           "tests": {"tally": {"unit": 0, "results": 0, "suggested": 0}}}}}
         summary, text = self.run_apply(fewer)
-        self.assertIn("/-- The **ideal von Mangoldt function**.\n\nReviewed-by: 1 person -/", text)
+        self.assertIn("/-- The **ideal von Mangoldt function**.\n\nReviewed-by: 1 person\n"
+                      "[Who and which](https://example.org/reviews/#d=TauCeti.vonMangoldt) -/", text)
         self.assertNotIn("Tested by:", text)
         self.assertEqual(summary["declarations"], 1)
 

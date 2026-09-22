@@ -32,17 +32,21 @@ from reviews import count_text, test_count_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LINK_TEXT = "Reviews and tests of this file"
+DECL_LINK_TEXT = "Who and which"
 MARK_LINE = re.compile(r"^(?:Reviewed-by|Tested by):.*$")
-LINK_LINE = re.compile(r"^\[" + LINK_TEXT + r"\]\(\S+\)\s*$")
+LINK_LINE = re.compile(r"^\[(?:" + LINK_TEXT + "|" + DECL_LINK_TEXT + r")\]\(\S+\)\s*$")
 
 
-def lines_for(entry: dict) -> list:
-    """The count lines a declaration's docstring carries, if any."""
+def lines_for(entry: dict, name: str = "", site: str = "") -> list:
+    """What a declaration's docstring carries: the counts, then the link to who
+    reviewed it and which tests it passes. The counts stay short and the link has
+    a line of its own, since only a line with a URL may pass 100 characters."""
     found = [f"{trailer}: {count_text(n['people'], n['ai'])}" for trailer, n in (entry.get("tally") or {}).items()
              if n["people"] or n["ai"]]
     tests = (entry.get("tests") or {}).get("tally") or {}
     counted = test_count_text(tests.get("unit", 0), tests.get("results", 0))
-    return found + ([f"Tested by: {counted}"] if counted else [])
+    found += [f"Tested by: {counted}"] if counted else []
+    return found + [f"[{DECL_LINK_TEXT}]({site}#d={name})"] if found and name else found
 
 
 def ours(line: str) -> bool:
@@ -124,11 +128,11 @@ def write_module_link(lines: list, module: str, site: str) -> list:
     return lines[:first] + body[:title + 1] + ["", link] + body[title + 1:] + lines[last + 1:]
 
 
-def write_counts(lines: list, item: dict, entry: dict) -> list:
+def write_counts(lines: list, item: dict, entry: dict, site: str = "") -> list:
     """The counts at the end of a declaration's docstring, in place of the last ones,
     with the rest of the docstring left exactly as it is."""
     start = item["line"] - 1
-    counts = lines_for(entry)
+    counts = lines_for(entry, item["name"], site)
     block = docstring_before(lines, start)
     if not block:
         # No docstring: the review lines become one, so the code still carries it.
@@ -180,7 +184,7 @@ def apply_to_checkout(root: Path, reviews: dict, site: str, index: dict | None =
         # The declarations first, from the bottom up, so their line numbers still
         # hold; the module link last, since it shifts everything under it.
         for item in sorted(mine, key=lambda item: -item["line"]):
-            lines = write_counts(lines, item, entries.get(item["name"], {}))
+            lines = write_counts(lines, item, entries.get(item["name"], {}), site)
             touched += lines_for(entries.get(item["name"], {})) != []
         lines = write_module_link(lines, module["module"], site)
         after = "\n".join(lines) + ("\n" if before.endswith("\n") else "")
