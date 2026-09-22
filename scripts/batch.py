@@ -11,8 +11,8 @@ take, so the pull request shows both:
   and the tests it passes;
 - snapshot/docstrings.lean, the docstring of each declaration with marks or
   listed tests, as it would read in the Lean source: how many people and AI
-  agents reviewed it, and how many tests it passes, each with a link to the page
-  that says who and which.
+  agents reviewed it and how many tests it passes, then a link, on a line of
+  its own, to the page that says who and which.
 
 However many marks a declaration collects, the source keeps one line per kind.
 The full record is the ledger and the git history: the commit message ends in
@@ -56,10 +56,12 @@ def current(index: dict, records: list) -> dict:
 
 
 def summary_lines(name: str, marks: list, tests: dict, site: str) -> list:
-    """One line per kind of mark, and one for the tests: counts, with a link to who and which."""
-    lines = [f"{trailer}: {count_text(n['people'], n['ai'])} ([who]({site}#d={name}))" for trailer, n in tally(marks).items()]
+    """A line counting each kind of mark, one counting the tests, then the link to who and
+    which. The counts stay short; the link has a line of its own, because a URL cannot be
+    wrapped and Mathlib's longLine linter lets only a line with a URL pass 100 characters."""
+    lines = [f"{trailer}: {count_text(n['people'], n['ai'])}" for trailer, n in tally(marks).items()]
     counted = test_count_text(tests["tally"]["unit"], tests["tally"]["results"]) if tests else ""
-    return lines + ([f"Tested by: {counted} ([which]({site}#d={name}))"] if counted else [])
+    return lines + ([f"Tested by: {counted}"] if counted else []) + [f"[Reviews and tests]({site}#d={name})"]
 
 
 def shown(index: dict, marks: dict, listed: list) -> list:

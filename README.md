@@ -121,13 +121,19 @@ weekly in real use) collects the marks since the last batch into one pull
 request, as the kernel's `b4 trailers -u` collects Reviewed-by replies. The pull
 request shows two forms such a batch into Tau Ceti could take: a data file
 (`snapshot/REVIEWED-BY.md`) and the declarations' docstrings
-(`snapshot/docstrings.lean`). Both count the marks, so a docstring gains one
-line per kind of mark however many there are, with a link to the page that says
-who:
+(`snapshot/docstrings.lean`). Both count the marks and tests, so a docstring
+gains the same few lines however many there are, then a link to the page that
+says who and which:
 
 ```lean
-Reviewed-by: 12 people and 5 AI agents ([who](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.X.y))
+Reviewed-by: 12 people and 5 AI agents
+Tested by: 3 unit tests and 4 key results
+[Reviews and tests](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.X.y) -/
 ```
+
+The counts stay within Tau Ceti's 100-character lines. The link has a line of
+its own: a URL cannot be wrapped, and Mathlib's `longLine` linter, which Tau
+Ceti runs with warnings as errors, lets only a line containing a URL go longer.
 
 The full record stays in the ledger and in the git history: the batch's commit
 message ends in one git trailer per new mark.

@@ -28,16 +28,27 @@ class Batch(unittest.TestCase):
         tested = dict(INDEX, examples=[{"statement": "example : f = 1", "sorry": False, "tests": ["TauCeti.X.f"], "path": "p", "line": 1, "url": "u"}])
         text = docstrings(tested, [ALICE, BOT, OLD], SITE, [])
         self.assertIn("/-- The function `f`.\n\n"
-                      "Reviewed-by: 1 person and 1 AI agent ([who](https://example.org/reviews/#d=TauCeti.X.f))\n"
-                      "Tested by: 1 unit test ([which](https://example.org/reviews/#d=TauCeti.X.f)) -/\ndef f : ℕ := 1", text)
+                      "Reviewed-by: 1 person and 1 AI agent\n"
+                      "Tested by: 1 unit test\n"
+                      "[Reviews and tests](https://example.org/reviews/#d=TauCeti.X.f) -/\ndef f : ℕ := 1", text)
         # A mark on an earlier version is not carried into the source.
         self.assertNotIn("def g", text)
 
     def test_many_marks_still_take_one_line_each(self):
         many = [dict(ALICE, by=f"person{n}") for n in range(12)] + [dict(BOT, agent=f"Agent {n}") for n in range(5)]
         text = docstrings(INDEX, many, SITE, [])
-        self.assertIn("Reviewed-by: 12 people and 5 AI agents ([who](https://example.org/reviews/#d=TauCeti.X.f)) -/", text)
+        self.assertIn("Reviewed-by: 12 people and 5 AI agents\n[Reviews and tests](https://example.org/reviews/#d=TauCeti.X.f) -/", text)
         self.assertEqual(text.count("Reviewed-by:"), 1)
+
+    def test_only_the_link_may_pass_the_line_limit(self):
+        # Mathlib's longLine linter, which Tau Ceti runs with warnings as errors, allows 100
+        # characters on every line except one with a URL.
+        name = "TauCeti.NumberTheory.SomeLongNamespace.AnotherLongPart.aVeryLongDeclarationNameIndeed"
+        index = {"tauceti": "c0ffee1234567", "declarations": [dict(INDEX["declarations"][0], name=name)]}
+        many = [dict(ALICE, decl=name, by=f"person{n}") for n in range(1234)] + [dict(BOT, decl=name, agent=f"Agent {n}") for n in range(567)]
+        text = docstrings(index, many, "https://cbirkbeck.github.io/tauceti-reviewed-by-test/", [])
+        self.assertTrue(any(len(line) > 100 for line in text.splitlines()))
+        self.assertEqual([line for line in text.splitlines() if len(line) > 100 and "http" not in line], [])
 
     def test_the_table_counts_each_mark(self):
         text = table(INDEX, [ALICE, BOT, OLD], SITE, [])

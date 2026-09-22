@@ -6,8 +6,9 @@ of primes of `S` below `x`, relative to all primes below `x`, tends to `δ` as `
 
 Both counts use the inclusive real cutoff fixed by `TauCeti.primeCount`.
 
-Reviewed-by: 1 person ([who](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=NumberField.Set.HasNaturalDensity))
-Tested by: 5 key results ([which](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=NumberField.Set.HasNaturalDensity)) -/
+Reviewed-by: 1 person
+Tested by: 5 key results
+[Reviews and tests](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=NumberField.Set.HasNaturalDensity) -/
 def HasNaturalDensity (S : Set (HeightOneSpectrum (𝓞 K))) (δ : ℝ) : Prop :=
 
 -- TauCeti/NumberTheory/ArithmeticDirichletSeries/VonMangoldt.lean, line 84
@@ -16,8 +17,9 @@ a prime ideal `P`, and vanishes on ideals which are not prime powers.
 
 The codomain is `ℂ`, matching `IdealArithmeticFunction`, although every value is real.
 
-Reviewed-by: 1 person and 1 AI agent ([who](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.IdealArithmeticFunction.vonMangoldt))
-Tested by: 4 key results ([which](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.IdealArithmeticFunction.vonMangoldt)) -/
+Reviewed-by: 1 person and 1 AI agent
+Tested by: 4 key results
+[Reviews and tests](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.IdealArithmeticFunction.vonMangoldt) -/
 noncomputable def vonMangoldt : IdealArithmeticFunction K := fun A ↦
 
 -- TauCeti/NumberTheory/ModularForms/HeckeSlash/ModularForm.lean, line 127
@@ -25,6 +27,7 @@ noncomputable def vonMangoldt : IdealArithmeticFunction K := fun A ↦
 is the form Hecke operators are consumed in: bundling is what lets them compose and later carry a
 ring structure. At `G = Γ₁(N)` this is the roadmap's Layer 2(b) operator.
 
-Reviewed-by: 1 person ([who](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=HeckeRing.GL2.heckeSlashModularFormEnd))
-Tested by: 2 key results ([which](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=HeckeRing.GL2.heckeSlashModularFormEnd)) -/
+Reviewed-by: 1 person
+Tested by: 2 key results
+[Reviews and tests](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=HeckeRing.GL2.heckeSlashModularFormEnd) -/
 noncomputable def heckeSlashModularFormEnd :
