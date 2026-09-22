@@ -1,0 +1,60 @@
+name: Report a problem
+description: Say that a Tau Ceti declaration is wrong, and why, so that it can be fixed. This issue stays open until it is.
+title: "Problem: "
+labels: ["problem"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A report says that **one declaration, at one version** is wrong, and why. A bot records it and replies; the page then flags the declaration, with a link here. This issue stays open as the place to get it fixed: close it as completed once it is fixed, or as not planned if the declaration is right after all. The **Report a problem** link on the page fills in the declaration and its version for you.
+  - type: input
+    id: declaration
+    attributes:
+      label: Declaration
+      description: The full Lean name.
+      placeholder: TauCeti.IdealArithmeticFunction.vonMangoldt
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version reported
+      description: Filled in by the Report a problem link, from the version the page showed you. Leave it empty to mean the current version.
+  - type: dropdown
+    id: what
+    attributes:
+      label: What is wrong
+      options:
+        - "It is wrong: false as stated, or not the intended notion"
+        - "Its name or docstring is misleading"
+        - "Something else is off: hypotheses, conventions or generality"
+      default: 0
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Why it is wrong, so that it can be fixed. A counterexample, the source it disagrees with (and its definition or theorem number), or the step that fails.
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix
+      description: Optional. The statement or definition it should have, if you know it.
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who is reporting
+      options:
+        - "I am (a person)"
+        - "An AI agent (details below)"
+      default: 0
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent, model and session (AI reports only)
+      placeholder: Claude Code, Opus 5, session 095781b9

@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        A mark records that you checked **one declaration, at one version**. When you submit, a bot records the mark, replies here and closes this issue; the page updates within a minute or two. The **Review this** link on the page fills in the declaration and its version for you.
+        A mark records that you checked **one declaration, at one version**. When you submit, a bot records the mark, replies here and closes this issue; the page updates within a minute or two. The **Review this** link on the page fills in the declaration and its version for you. If the declaration is wrong, use **Report a problem** on the page instead.
   - type: input
     id: declaration
     attributes:
@@ -49,6 +49,4 @@ body:
     id: evidence
     attributes:
       label: Evidence
-      description: What you compared the declaration with (a source, and its definition or theorem number), or what you checked.
-    validations:
-      required: true
+      description: Optional for a person. An AI review must say what it compared the declaration with (a source, and its definition or theorem number), or what it checked. If the declaration is wrong, use Report a problem instead.

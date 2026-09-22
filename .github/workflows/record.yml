@@ -1,11 +1,13 @@
 name: Record review marks
 
 # Records marks from the "Review a definition" form (label `review`) and from
-# `Reviewed-by:` lines in comments on an issue labelled `reviews`, then
-# rebuilds the page. The ledger is committed directly: no pull request.
+# `Reviewed-by:` lines in comments on an issue labelled `reviews`, and problem
+# reports from the "Report a problem" form (label `problem`): when a report is
+# opened or edited, and when its issue is closed (fixed, or not) or reopened.
+# Then rebuilds the page. The ledgers are committed directly: no pull request.
 on:
   issues:
-    types: [opened, edited]
+    types: [opened, edited, closed, reopened]
   issue_comment:
     types: [created]
 
@@ -23,7 +25,10 @@ concurrency:
 jobs:
   record:
     if: >-
-      (github.event_name == 'issues' && github.event.issue.state == 'open' && contains(github.event.issue.labels.*.name, 'review')) ||
+      (github.event_name == 'issues' && github.event.issue.state == 'open' && contains(github.event.issue.labels.*.name, 'review') &&
+       (github.event.action == 'opened' || github.event.action == 'edited')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'problem') &&
+       (github.event.issue.state == 'open' || github.event.action == 'closed')) ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request == null && github.event.comment.user.type != 'Bot' &&
        contains(github.event.issue.labels.*.name, 'reviews'))
     runs-on: ubuntu-latest
@@ -39,16 +44,18 @@ jobs:
         with:
           python-version: '3.12'
       - uses: ./.github/actions/declarations
-      - name: Read the marks
+      - name: Read the marks or the report
         id: record
         run: python3 scripts/reviews.py from-event "$GITHUB_EVENT_PATH" --reply "$RUNNER_TEMP/reply.md" --out "$GITHUB_OUTPUT"
       - name: Save the ledger
         if: steps.record.outputs.recorded != '0'
+        env:
+          MESSAGE: ${{ steps.record.outputs.message }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reviews/records.jsonl
-          git commit -q -m "Record review marks from #${{ steps.record.outputs.number }}"
+          git add reviews
+          git commit -q -m "$MESSAGE"
           for attempt in 1 2 3 4 5; do git pull --rebase -q && git push -q && exit 0; sleep $((attempt * 5)); done
           exit 1
       - name: Answer on the issue
@@ -56,11 +63,18 @@ jobs:
         env:
           NUMBER: ${{ steps.record.outputs.number }}
           CLOSE: ${{ steps.record.outputs.close }}
-          PROBLEMS: ${{ steps.record.outputs.problems }}
+          INVALID: ${{ steps.record.outputs.invalid }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          INCOMPLETE: ${{ contains(github.event.issue.labels.*.name, 'incomplete') }}
         run: |
           if [ -s "$RUNNER_TEMP/reply.md" ]; then gh issue comment "$NUMBER" --body-file "$RUNNER_TEMP/reply.md"; fi
           if [ "$CLOSE" = "true" ]; then gh issue close "$NUMBER" --reason completed; fi
-          if [ "${PROBLEMS:-0}" != "0" ] && [ "${{ github.event_name }}" = "issues" ]; then gh issue edit "$NUMBER" --add-label needs-fix; fi
+          # A form the bot could not read is labelled until an edit fixes it.
+          if [ "$EVENT" = "issues" ] && { [ "$ACTION" = "opened" ] || [ "$ACTION" = "edited" ]; }; then
+            if [ "${INVALID:-0}" != "0" ]; then gh issue edit "$NUMBER" --add-label incomplete
+            elif [ "$INCOMPLETE" = "true" ]; then gh issue edit "$NUMBER" --remove-label incomplete; fi
+          fi
   site:
     needs: record
     if: needs.record.outputs.recorded != '0'

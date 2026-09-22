@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from reviews import add, comment_marks, form_mark, from_event, make_record  # noqa: E402
+from reviews import add, comment_marks, form_mark, form_report, from_event, make_record, make_report  # noqa: E402
 
 INDEX = {"tauceti": "c0ffee", "declarations": [
     {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt", "hash": "aaaaaaaaaaaa"},
@@ -102,8 +102,20 @@ class Records(unittest.TestCase):
         self.assertIsNone(record)
         self.assertIn("TauCeti.IdealArithmeticFunction.vonMangoldt", problem)
 
-    def test_a_form_needs_evidence(self):
+    def test_a_person_need_not_say_why_a_declaration_is_right(self):
         record, problem = make_record(self.mark(evidence=""), INDEX, "someone", {"issue": 4}, "now")
+        self.assertIsNone(problem)
+        self.assertEqual((record["kind"], record["evidence"]), ("person", ""))
+
+    def test_an_ai_review_must_give_its_evidence(self):
+        mark = self.mark(kind="agent", agent="Claude Code, Opus 5, session 095781b9", evidence="")
+        record, problem = make_record(mark, INDEX, "someone", {"issue": 4}, "now")
+        self.assertIsNone(record)
+        self.assertIn("evidence", problem)
+
+    def test_an_ai_mark_in_a_comment_must_give_its_evidence_too(self):
+        [mark] = comment_marks('<!--reviewed-by:v1 {"agent": "Codex, GPT-6, session c1"}-->\nTested-by: NumberField.Set.HasNaturalDensity')
+        record, problem = make_record(mark, INDEX, "someone", {"issue": 1, "comment": 2}, "now")
         self.assertIsNone(record)
         self.assertIn("evidence", problem)
 
@@ -132,13 +144,152 @@ class Events(unittest.TestCase):
     def test_a_comment_records_its_good_lines_and_explains_the_rest(self):
         comment = {"id": 99, "user": {"login": "bob"}, "body": "Reviewed-by: NumberField.Set.HasNaturalDensity\nTested-by: TauCeti.Nope"}
         reply, outputs, lines = self.run_event({"issue": {"number": 1, "user": {"login": "alice"}, "body": ""}, "comment": comment})
-        self.assertEqual((outputs["recorded"], outputs["problems"], outputs["close"], len(lines)), (1, 1, "false", 1))
+        self.assertEqual((outputs["recorded"], outputs["invalid"], outputs["close"], len(lines)), (1, 1, "false", 1))
         self.assertIn("`TauCeti.Nope` is not a declaration on the page", reply)
 
     def test_a_comment_without_marks_gets_no_reply(self):
         comment = {"id": 5, "user": {"login": "bob"}, "body": "Which ones should I look at first?"}
         reply, outputs, _ = self.run_event({"issue": {"number": 1, "user": {"login": "alice"}, "body": ""}, "comment": comment})
         self.assertEqual((reply, outputs["recorded"]), ("", 0))
+
+
+PROBLEM = """### Declaration
+
+TauCeti.IdealArithmeticFunction.vonMangoldt
+
+### Version reported
+
+aaaaaaaaaaaa
+
+### What is wrong
+
+It is wrong: false as stated, or not the intended notion
+
+### Why
+
+It is log N(P) on prime ideals P only; the von Mangoldt function is log N(P) on every power of P (Neukirch VII.1).
+
+### Suggested fix
+
+_No response_
+
+### Who is reporting
+
+I am (a person)
+
+### Agent, model and session (AI reports only)
+
+_No response_
+"""
+
+
+class Reports(unittest.TestCase):
+    def report(self, **changes):
+        report = form_report(PROBLEM)
+        report.update(changes)
+        return report
+
+    def test_the_problem_form_gives_one_report(self):
+        self.assertEqual(form_report(PROBLEM), {
+            "decl": "TauCeti.IdealArithmeticFunction.vonMangoldt", "version": "aaaaaaaaaaaa", "what": "wrong",
+            "why": "It is log N(P) on prime ideals P only; the von Mangoldt function is log N(P) on every power of P (Neukirch VII.1).",
+            "fix": "", "kind": "person", "agent": ""})
+
+    def test_the_other_kinds_of_problem(self):
+        self.assertEqual(form_report(PROBLEM.replace("It is wrong: false as stated, or not the intended notion",
+                                                     "Its name or docstring is misleading"))["what"], "misleading")
+        self.assertEqual(form_report(PROBLEM.replace("It is wrong: false as stated, or not the intended notion",
+                                                     "Something else is off: hypotheses, conventions or generality"))["what"], "other")
+
+    def test_a_report_is_pinned_to_the_version_it_is_about(self):
+        record, problem = make_report(self.report(), INDEX, "alice", 12, "2026-09-22T15:00:00Z")
+        self.assertIsNone(problem)
+        self.assertEqual({k: record[k] for k in ("event", "issue", "decl", "hash", "tauceti", "what", "by", "kind", "at")},
+                         {"event": "reported", "issue": 12, "decl": "TauCeti.IdealArithmeticFunction.vonMangoldt", "hash": "aaaaaaaaaaaa",
+                          "tauceti": "c0ffee", "what": "wrong", "by": "alice", "kind": "person", "at": "2026-09-22T15:00:00Z"})
+
+    def test_a_report_must_say_why(self):
+        record, problem = make_report(self.report(why=""), INDEX, "alice", 12, "now")
+        self.assertIsNone(record)
+        self.assertIn("why", problem)
+
+    def test_an_ai_report_names_its_agent(self):
+        record, problem = make_report(self.report(kind="agent"), INDEX, "alice", 12, "now")
+        self.assertIsNone(record)
+        self.assertIn("agent", problem)
+
+    def test_a_report_on_an_unknown_declaration_is_refused_with_a_suggestion(self):
+        record, problem = make_report(self.report(decl="TauCeti.IdealArithmeticFunction.vonMangold"), INDEX, "alice", 12, "now")
+        self.assertIsNone(record)
+        self.assertIn("TauCeti.IdealArithmeticFunction.vonMangoldt", problem)
+
+
+class ReportEvents(unittest.TestCase):
+    """A report is its own issue: recorded when it is opened, kept open until the declaration is fixed."""
+
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.ledger = Path(self.folder.name) / "records.jsonl"
+        self.problems = Path(self.folder.name) / "problems.jsonl"
+
+    def tearDown(self):
+        self.folder.cleanup()
+
+    def send(self, action, body=PROBLEM, state_reason=None, sender="alice"):
+        issue = {"number": 12, "user": {"login": "alice"}, "body": body, "labels": [{"name": "problem"}], "state_reason": state_reason}
+        return from_event({"action": action, "issue": issue, "sender": {"login": sender}}, INDEX, self.ledger, "https://example.org/",
+                          "2026-09-22T15:00:00Z")
+
+    def events(self):
+        return [json.loads(line) for line in self.problems.read_text().splitlines()] if self.problems.exists() else []
+
+    def test_a_report_is_recorded_and_its_issue_stays_open(self):
+        reply, outputs = self.send("opened")
+        self.assertEqual((outputs["recorded"], outputs["invalid"], outputs["close"]), (1, 0, "false"))
+        self.assertEqual([(e["event"], e["issue"], e["decl"]) for e in self.events()],
+                         [("reported", 12, "TauCeti.IdealArithmeticFunction.vonMangoldt")])
+        self.assertFalse(self.ledger.exists())
+        self.assertIn("stays open", reply)
+
+    def test_an_incomplete_report_is_answered_and_not_recorded(self):
+        body = PROBLEM.replace("It is log N(P) on prime ideals P only; the von Mangoldt function is log N(P) on every power of P (Neukirch VII.1).",
+                               "_No response_")
+        reply, outputs = self.send("opened", body)
+        self.assertEqual((outputs["recorded"], outputs["invalid"], outputs["close"]), (0, 1, "false"))
+        self.assertEqual(self.events(), [])
+        self.assertIn("why", reply)
+
+    def test_an_edit_updates_the_report_once(self):
+        self.send("opened")
+        edited = PROBLEM.replace("(Neukirch VII.1)", "(Neukirch VII.1, and Iwaniec–Kowalski 1.2)")
+        reply, outputs = self.send("edited", edited)
+        self.assertEqual(outputs["recorded"], 1)
+        self.assertEqual(self.events()[-1]["event"], "updated")
+        self.assertIn("Iwaniec", self.events()[-1]["why"])
+        reply, outputs = self.send("edited", edited)
+        self.assertEqual((reply, outputs["recorded"], len(self.events())), ("", 0, 2))
+
+    def test_closing_the_issue_as_completed_records_the_fix(self):
+        self.send("opened")
+        reply, outputs = self.send("closed", state_reason="completed", sender="carol")
+        self.assertEqual(outputs["recorded"], 1)
+        self.assertEqual({k: self.events()[-1][k] for k in ("event", "issue", "resolution", "by")},
+                         {"event": "closed", "issue": 12, "resolution": "fixed", "by": "carol"})
+
+    def test_closing_it_as_not_planned_records_that_nothing_was_fixed(self):
+        self.send("opened")
+        self.send("closed", state_reason="not_planned", sender="carol")
+        self.assertEqual(self.events()[-1]["resolution"], "not planned")
+
+    def test_reopening_the_issue_reopens_the_report(self):
+        self.send("opened")
+        self.send("closed", state_reason="completed")
+        reply, outputs = self.send("reopened")
+        self.assertEqual((outputs["recorded"], self.events()[-1]["event"]), (1, "reopened"))
+
+    def test_closing_a_report_that_was_never_recorded_changes_nothing(self):
+        reply, outputs = self.send("closed", state_reason="not_planned")
+        self.assertEqual((reply, outputs["recorded"], self.events()), ("", 0, []))
 
 
 if __name__ == "__main__":

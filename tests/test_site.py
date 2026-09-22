@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from build_site import data, marks_by_declaration, page, review_link, search_index, shards, summary  # noqa: E402
+from build_site import data, marks_by_declaration, page, problem_link, problems_by_declaration, review_link, search_index, shards, summary  # noqa: E402
 
 INDEX = {"tauceti": "c0ffee1234567", "read": "2026-09-21T15:00:00Z",
          "modules": [{"module": "TauCeti.NumberTheory.X", "path": "TauCeti/NumberTheory/X.lean", "doc": "# X\n\nAbout X.", "url": "u", "declarations": 2},
@@ -23,6 +23,12 @@ RECORDS = [
     {"decl": "TauCeti.X.f", "hash": "000000000000", "trailer": "Tested-by", "by": "bob", "kind": "agent", "agent": "Codex, session c1", "evidence": "", "source": {"issue": 5, "comment": 9}, "at": "2026-09-20T10:00:00Z"},
     {"decl": "TauCeti.Gone", "hash": "dddddddddddd", "trailer": "Tested-by", "by": "carol", "kind": "person", "agent": "", "evidence": "", "source": {"issue": 6}, "at": "2026-09-19T10:00:00Z"}]
 SETTINGS = {"repo": "CBirkbeck/test", "bulk_issue": 1, "tauceti": "c0ffee1234567"}
+PROBLEMS = [
+    {"schema": "problem/v1", "event": "reported", "issue": 12, "decl": "TauCeti.Y.g", "hash": "cccccccccccc", "tauceti": "c0ffee1234567",
+     "what": "wrong", "why": "It should be 3.", "fix": "def g := 3", "by": "alice", "kind": "person", "agent": "", "at": "2026-09-22T15:00:00Z"},
+    {"schema": "problem/v1", "event": "reported", "issue": 13, "decl": "TauCeti.X.f", "hash": "000000000000", "tauceti": "0ld",
+     "what": "misleading", "why": "The docstring says two.", "fix": "", "by": "bob", "kind": "agent", "agent": "Codex, session c1", "at": "2026-09-20T10:00:00Z"},
+    {"schema": "problem/v1", "event": "closed", "issue": 13, "resolution": "fixed", "by": "carol", "at": "2026-09-21T10:00:00Z"}]
 
 
 class Links(unittest.TestCase):
@@ -33,6 +39,39 @@ class Links(unittest.TestCase):
         self.assertEqual(query["template"], ["reviewed-by.yml"])
         self.assertEqual(query["declaration"], ["TauCeti.X.f"])
         self.assertEqual(query["version"], ["aaaaaaaaaaaa"])
+
+    def test_report_a_problem_fills_in_the_declaration_and_the_version_shown(self):
+        url = urlparse(problem_link("CBirkbeck/test", INDEX["declarations"][2]))
+        query = parse_qs(url.query)
+        self.assertEqual((url.netloc, url.path), ("github.com", "/CBirkbeck/test/issues/new"))
+        self.assertEqual((query["template"], query["title"]), (["problem.yml"], ["Problem: TauCeti.Y.g"]))
+        self.assertEqual((query["declaration"], query["version"]), (["TauCeti.Y.g"], ["cccccccccccc"]))
+
+
+class Problems(unittest.TestCase):
+    def test_a_report_is_open_until_its_issue_is_closed(self):
+        status = lambda events: problems_by_declaration(INDEX, events)["TauCeti.Y.g"][0]["status"]
+        closed = {"schema": "problem/v1", "event": "closed", "issue": 12, "resolution": "fixed", "by": "carol", "at": "2026-09-23T10:00:00Z"}
+        reopened = {"schema": "problem/v1", "event": "reopened", "issue": 12, "by": "alice", "at": "2026-09-24T10:00:00Z"}
+        self.assertEqual(status(PROBLEMS[:1]), "open")
+        self.assertEqual(status(PROBLEMS[:1] + [closed]), "fixed")
+        self.assertEqual(status(PROBLEMS[:1] + [closed, reopened]), "open")
+
+    def test_an_edit_replaces_what_the_report_says(self):
+        updated = dict(PROBLEMS[0], event="updated", why="It should be 4.", at="2026-09-22T16:00:00Z")
+        [report] = problems_by_declaration(INDEX, PROBLEMS[:1] + [updated])["TauCeti.Y.g"]
+        self.assertEqual((report["why"], report["at"], report["issue"]), ("It should be 4.", "2026-09-22T15:00:00Z", 12))
+
+    def test_a_report_on_an_earlier_version_says_so(self):
+        found = problems_by_declaration(INDEX, PROBLEMS)
+        self.assertTrue(found["TauCeti.Y.g"][0]["current"])
+        self.assertEqual((found["TauCeti.X.f"][0]["current"], found["TauCeti.X.f"][0]["status"], found["TauCeti.X.f"][0]["closedBy"]),
+                         (False, "fixed", "carol"))
+
+    def test_open_reports_come_first(self):
+        again = dict(PROBLEMS[1], issue=14, hash="aaaaaaaaaaaa", at="2026-09-19T10:00:00Z")
+        found = problems_by_declaration(INDEX, PROBLEMS + [again])["TauCeti.X.f"]
+        self.assertEqual([(p["issue"], p["status"]) for p in found], [(14, "open"), (13, "fixed")])
 
 
 class Marks(unittest.TestCase):
@@ -51,6 +90,14 @@ class Marks(unittest.TestCase):
         entry = out["declarations"]["TauCeti.X.f"]
         self.assertEqual(entry["hash"], "aaaaaaaaaaaa")
         self.assertEqual([(m["trailer"], m["current"], m["issue"]) for m in entry["marks"]], [("Reviewed-by", True, 3), ("Tested-by", False, 5)])
+
+    def test_the_marks_file_carries_the_problem_reports_too(self):
+        out = data(INDEX, RECORDS, PROBLEMS)
+        self.assertEqual(list(out["declarations"]), ["TauCeti.X.f", "TauCeti.Y.g"])
+        self.assertEqual(out["declarations"]["TauCeti.Y.g"]["marks"], [])
+        self.assertEqual([(p["issue"], p["status"], p["why"]) for p in out["declarations"]["TauCeti.Y.g"]["problems"]],
+                         [(12, "open", "It should be 3.")])
+        self.assertEqual([p["status"] for p in out["declarations"]["TauCeti.X.f"]["problems"]], ["fixed"])
 
 
 class Search(unittest.TestCase):
@@ -82,6 +129,11 @@ class Page(unittest.TestCase):
         self.assertIn("3 declarations", html)
         self.assertIn("c0ffee1", html)
         self.assertIn('id="search"', html)
+
+    def test_the_page_counts_open_problems_and_can_filter_them(self):
+        html = page(INDEX, RECORDS, SETTINGS, PROBLEMS)
+        self.assertIn("1 open problem", html)
+        self.assertIn('<option value="problem">', html)
 
     def test_settings_cannot_close_the_script(self):
         html = page(INDEX, RECORDS, dict(SETTINGS, repo="</script><script>alert(1)</script>"))

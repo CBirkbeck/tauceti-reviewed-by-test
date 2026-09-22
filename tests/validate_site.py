@@ -88,6 +88,36 @@ def main() -> int:
             phone.locator("#back").tap()
             phone.wait_for_timeout(300)
             check("back returns to the results", not phone.evaluate("document.body.classList.contains('reading')") and phone.locator(".result").count() > 0)
+            # A problem report, added to the page's data in flight so the ledger
+            # stays real: flagged, listed by the filter, shown with its issue.
+            reported = "TauCeti.IdealArithmeticFunction.vonMangoldt"
+
+            def inject(route):
+                response = route.fetch()
+                body = response.json()
+                entry = body["declarations"].setdefault(reported, {"hash": "", "kind": "def", "url": "", "marks": []})
+                entry["problems"] = [{"issue": 999, "status": "open", "what": "wrong", "why": "A test report: it misses the prime powers.",
+                                      "fix": "", "by": "tester", "kind": "person", "agent": "", "hash": entry["hash"], "current": True,
+                                      "at": "2026-09-22T15:00:00Z"}]
+                route.fulfill(response=response, json=body)
+            flagged = browser.new_page(viewport={"width": 1440, "height": 900})
+            flagged.on("pageerror", lambda error: errors.append(str(error)))
+            flagged.route("**/reviews.json", inject)
+            flagged.goto(url, wait_until="load")
+            flagged.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
+            check("the overview lists open problems", "Open problems" in flagged.locator("#results").text_content())
+            flagged.select_option("#state-filter", "problem")
+            flagged.wait_for_timeout(300)
+            check("the reported problems filter lists the reported declaration", flagged.evaluate("TauReview.results()") == [reported])
+            check("a reported declaration is flagged in the results", flagged.locator(".result .flag").count() == 1)
+            flagged.locator(".result").first.click()
+            flagged.wait_for_selector("#panel .problem", timeout=15000)
+            check("its page shows the report and links to its issue", "misses the prime powers" in flagged.locator("#panel .problem").inner_text()
+                  and flagged.locator("#panel .problem a[href$='/issues/999']").count() == 1)
+            report = flagged.locator("#panel a.warn").get_attribute("href")
+            check("a declaration offers Report a problem, filled in", "template=problem.yml" in report and "declaration=" in report and "version=" in report)
+            if shots:
+                flagged.screenshot(path=str(shots / "site-problem.png"))
             check("no errors in the page", not errors)
             browser.close()
     except AssertionError as failure:
