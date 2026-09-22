@@ -135,49 +135,26 @@ In Tau Ceti itself the report would be an issue on Tau Ceti, for its workers to
 pick up, and the fix's commit would carry `Reported-by:` and `Closes:` trailers,
 as the kernel's do. This test keeps the reports in its own repository.
 
-## Batching into the code
+## In the code: the fork
 
-[Batch marks into the code](.github/workflows/batch.yml) (Monday mornings, and
-by hand whenever wanted) collects the marks since the last batch into one pull
-request, as the kernel's `b4 trailers -u` collects Reviewed-by replies. The pull
-request shows two forms such a batch into Tau Ceti could take: a data file
-(`snapshot/REVIEWED-BY.md`) and the declarations' docstrings
-(`snapshot/docstrings.lean`). Both count the marks and tests, so a docstring
-gains the same few lines however many there are, then a link to the page that
-says who and which:
+The same lines live in Lean, in a **fork** of Tau Ceti,
+[CBirkbeck/TauCeti](https://github.com/CBirkbeck/TauCeti), so the trial can be
+read in real code rather than a mock-up; Tau Ceti itself is untouched.
+`scripts/apply.py` writes them into a checkout:
 
-```lean
-Reviewed-by: 12 people and 5 AI agents
-Tested by: 3 unit tests and 4 key results
-[Reviews and tests](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#d=TauCeti.X.y) -/
-```
+- one line under each module docstring's title, linking to that file's page;
+- the counts at the end of each reviewed declaration's docstring, and a
+  docstring holding them for a reviewed declaration that has none (8% of them,
+  mostly API lemmas);
+- nothing else: rerunning it after more reviews rewrites only what changed, and
+  a declaration whose marks have gone loses its lines again.
 
-The counts stay within Tau Ceti's 100-character lines. The link has a line of
-its own: a URL cannot be wrapped, and Mathlib's `longLine` linter, which Tau
-Ceti runs with warnings as errors, lets only a line containing a URL go longer.
-
-The full record stays in the ledger and in the git history: the batch's commit
-message ends in one git trailer per new mark.
-
-## From the code to the review site
-
-Reading Lean, a line at the top of the file takes you to its page, where any of
-its declarations can be reviewed:
-
-```lean
-/-!
-# The ideal von Mangoldt function
-
-[Reviews and tests of this file](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#m=TauCeti.NumberTheory.ArithmeticDirichletSeries.VonMangoldt)
-
-...
--/
-```
-
-One link per file rather than one per declaration: `snapshot/headers.lean` shows
-how it would read, and a file's page (`#m=<module>`) lists every declaration in
-it, what is named there, and how many are reviewed or have tests. Nothing writes
-this into Tau Ceti; the snapshot is what a change there would look like.
+The commit ends in one git trailer per mark, as the kernel's `b4 trailers -u`
+collects Reviewed-by replies. The fork's own workflow
+(`.github/workflows/review-lines.yml`, added by the pull request) takes the fork
+up to Tau Ceti's main each morning, rewrites the lines from the site's
+`reviews.json`, and updates its pull request, so the fork's CI keeps checking
+that the lines build and lint.
 
 ## For other readers
 
@@ -194,7 +171,7 @@ shows its marks greyed. So the page keeps up with the library by itself: new
 declarations arrive with the pin, new named results with the roadmaps and with
 Voyager's announcements, and tests are recomputed against the new commit. What
 needs a person is only the judgement: reviewing, listing key results as tests,
-answering suggestions and reports, and merging the weekly batch.
+answering suggestions and reports, and merging the fork's pull request.
 
 ## Files
 
@@ -203,10 +180,11 @@ answering suggestions and reports, and merging the weekly batch.
   out the pinned commit with `.github/actions/declarations`).
 - `scripts/reviews.py` records marks from forms and comments, and problem
   reports and what becomes of their issues.
+- `scripts/apply.py` writes the lines into a fork of Tau Ceti;
+  `scripts/named.py` reads the named results.
 - `scripts/build_site.py` builds the page: `index.html`, the search index
   `data/search.json` and docstring summaries `data/docs.json` it loads first,
   one file per module in `data/m/` read when a declaration is opened, and
   `reviews.json`.
-- `scripts/batch.py` prepares a batch.
 - `python3 -m unittest discover -s tests` runs the tests;
   `python3 tests/validate_site.py` checks the built page in a browser.
