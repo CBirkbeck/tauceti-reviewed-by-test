@@ -21,6 +21,27 @@ its marks and the rest of its module, and review it. Every search and every
 declaration has its own link (`#q=…`, `#d=<full name>`); `/` jumps to the
 search box.
 
+## Named results and definitions
+
+Most of a library is API, glue and steps of proofs, so the page marks out the
+declarations worth looking at first and gives them a tab of their own,
+**Named**. Two sources name them, and both are read again every day:
+
+- **the roadmaps** — each roadmap's generated `STATUS.md` lists its *Named
+  results* and *Notable definitions and infrastructure*, each a name, a sentence
+  and the declarations it links. `scripts/named.py roadmaps` reads them into
+  `data/named-roadmaps.json`;
+- **Voyager**, the bot that announces what is new in Tau Ceti on the Lean Zulip.
+  Its past announcements were read into [`reviews/named.jsonl`](reviews/named.jsonl)
+  with `scripts/named.py voyager`, and from now on each run adds its own with a
+  line `Named: <declaration> — <name> — <a sentence>` in a comment on
+  [issue #1](../../issues/1); anyone may add one the same way, and a declaration
+  already named is left alone.
+
+A named declaration shows its name beside it in every list, and its page says
+what it is and who named it, with links to the roadmap's status file and to the
+pull requests Voyager cited.
+
 ## Marks
 
 | Mark | Meaning |
@@ -116,8 +137,8 @@ as the kernel's do. This test keeps the reports in its own repository.
 
 ## Batching into the code
 
-[Batch marks into the code](.github/workflows/batch.yml) (run by hand here,
-weekly in real use) collects the marks since the last batch into one pull
+[Batch marks into the code](.github/workflows/batch.yml) (Monday mornings, and
+by hand whenever wanted) collects the marks since the last batch into one pull
 request, as the kernel's `b4 trailers -u` collects Reviewed-by replies. The pull
 request shows two forms such a batch into Tau Ceti could take: a data file
 (`snapshot/REVIEWED-BY.md`) and the declarations' docstrings
@@ -138,6 +159,26 @@ Ceti runs with warnings as errors, lets only a line containing a URL go longer.
 The full record stays in the ledger and in the git history: the batch's commit
 message ends in one git trailer per new mark.
 
+## From the code to the review site
+
+Reading Lean, a line at the top of the file takes you to its page, where any of
+its declarations can be reviewed:
+
+```lean
+/-!
+# The ideal von Mangoldt function
+
+[Reviews and tests of this file](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#m=TauCeti.NumberTheory.ArithmeticDirichletSeries.VonMangoldt)
+
+...
+-/
+```
+
+One link per file rather than one per declaration: `snapshot/headers.lean` shows
+how it would read, and a file's page (`#m=<module>`) lists every declaration in
+it, what is named there, and how many are reviewed or have tests. Nothing writes
+this into Tau Ceti; the snapshot is what a change there would look like.
+
 ## For other readers
 
 The marks and problem reports as data, for the Tau Ceti atlas or Tau Ceti's own documentation:
@@ -147,8 +188,13 @@ The marks and problem reports as data, for the Tau Ceti atlas or Tau Ceti's own 
 
 `data/settings.json` pins the Tau Ceti commit the page shows. The
 [Follow Tau Ceti](.github/workflows/refresh.yml) workflow moves the pin to
-main once a day and rebuilds the page; marks keep the versions they were made
-on, so a declaration that changed shows its marks greyed.
+main once a day, reads the roadmaps' named results again, and rebuilds the
+page; marks keep the versions they were made on, so a declaration that changed
+shows its marks greyed. So the page keeps up with the library by itself: new
+declarations arrive with the pin, new named results with the roadmaps and with
+Voyager's announcements, and tests are recomputed against the new commit. What
+needs a person is only the judgement: reviewing, listing key results as tests,
+answering suggestions and reports, and merging the weekly batch.
 
 ## Files
 

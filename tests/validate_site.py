@@ -145,6 +145,25 @@ def main() -> int:
             check("a declaration offers Report a problem, filled in", "template=problem.yml" in report and "declaration=" in report and "version=" in report)
             if shots:
                 flagged.screenshot(path=str(shots / "site-problem.png"))
+            # The named results and definitions, and a file's own page.
+            catalogue = browser.new_page(viewport={"width": 1440, "height": 900})
+            catalogue.on("pageerror", lambda error: errors.append(str(error)))
+            catalogue.goto(url + "#kind=named", wait_until="load")
+            catalogue.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
+            named = catalogue.evaluate("TauReview.results()")
+            check("the Named tab lists the named results and definitions", len(named) > 100)
+            check("each of them shows the name it is known by", catalogue.locator(".result .named").count() > 0)
+            catalogue.locator(".result").first.click()
+            catalogue.wait_for_selector("#panel .namedline", timeout=15000)
+            check("a named declaration says who named it", "Named" in catalogue.locator("#panel .namedline").text_content())
+            module = catalogue.evaluate("index.modules[index.rows[rowOf.get(TauReview.state().d)][2]]")
+            catalogue.goto(url + "#m=" + module, wait_until="load")
+            catalogue.wait_for_selector("#panel .siblings button", timeout=30000)
+            check("a file has a page listing its declarations", catalogue.locator("#panel .siblings button").count() >= 1
+                  and module in catalogue.locator("#panel h2").text_content())
+            check("and the results beside it are that file's", len(catalogue.evaluate("TauReview.results()")) >= 1)
+            if shots:
+                catalogue.screenshot(path=str(shots / "site-file.png"))
             check("no errors in the page", not errors)
             browser.close()
     except AssertionError as failure:

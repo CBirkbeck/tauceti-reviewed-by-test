@@ -1,0 +1,2122 @@
+[
+ {
+  "decl": "TauCeti.ValuationSpectrum.instSpectralSpaceElemSpaOfIsHuberRing",
+  "name": "Spectrality of the adic spectrum",
+  "what": "result",
+  "about": "`Spa(A,A⁺)` is a spectral space for a Huber ring and a ring of integral elements, by the characterisation of the continuous locus inside `Spv(A,IA)`.",
+  "source": {
+   "roadmap": "AdicSpaces",
+   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ValuationSpectrum.spaCompletionHomeomorph_preimage_mem_spaRationalFamily_iff",
+  "name": "Wedhorn's completion theorem (Proposition 7.48)",
+  "what": "result",
+  "about": "pullback along `A → Â` is [a homeomorphism `Spa(Â,Â⁺) ≃ Spa(A,A⁺)`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/AlgebraicGeometry/AdicSpace/Spa/Completion/Homeomorph.html#TauCeti.ValuationSpectrum.spaCompletionHomeomorph), for `Â⁺` the closure of the image of `A⁺`, and it matches rational subsets.",
+  "source": {
+   "roadmap": "AdicSpaces",
+   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ValuationSpectrum.faithfullyFlat_pi_toCompletionLoc",
+  "name": "Faithful flatness along a rational cover (Corollary 8.32)",
+  "what": "result",
+  "about": "for a finite rational cover of `Spa(A,A⁺)`, the map from `A` into the product of the coordinate rings is faithfully flat, so in particular injective: Čech exactness in degree zero.",
+  "source": {
+   "roadmap": "AdicSpaces",
+   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Huber.exact_algebraMap_laurentCoverDiff",
+  "name": "Exactness for the two-piece Laurent cover (Lemma 8.33)",
+  "what": "result",
+  "about": "a pair of sections over `{|f| ≤ 1}` and `{|f| ≥ 1}` agreeing on the overlap is a pair of equal constants, and the differential onto the overlap is surjective. This is proved for the quotient presentations of the coordinate rings, not for presheaf sections.",
+  "source": {
+   "roadmap": "AdicSpaces",
+   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PowerSeries.IsDistinguished.existsUnique_mul_add_eq",
+  "name": "Weierstrass division",
+  "what": "result",
+  "about": "over a complete nonarchimedean field, a restricted series distinguished of degree `s` at a positive radius divides every restricted series in exactly one way. One variable only.",
+  "source": {
+   "roadmap": "AdicSpaces",
+   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Huber.PairOfDefinition.rationalQuotientRingEquiv",
+  "name": "The completed rational localisation with its plus ring",
+  "what": "definition",
+  "about": "`A_U⁺` is the closure of the integral closure of `A⁺[T/s]`, and [`(A⟨T/s⟩, A_U⁺)` is a Huber pair](https://taucetiproject.github.io/TauCeti/docs/TauCeti/RingTheory/Huber/LocalizationTopology/Plus.html#TauCeti.Huber.PairOfDefinition.isRingOfIntegralElements_completedPlusSubring). Presenting it as a quotient of a restricted power-series ring makes it strongly noetherian over a strongly noetherian base, which is what the flatness chain consumes.",
+  "source": {
+   "roadmap": "AdicSpaces",
+   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Huber.twoSidedRestrictedSubmodule.instRing",
+  "name": "Two-sided restricted series `A⟨X,X⁻¹⟩`",
+  "what": "definition",
+  "about": "a ring built by convolving coefficient families that tend to zero cofinitely. It is the coordinate ring of the overlap in the Laurent argument.",
+  "source": {
+   "roadmap": "AdicSpaces",
+   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isRiemannRochDivisor_weilDifferentialDivisor",
+  "name": "The Riemann–Roch theorem",
+  "what": "result",
+  "about": "`ℓ(D) − ℓ(W − D) = deg D + 1 − g` for `W` the divisor of a nonzero Weil differential, through the duality isomorphism `L(W − D) ≃ Ω_F(D)`.",
+  "source": {
+   "roadmap": "AlgebraicCurves",
+   "path": "TauCetiRoadmap/AlgebraicCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.riemannRochSpaceEquivWeilDifferentialFiltration",
+  "name": "The Riemann–Roch theorem",
+  "what": "result",
+  "about": "`ℓ(D) − ℓ(W − D) = deg D + 1 − g` for `W` the divisor of a nonzero Weil differential, through the duality isomorphism `L(W − D) ≃ Ω_F(D)`.",
+  "source": {
+   "roadmap": "AlgebraicCurves",
+   "path": "TauCetiRoadmap/AlgebraicCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.hurwitz_genus_formula",
+  "name": "The Hurwitz genus formula",
+  "what": "result",
+  "about": "`[k' : k] · (2g' − 2) = [F' : F] · (2g − 2) + [k' : k] · deg Diff(F'/F)` for `F'/F` finite separable with exact constants and `k'/k` finite separable.",
+  "source": {
+   "roadmap": "AlgebraicCurves",
+   "path": "TauCetiRoadmap/AlgebraicCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Place.ramificationIdx_eq_differentExponent_add_one_iff",
+  "name": "Dedekind's different theorem",
+  "what": "result",
+  "about": "`d(P'∣P) ≥ e(P'∣P) − 1` always, with equality exactly at the tame places.",
+  "source": {
+   "roadmap": "AlgebraicCurves",
+   "path": "TauCetiRoadmap/AlgebraicCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Place.card_weierstrassGaps",
+  "name": "The Weierstrass gap theorem",
+  "what": "result",
+  "about": "at a rational place of a field of genus `g` there are exactly `g` gaps, characteristic-free.",
+  "source": {
+   "roadmap": "AlgebraicCurves",
+   "path": "TauCetiRoadmap/AlgebraicCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Place.degreeOneAddEquivDegreeZeroClassGroup",
+  "name": "The group law on an elliptic function field",
+  "what": "result",
+  "about": "the degree-one places, with a chosen base place, are `Cl⁰(F)`, and `P ⊕ Q = R` exactly when `P + Q ∼ R + P₀`.",
+  "source": {
+   "roadmap": "AlgebraicCurves",
+   "path": "TauCetiRoadmap/AlgebraicCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.EulerProductData.hasProd_eulerFactor",
+  "name": "The analytic Euler product",
+  "what": "result",
+  "about": "on the half-plane of absolute convergence the local Euler factors have an unrestricted product over the height-one primes, equal to the `LSeries` of the norm coefficients.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.dedekindZeta_ne_zero_of_one_lt_re",
+  "name": "Nonvanishing of the Dedekind zeta function to the right of one",
+  "what": "result",
+  "about": "`ζ_K s ≠ 0` for `Re s > 1`, since each local ratio lies strictly inside the unit disc.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.MultiplicativeIdealWeight.logDeriv_LSeries_eq_neg_tsum_vonMangoldtTransform",
+  "name": "The logarithmic derivative as a von Mangoldt series",
+  "what": "result",
+  "about": "for a completely multiplicative weight, `logDeriv L(s) = -∑' A, χ(A) Λ(A) N(A)⁻ˢ` right of the abscissa of absolute convergence, prime powers included.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.truncatedPerron_LSeries",
+  "name": "The arithmetic Perron formula",
+  "what": "result",
+  "about": "for a series absolutely convergent on the line, the truncated Perron integral is the series of truncated kernels at the ratios `x / n`, with an off-norm error bound and the half-weight limit at integer endpoints.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.LSeries.landau",
+  "name": "Landau's theorem",
+  "what": "result",
+  "about": "a Dirichlet series with nonnegative coefficients whose abscissa of absolute convergence is the real number `σ` admits no analytic continuation across `σ`, now with its meromorphic-order corollary.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.LSeries.meromorphicOrderAt_lt_zero_of_eq_LSeries",
+  "name": "Landau's theorem",
+  "what": "result",
+  "about": "a Dirichlet series with nonnegative coefficients whose abscissa of absolute convergence is the real number `σ` admits no analytic continuation across `σ`, now with its meromorphic-order corollary.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.EulerProductData",
+  "name": "Euler-product data",
+  "what": "definition",
+  "about": "the package the export contract names: prime-power local series plus the coprime-multiplicativity proof, closed under product, conjugation, and restriction away from a finite prime set. Everything analytic above is stated for it, not for a bare ideal arithmetic function.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.idealPrimePowerEquiv",
+  "name": "Prime-power ideals as a prime and an exponent",
+  "what": "definition",
+  "about": "the bijection `(𝔭, k) ↦ 𝔭 ^ (k + 1)`, turning a sum supported on prime powers into a sum over primes and exponents and carrying the Taylor expansion of the local logarithms.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.primeVonMangoldtCoeff",
+  "name": "The von Mangoldt coefficient system of a prime set",
+  "what": "definition",
+  "about": "the nonnegative coefficients whose inclusive partial sum is Chebyshev's ψ, in the `ℕ → ℝ` form a Tauberian theorem consumes.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.SporadicName.presentation",
+  "name": "The sporadic presentation table",
+  "what": "result",
+  "about": "every sporadic name is attached to an explicit, sourced finite presentation, and its group is Mathlib's `PresentedGroup` on the compiled relators.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Sporadic.Monster.mulEquivPresentedGroupCoxeterAppend",
+  "name": "The Y₄₄₃ presentation of the Monster",
+  "what": "result",
+  "about": "the transcribed row presents the Coxeter group of the Y₄₄₃ diagram cut down by Bray's spider relator and Ivanov's central relator, the form the sources state.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GraphTwistedIndex.Group",
+  "name": "The ordinary and graph-twisted candidates",
+  "what": "result",
+  "about": "for all thirteen such families at once, the derived subgroup of the fixed points of `γ ∘ Frob_q` modulo its centre, with `x_i(u) ↦ x_{σ i}(u ^ q)` on the simple root subgroups and `γ` annihilated by the twist order.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.SuzukiLieIndex.suzukiGroupEquivFixedPoints",
+  "name": "The Suzuki generation theorem",
+  "what": "result",
+  "about": "the group generated by the standard four-by-four unipotent and Weyl matrices is exactly the fixed-point group of the odd power of the special isogeny.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.exists_mulEquiv_of_forall_finite_isSimpleGroup_zero",
+  "name": "Universe lowering for classifications",
+  "what": "result",
+  "about": "a classification of finite simple groups by a fixed `Type`-valued family in universe zero holds in every universe.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ValidLieTypeIndex.AmbientGroup",
+  "name": "The ambient group of a valid Lie-type index",
+  "what": "definition",
+  "about": "one definition covering all seventeen constructors, the algebraic-closure-valued points of the carrier its family uses, carrying the `q`-power Frobenius and the Bourbaki-numbered simple root subgroups against which the Steinberg equations are stated.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.F4ShortRoot.PrimeField.groupScheme",
+  "name": "The characteristic-two short-root F₄ carrier",
+  "what": "definition",
+  "about": "the closed subgroup scheme of `GL₂₆` over `𝔽₂` generated by the reduced root subgroups and weight torus of the F₄ Chevalley lattice modulo two, on which the Ree F₄ and Tits branches are built.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Relator.toWord_toFreeGroup",
+  "name": "Auditable presentations",
+  "what": "definition",
+  "about": "readable relator expressions compile to signed words proved to denote them, and a row whose relations generate the normal closure of a Coxeter matrix's relators, with or without further relators appended, is identified with that Coxeter group.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GroupPresentation.mulEquivCoxeterGroup",
+  "name": "Auditable presentations",
+  "what": "definition",
+  "about": "readable relator expressions compile to signed words proved to denote them, and a row whose relations generate the normal closure of a Coxeter matrix's relators, with or without further relators appended, is identified with that Coxeter group.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.exists_auxiliaryPrime",
+  "name": "The auxiliary-prime theorem",
+  "what": "result",
+  "about": "above any bound it produces a prime congruent to `1` modulo a prescribed nonzero level, unramified in both number fields, with the corresponding cyclotomic polynomial irreducible over the base.",
+  "source": {
+   "roadmap": "Chebotarev",
+   "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.artinSymbol_map_restrictNormalHom",
+  "name": "Artin-symbol restriction to a normal subextension",
+  "what": "result",
+  "about": "shrinking the top field carries the Artin class to the lower Artin class with no power or inverse.",
+  "source": {
+   "roadmap": "Chebotarev",
+   "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.artinSymbol_map_restrictScalarsHom_eq_pow_inertiaDeg",
+  "name": "The Artin-symbol base-change power law",
+  "what": "result",
+  "about": "raising the base field raises the original Artin class to the intermediate residue degree.",
+  "source": {
+   "roadmap": "Chebotarev",
+   "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.fixedField_zpowers_isCyclotomicExtension",
+  "name": "The tagged fixed-field cyclotomic theorem",
+  "what": "result",
+  "about": "when the order of a tag's first component divides that of its second, the compositum is cyclotomic over the fixed field of the generated cyclic subgroup.",
+  "source": {
+   "roadmap": "Chebotarev",
+   "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.Chebotarev.frobeniusPsi_sub_frobeniusTheta_isLittleO",
+  "name": "Higher-prime-power removal for Frobenius `ψ`",
+  "what": "result",
+  "about": "the contribution beyond exponent one is `o(x)`, giving the first discard estimate needed to pass from `ψ_C` to `ϑ_C`.",
+  "source": {
+   "roadmap": "Chebotarev",
+   "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation.isAddCyclic_H2",
+  "name": "H² of a class formation is cyclic of the degree",
+  "what": "result",
+  "about": "for every finite normal layer `K/F`, ClassFormation.isAddCyclic_H2 and ClassFormation.natCard_H2 show that `H²(Gal(K/F), A^K)` is cyclic of order exactly `[K : F]`, generated by the fundamental class.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation.natCard_H2",
+  "name": "H² of a class formation is cyclic of the degree",
+  "what": "result",
+  "about": "for every finite normal layer `K/F`, ClassFormation.isAddCyclic_H2 and ClassFormation.natCard_H2 show that `H²(Gal(K/F), A^K)` is cyclic of order exactly `[K : F]`, generated by the fundamental class.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation.fundamentalClass_restrict",
+  "name": "The scaling laws for the fundamental class",
+  "what": "result",
+  "about": "restriction to an intermediate field sends the fundamental class to the fundamental class. Corestriction and inflation multiply it by the relative degree (fundamentalClass_cor, fundamentalClass_infl). These are exactly the shapes the Layer 3 compatibility squares must respect.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation.fundamentalClass_cor",
+  "name": "The scaling laws for the fundamental class",
+  "what": "result",
+  "about": "restriction to an intermediate field sends the fundamental class to the fundamental class. Corestriction and inflation multiply it by the relative degree (fundamentalClass_cor, fundamentalClass_infl). These are exactly the shapes the Layer 3 compatibility squares must respect.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation.fundamentalClass_infl",
+  "name": "The scaling laws for the fundamental class",
+  "what": "result",
+  "about": "restriction to an intermediate field sends the fundamental class to the fundamental class. Corestriction and inflation multiply it by the relative degree (fundamentalClass_cor, fundamentalClass_infl). These are exactly the shapes the Layer 3 compatibility squares must respect.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.TateCohomology.herbrandQuotient_eq_mul_of_shortExact",
+  "name": "The Herbrand quotient's two basic properties",
+  "what": "result",
+  "about": "for a finite cyclic group, it is multiplicative in short exact sequences and invariant under maps with finite kernel and cokernel. It equals one on finite modules and the group order on trivial `ℤ`.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.TateCohomology.herbrandQuotient_eq_of_finite_kernel_of_finite_cokernel",
+  "name": "The Herbrand quotient's two basic properties",
+  "what": "result",
+  "about": "for a finite cyclic group, it is multiplicative in short exact sequences and invariant under maps with finite kernel and cokernel. It equals one on finite modules and the group order on trivial `ℤ`.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "Rep.FiniteCyclicGroup.periodicIso",
+  "name": "Two-periodicity of cyclic Tate cohomology",
+  "what": "result",
+  "about": "Rep.FiniteCyclicGroup.periodicIso identifies Tate degrees that are congruent modulo two.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.groupCohomology.isZero_of_isZero_sylow",
+  "name": "The Sylow reduction of Tate's triviality criterion",
+  "what": "result",
+  "about": "groupCohomology.isZero_of_isZero_sylow says a cohomology group vanishes if it vanishes on one Sylow subgroup for each prime (Milne II 3.10).",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation",
+  "name": "Class formations",
+  "what": "definition",
+  "about": "ClassFormation takes the invariant as data and derives the fundamental class as the unique class of invariant `1/[K : F]`, as the roadmap requires. For the layer of every subgroup, the three hypotheses Tate's theorem will consume are proved as separate theorems: vanishing `H¹`, `H²` of the right order, and a generating restricted fundamental class.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation.fundamentalClass",
+  "name": "Class formations",
+  "what": "definition",
+  "about": "ClassFormation takes the invariant as data and derives the fundamental class as the unique class of invariant `1/[K : F]`, as the roadmap requires. For the layer of every subgroup, the three hypotheses Tate's theorem will consume are proved as separate theorems: vanishing `H¹`, `H²` of the right order, and a generating restricted fundamental class.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.NormalLayer",
+  "name": "Finite normal layers and their maps",
+  "what": "definition",
+  "about": "NormalLayer comes with the finite quotient system, norm quotients, and the degree `-2` and degree `0` identifications. It also has restriction, corestriction, inflation and conjugation on ordinary and Tate cohomology, including [`cor ∘ res = [E : F]`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/NumberTheory/ClassFieldTheory/Formation/Tate/Restriction.html#TauCeti.ClassFieldTheory.LayerRestriction.tateCor_tateRes) in every Tate degree. This gives the Artin map of Layer 4 names for every map it has to be compatible with.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.classField",
+  "name": "Class fields",
+  "what": "definition",
+  "about": "classField is the fixed field of an open normal subgroup of the absolute Galois group. It is abelian exactly when the layer is, with the closed commutator subgroup used throughout. This fixes the target of the two existence theorems.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.isAbelianGalois_classField_iff",
+  "name": "Class fields",
+  "what": "definition",
+  "about": "classField is the fixed field of an open normal subgroup of the absolute Galois group. It is abelian exactly when the layer is, with the closed commutator subgroup used throughout. This fixes the target of the two existence theorems.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GridDiagram.stateSum_eq_smul_T_mul_det_weightMatrix",
+  "name": "The grid determinant formula and the Euler characteristic",
+  "what": "result",
+  "about": "the alternating Alexander state sum of a grid diagram is a sign times a monomial times the determinant of its weight matrix, and on an odd-component diagram that expression is the graded Euler characteristic of the bigraded chain module. That is milestone G.4 on the chain side: the determinant is not yet matched to the Alexander polynomial, and with `∂² = 0` open it is not an Euler characteristic of homology.",
+  "source": {
+   "roadmap": "CombinatorialHeegaardFloer",
+   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.OddComponentGridDiagram.gradedEulerChar_eq_smul_T_mul_det_weightMatrix",
+  "name": "The grid determinant formula and the Euler characteristic",
+  "what": "result",
+  "about": "the alternating Alexander state sum of a grid diagram is a sign times a monomial times the determinant of its weight matrix, and on an odd-component diagram that expression is the graded Euler characteristic of the bigraded chain module. That is milestone G.4 on the chain side: the determinant is not yet matched to the Alexander polynomial, and with `∂² = 0` open it is not an Euler characteristic of homology.",
+  "source": {
+   "roadmap": "CombinatorialHeegaardFloer",
+   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GridLink",
+  "name": "Links as grids modulo moves",
+  "what": "result",
+  "about": "GridLink is grid diagrams of every size modulo commutation and (de)stabilization, with two diagrams presenting the same link exactly when moves connect them: nothing waits on Cromwell's theorem.",
+  "source": {
+   "roadmap": "CombinatorialHeegaardFloer",
+   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GridDiagram.toGridLink_eq_iff_movesTo",
+  "name": "Links as grids modulo moves",
+  "what": "result",
+  "about": "GridLink is grid diagrams of every size modulo commutation and (de)stabilization, with two diagrams presenting the same link exactly when moves connect them: nothing waits on Cromwell's theorem.",
+  "source": {
+   "roadmap": "CombinatorialHeegaardFloer",
+   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PlumbingGraph.exists_injective_latticeHomologyCycleMap",
+  "name": "The `U`-tower in every negative-definite plumbing",
+  "what": "result",
+  "about": "a minimal-weight lattice point is a cycle no nonzero multiple of which is a boundary, so the homology is nonzero; [`E₈`'s too](https://taucetiproject.github.io/TauCeti/docs/TauCeti/LowDimTopology/Plumbing/E8.html#TauCeti.e8Plumbing_not_isZero_latticeHomology) in every spin^c structure, though its rank is unknown.",
+  "source": {
+   "roadmap": "CombinatorialHeegaardFloer",
+   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PlumbingGraph.intersectionForm_blowUpEdgeEquiv",
+  "name": "Both blow-ups split the intersection form",
+  "what": "result",
+  "about": "blowing up at a vertex or along an edge adds an orthogonal `⟨-1⟩`, preserves and reflects negative-definiteness, and fixes the infimum of the characteristic weight: the Neumann moves in usable form, but nothing yet about homology.",
+  "source": {
+   "roadmap": "CombinatorialHeegaardFloer",
+   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PlumbingGraph.isNegativeDefinite_blowUpEdge_iff",
+  "name": "Both blow-ups split the intersection form",
+  "what": "result",
+  "about": "blowing up at a vertex or along an edge adds an orthogonal `⟨-1⟩`, preserves and reflects negative-definiteness, and fixes the infimum of the characteristic weight: the Neumann moves in usable form, but nothing yet about homology.",
+  "source": {
+   "roadmap": "CombinatorialHeegaardFloer",
+   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.koszulBraidedCategory",
+  "name": "The Koszul braiding on cochain complexes",
+  "what": "result",
+  "about": "`CochainComplex (ModuleCat R) ℤ` is a symmetric monoidal category with braiding `x ⊗ y ↦ (-1)^{|x||y|} y ⊗ x` on the summands of Mathlib's totalized tensor product, both hexagons proved at complex level.",
+  "source": {
+   "roadmap": "DGAInfinity",
+   "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.linearHomComplexEnrichedCategory",
+  "name": "The linear Hom complex enrichment",
+  "what": "result",
+  "about": "cochain complexes in an `R`-linear preadditive category are enriched in cochain complexes of `R`-modules, with closed degree-zero composition obtained from Keller composition through the Koszul braiding, and with underlying additive complex Mathlib's `HomComplex`.",
+  "source": {
+   "roadmap": "DGAInfinity",
+   "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ReducedTensorWords.gradedCoderivEquivTaylor",
+  "name": "The graded coderivation/Taylor correspondence",
+  "what": "result",
+  "about": "a `q`-twisted, Koszul-signed coderivation of the reduced tensor coalgebra is exactly its family of Taylor components, with inverse the signed Taylor expansion.",
+  "source": {
+   "roadmap": "DGAInfinity",
+   "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AInfinity.suspendedStasheffSum_eq_zero_iff",
+  "name": "The suspended and unsuspended Stasheff identities agree",
+  "what": "result",
+  "about": "the suspended arity-`n` sum with no structural coefficient vanishes exactly when the unsuspended sum with `(-1)^{r+st}` does, and the arity 1–4 equations are evaluated verbatim.",
+  "source": {
+   "roadmap": "DGAInfinity",
+   "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Contraction.normalize",
+  "name": "Normalization of contractions",
+  "what": "result",
+  "about": "every contraction `(i, p, h)` of cochain complexes can be replaced, keeping `i` and `p`, by one satisfying `h i = 0`, `p h = 0`, `h h = 0`; a contraction is a homotopy equivalence and its two maps are quasi-isomorphisms.",
+  "source": {
+   "roadmap": "DGAInfinity",
+   "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.weak_regularity_frieze_kannan",
+  "name": "Frieze–Kannan weak regularity",
+  "what": "result",
+  "about": "every graphon is within ε in cut norm of a block-averaged step graphon on a measurable partition with at most 4^(⌈1/ε²⌉+1) parts, the baseline exponent.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.counting_lemma",
+  "name": "The counting lemma",
+  "what": "result",
+  "about": "|t(F,U) − t(F,W)| ≤ e(F)·‖U − W‖□ on one carrier, with a coupling form across carriers.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.forall_homDensity_eq_of_cutDist_eq_zero",
+  "name": "Forward separation",
+  "what": "result",
+  "about": "graphons on arbitrary probability carriers at coupling cut distance zero have the same homomorphism density for every graph on `Fin n`.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.cutDist_eq_cutDistPullback",
+  "name": "Coupling and map cut distance agree",
+  "what": "result",
+  "about": "over standard Borel carriers with atoms allowed, the coupling-primary `cutDist` equals the infimum over measure-preserving maps out of the unit interval, using Janson's Theorem A.9.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.mantel_triangle_free",
+  "name": "Goodman's inequality",
+  "what": "result",
+  "about": "triangle density is at least 2·t(K₂,W)² − t(K₂,W) for every graphon, with Mantel's bound as the triangle-free corollary.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.goodman_triangle_density",
+  "name": "Goodman's inequality",
+  "what": "result",
+  "about": "triangle density is at least 2·t(K₂,W)² − t(K₂,W) for every graphon, with Mantel's bound as the triangle-free corollary.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.cutDist",
+  "name": "The coupling-primary cut distance",
+  "what": "definition",
+  "about": "`IsCoupling` and the overlaid difference make `cutDist` well defined between graphons on any two probability spaces, with symmetry, the diagonal bound by the same-carrier cut norm, and pullback invariance of the cut norm behind it.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DenseGraphLimits.Graphon.toAEEqFun",
+  "name": "The AE view",
+  "what": "definition",
+  "about": "a graphon's class in `AEEqFun` on the product carrier, through which `homDensity`, the cut norm and the cut distance all factor, with a strict representative recovered from any a.e. symmetric `[0,1]`-valued class; this lets Layer 4 argue in the a.e. world.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.MeasureTheory.exists_glue_of_countable_middle",
+  "name": "Coupling gluing",
+  "what": "definition",
+  "about": "finite PMF gluing with explicit zero-mass middle atoms, and gluing of two plans over a countable middle space with no hypothesis on the outer spaces; the ingredients the triangle inequality is meant to be built from.",
+  "source": {
+   "roadmap": "DenseGraphLimits",
+   "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
+  }
+ },
+ {
+  "decl": "WeierstrassCurve.Affine.fg_point_of_numberField",
+  "name": "The Mordell–Weil theorem",
+  "what": "result",
+  "about": "the rational points form a finitely generated group, over a number field and, for `y² = f(x)` with `f` monic cubic, over a Dedekind fraction field with Northcott absolute values.",
+  "source": {
+   "roadmap": "EllipticCurves",
+   "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "WeierstrassCurve.Affine.fg_point",
+  "name": "The Mordell–Weil theorem",
+  "what": "result",
+  "about": "the rational points form a finitely generated group, over a number field and, for `y² = f(x)` with `f` monic cubic, over a Dedekind fraction field with Northcott absolute values.",
+  "source": {
+   "roadmap": "EllipticCurves",
+   "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "WeierstrassCurve.Affine.Point.canonicalHeight_eq_zero_iff_isOfFinAddOrder",
+  "name": "The canonical height",
+  "what": "result",
+  "about": "quadratic, and vanishing exactly on the torsion points, so its pairing is positive definite modulo torsion.",
+  "source": {
+   "roadmap": "EllipticCurves",
+   "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Probability.exchangeableSigma_trivial_iff_iid",
+  "name": "[The de Finetti correspondence](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Probability/DeFinetti/Correspondence.html#TauCeti.Probability.deFinettiEquiv)",
+  "what": "result",
+  "about": "mixing laws correspond bijectively and affinely to exchangeable path laws; product laws are exactly the zero-one, permutation-ergodic, and extreme exchangeable laws.",
+  "source": {
+   "roadmap": "Exchangeability",
+   "path": "TauCetiRoadmap/Exchangeability/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Probability.exchangeableSigma_trivial_iff_ergodicSMul",
+  "name": "[The de Finetti correspondence](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Probability/DeFinetti/Correspondence.html#TauCeti.Probability.deFinettiEquiv)",
+  "what": "result",
+  "about": "mixing laws correspond bijectively and affinely to exchangeable path laws; product laws are exactly the zero-one, permutation-ergodic, and extreme exchangeable laws.",
+  "source": {
+   "roadmap": "Exchangeability",
+   "path": "TauCetiRoadmap/Exchangeability/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Probability.exchangeable_extreme_iff_iid",
+  "name": "[The de Finetti correspondence](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Probability/DeFinetti/Correspondence.html#TauCeti.Probability.deFinettiEquiv)",
+  "what": "result",
+  "about": "mixing laws correspond bijectively and affinely to exchangeable path laws; product laws are exactly the zero-one, permutation-ergodic, and extreme exchangeable laws.",
+  "source": {
+   "roadmap": "Exchangeability",
+   "path": "TauCetiRoadmap/Exchangeability/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.MarkovEquiv.associated_burauAlexander",
+  "name": "The Burau-Alexander polynomial is a Markov invariant",
+  "what": "result",
+  "about": "the corner minor of `burau b - 1` changes only by a unit under either Markov move, enough to prove the closure of `σ₀³` is not the unknot. The first proof here that two knots differ.",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.not_markovEquiv_sigma_pow_three_one",
+  "name": "The Burau-Alexander polynomial is a Markov invariant",
+  "what": "result",
+  "about": "the corner minor of `burau b - 1` changes only by a unit under either Markov move, enough to prove the closure of `σ₀³` is not the unknot. The first proof here that two knots differ.",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PDCode.kauffmanBracket",
+  "name": "The Kauffman bracket of a diagram",
+  "what": "result",
+  "about": "the state sum over the smoothings of a PD code, whose writhe-normalised form survives the oriented first Reidemeister move and algebraic clasp insertion. Moves II and III are absent, so it is not yet a link invariant.",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.OrientedPDCode.normalizedKauffmanBracket_reidemeisterOne",
+  "name": "The Kauffman bracket of a diagram",
+  "what": "result",
+  "about": "the state sum over the smoothings of a PD code, whose writhe-normalised form survives the oriented first Reidemeister move and algebraic clasp insertion. Moves II and III are absent, so it is not yet a link invariant.",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.KnotTheory.tristramLevineSignature",
+  "name": "The Tristram-Levine signature of a Seifert matrix",
+  "what": "result",
+  "about": "the signature of `(1 - ω)V + (1 - conj ω)Vᵀ`: congruence-invariant, additive under connected sum, negated by mirroring, and at `ω = -1` the classical signature, which already separates the trefoil (`-2`) from the figure eight (`0`).",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.KnotTheory.signature_trefoilSeifertMatrix",
+  "name": "The Tristram-Levine signature of a Seifert matrix",
+  "what": "result",
+  "about": "the signature of `(1 - ω)V + (1 - conj ω)Vᵀ`: congruence-invariant, additive under connected sum, negated by mirroring, and at `ω = -1` the classical signature, which already separates the trefoil (`-2`) from the figure eight (`0`).",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isManifold_boundary",
+  "name": "The boundary of a manifold with boundary is a manifold",
+  "what": "result",
+  "about": "one dimension down, for the Euclidean half-space model. The gluing track waits on this and on a collar.",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isLocallyFlat_iff_isEmbedding_and_isLocallyBicollared",
+  "name": "Codimension-one local flatness is local bicollaring",
+  "what": "result",
+  "about": "in one-dimensional codimension these are the same condition, the local half of Brown's theorem; a bicollared image is also two-sided.",
+  "source": {
+   "roadmap": "GeometricTopology",
+   "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GlobalNumberFields.weakApproximation_denseRange",
+  "name": "Artin–Whaples weak approximation at mixed places",
+  "what": "result",
+  "about": "for finite sets of finite and infinite places, the diagonal image of a number field is dense in the product of the corresponding completions; this is the load-bearing export to Global Quadratic Forms, in exactly the mixed form that roadmap requires.",
+  "source": {
+   "roadmap": "GlobalNumberFields",
+   "path": "TauCetiRoadmap/GlobalNumberFields/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GlobalNumberFields.infiniteCompletionNormalizedAbsValue",
+  "name": "Normalized absolute value on an infinite completion",
+  "what": "definition",
+  "about": "the monoid-with-zero homomorphism `x ↦ ‖x‖ ^ w.mult` on `w.Completion`, giving `|x|` at a real place and `|z|²` at a complex place, continuous and vanishing only at zero; it supplies the archimedean half of the local absolute values that the product formula and the idele norm will need.",
+  "source": {
+   "roadmap": "GlobalNumberFields",
+   "path": "TauCetiRoadmap/GlobalNumberFields/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GlobalNumberFields.infiniteCompletionNormalizedAbsValue_algebraMap",
+  "name": "Agreement with the global normalized value on `K`",
+  "what": "definition",
+  "about": "on the dense copy of `K` the completion value is the normalized infinite-place value, which is what lets statements about `K` transfer to the completion.",
+  "source": {
+   "roadmap": "GlobalNumberFields",
+   "path": "TauCetiRoadmap/GlobalNumberFields/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ExactStructure.resolutionEquiv",
+  "name": "Resolution theorem",
+  "what": "result",
+  "about": "for a property `P` of `E`-projectives containing zero and closed under biproducts, the inclusion of `P` into the objects of finite `P`-dimension induces an isomorphism on exact K₀, with inverse the alternating class of any finite resolution.",
+  "source": {
+   "roadmap": "GrothendieckEulerForms",
+   "path": "TauCetiRoadmap/GrothendieckEulerForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AbelianK0.eulerChar_eq_homologyEulerChar",
+  "name": "Euler–Poincaré theorem",
+  "what": "result",
+  "about": "in abelian K₀ the alternating class of the terms of a bounded cochain complex equals that of its cohomology, for any short-exact-additive invariant.",
+  "source": {
+   "roadmap": "GrothendieckEulerForms",
+   "path": "TauCetiRoadmap/GrothendieckEulerForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ExactStructure.exists_conflation_biprod_of_conflation_of_projective",
+  "name": "Horseshoe lemma",
+  "what": "result",
+  "about": "in any exact category, resolutions of a conflation's outer terms, the right one projective, combine to resolve its middle term; with Schanuel's lemma this lifts finite projective resolutions along conflations.",
+  "source": {
+   "roadmap": "GrothendieckEulerForms",
+   "path": "TauCetiRoadmap/GrothendieckEulerForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.extEulerPairing",
+  "name": "Ext-Euler pairing",
+  "what": "result",
+  "about": "for extension-closed properties whose pairs are Euler-admissible, `χ(X,Y) = ∑ (-1)ⁿ dim Extⁿ(X,Y)` descends to the unique biadditive pairing on the two exact K₀ groups.",
+  "source": {
+   "roadmap": "GrothendieckEulerForms",
+   "path": "TauCetiRoadmap/GrothendieckEulerForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.LaurentK0.T_smul",
+  "name": "Laurent normalisation of the shift",
+  "what": "result",
+  "about": "on the graded K₀ of a graded exact category, `qⁿ · [M] = [M{n}]`.",
+  "source": {
+   "roadmap": "GrothendieckEulerForms",
+   "path": "TauCetiRoadmap/GrothendieckEulerForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.HodgeStructureOn.isInternal_piece",
+  "name": "The Hodge decomposition",
+  "what": "result",
+  "about": "the components H^{p,n−p} = F^p ∩ conj F^{n−p} of a bounded n-opposed filtration form an internal direct sum, and conversely (Deligne's equivalence, `decompositionEquiv`).",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.exists_isCompl_of_isPolarizable",
+  "name": "Semisimplicity of polarizable rational Hodge structures",
+  "what": "result",
+  "about": "every rational Hodge substructure of a polarizable pure Hodge structure has a complement over ℚ and after complexification, orthogonal for some polarizing form; proved via the Weil operator and the positive-definite Hodge form.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.MixedHodgeStructure.isInternal_deligneSplittingFamily",
+  "name": "Deligne's theorem on the bigrading",
+  "what": "result",
+  "about": "the pieces I^{p,q}, defined by Deligne's closed formula in F, conj F and W, form an internal direct sum of the complex space, recovering W_k as ⨆_{p+q≤k} I^{p,q} and F^p as ⨆_{p'≥p} I^{p',q'}.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.MixedHodgeStructure.Hom.range_inf_F_eq_map_F",
+  "name": "Strictness of morphisms of mixed Hodge structures",
+  "what": "result",
+  "about": "a morphism is strict for the Hodge filtration, range f ⊓ F'^p = f(F^p), and likewise for the rational and the complexified weight filtrations.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.HodgeStructureOn.finsum_hodgeNumber_eq_finrank",
+  "name": "The Hodge numbers partition the dimension",
+  "what": "result",
+  "about": "∑ h^{p,n−p} = dim_ℂ V_ℂ, equal to the lattice rank, with Hodge symmetry h^{p,q} = h^{q,p}.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Manifold.riemannianEDist_eq_iInf_pathELength_piecewise",
+  "name": "do Carmo's distance is Mathlib's distance",
+  "what": "result",
+  "about": "the infimum of lengths over piecewise-`C¹` paths equals `Manifold.riemannianEDist`, via a corner-smoothing theorem giving every piecewise-`C¹` path a `C¹` path of the same endpoints and length.",
+  "source": {
+   "roadmap": "HopfRinow",
+   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
+  }
+ },
+ {
+  "decl": "CovariantDerivative.isLeviCivita_leviCivita",
+  "name": "Existence and uniqueness of the Levi-Civita connection",
+  "what": "result",
+  "about": "the connection built from the Koszul formula is torsion-free and metric-compatible, and any two such connections agree (CovariantDerivative.isLeviCivita_leviCivita, CovariantDerivative.IsLeviCivita.unique).",
+  "source": {
+   "roadmap": "HopfRinow",
+   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
+  }
+ },
+ {
+  "decl": "CovariantDerivative.IsLeviCivita.unique",
+  "name": "Existence and uniqueness of the Levi-Civita connection",
+  "what": "result",
+  "about": "the connection built from the Koszul formula is torsion-free and metric-compatible, and any two such connections agree (CovariantDerivative.isLeviCivita_leviCivita, CovariantDerivative.IsLeviCivita.unique).",
+  "source": {
+   "roadmap": "HopfRinow",
+   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
+  }
+ },
+ {
+  "decl": "CovariantDerivative.instContMDiffCovariantDerivativeLeviCivita",
+  "name": "Smoothness of the Levi-Civita connection",
+  "what": "result",
+  "about": "on a `C^∞` manifold with a `C^∞` metric the connection is `C^∞`, and its Christoffel symbols are `C^∞` on every tangent-trivialization base set (CovariantDerivative.instContMDiffCovariantDerivativeLeviCivita, CovariantDerivative.contMDiffOn_christoffelSymbol_leviCivita).",
+  "source": {
+   "roadmap": "HopfRinow",
+   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
+  }
+ },
+ {
+  "decl": "CovariantDerivative.contMDiffOn_christoffelSymbol_leviCivita",
+  "name": "Smoothness of the Levi-Civita connection",
+  "what": "result",
+  "about": "on a `C^∞` manifold with a `C^∞` metric the connection is `C^∞`, and its Christoffel symbols are `C^∞` on every tangent-trivialization base set (CovariantDerivative.instContMDiffCovariantDerivativeLeviCivita, CovariantDerivative.contMDiffOn_christoffelSymbol_leviCivita).",
+  "source": {
+   "roadmap": "HopfRinow",
+   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Manifold.IsGeodesicCurveOn.norm_curveVelocityWithin_eq",
+  "name": "Geodesics have constant speed",
+  "what": "result",
+  "about": "on an open preconnected parameter set a geodesic has the same speed at every two parameters, the lemma that makes a geodesic Cauchy at a finite endpoint.",
+  "source": {
+   "roadmap": "HopfRinow",
+   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
+  }
+ },
+ {
+  "decl": "IsMIntegralCurveOn.exists_gt_isMIntegralCurveOn_Ioo_of_tendsto",
+  "name": "The finite-endpoint extension criterion",
+  "what": "result",
+  "about": "an integral curve of a `C¹` vector field on `Ioo a b` that accumulates at a point of the manifold as `t → b⁻` extends past `b`, with the left-endpoint analogue; hence the maximal integral curve has no cluster point at a finite endpoint.",
+  "source": {
+   "roadmap": "HopfRinow",
+   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AlgebraicGeometry.SchemeWeilDivisor.equivCartierDivisor",
+  "name": "The Weil–Cartier equivalence",
+  "what": "result",
+  "about": "on a Noetherian integral curve whose codimension-one local rings are discrete valuation rings, Weil divisors and Cartier divisors are additively equivalent.",
+  "source": {
+   "roadmap": "JacobianChallenge",
+   "path": "TauCetiRoadmap/JacobianChallenge/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AlgebraicGeometry.SchemeWeilDivisor.IsLocallyPrincipal.isInvertible_sheaf",
+  "name": "Locally principal divisors give line bundles",
+  "what": "result",
+  "about": "the sheaf `𝒪_X(D)` of a locally principal Weil divisor on such a curve is locally free of rank one.",
+  "source": {
+   "roadmap": "JacobianChallenge",
+   "path": "TauCetiRoadmap/JacobianChallenge/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AlgebraicGeometry.WeilDivisor.OrderSystem.weightedDegreeZeroQuotientEquivPicZero",
+  "name": "`Pic⁰` as a quotient",
+  "what": "result",
+  "about": "degree-zero divisors modulo principal divisors form the degree-zero divisor class group, with every class represented in degree zero; this is only an abstract group.",
+  "source": {
+   "roadmap": "JacobianChallenge",
+   "path": "TauCetiRoadmap/JacobianChallenge/STATUS.md"
+  }
+ },
+ {
+  "decl": "AlgebraicGeometry.Scheme.Modules.finrank_cohomology_zero_sub_one_eq_add",
+  "name": "Additivity of the curve Euler characteristic",
+  "what": "result",
+  "about": "`dim H⁰-dim H¹` is additive in a short exact sequence when the stated finite-dimensionality hypotheses hold and the relevant `H²` vanishes.",
+  "source": {
+   "roadmap": "JacobianChallenge",
+   "path": "TauCetiRoadmap/JacobianChallenge/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AlgebraicGeometry.AbelianVariety.isCommMonObj",
+  "name": "Commutativity of abelian varieties",
+  "what": "result",
+  "about": "a proper geometrically integral group scheme over a field is a commutative group object.",
+  "source": {
+   "roadmap": "JacobianChallenge",
+   "path": "TauCetiRoadmap/JacobianChallenge/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.mem_cuspFormsOld_of_forall_coprime_qExpansion_coeff_eq_zero",
+  "name": "The Atkin–Lehner Main Lemma",
+  "what": "result",
+  "about": "a cusp form in `S_k(Γ₁(N), χ)` whose Fourier coefficients vanish at every index coprime to `N` is old, indeed a sum `∑_{p ∣ N} V_p f_p` of prime degeneracy images: mem_cuspFormsOld_of_forall_coprime_qExpansion_coeff_eq_zero. Stated per character space only.",
+  "source": {
+   "roadmap": "ModularForms",
+   "path": "TauCetiRoadmap/ModularForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "HeckeRing.GL2.finrank_cuspFormsNewEigenspace_eq_one",
+  "name": "Multiplicity one",
+  "what": "result",
+  "about": "a simultaneous eigenspace of the good Hecke operators in the new part of `S_k(N, χ)` is a line once nonzero: finrank_cuspFormsNewEigenspace_eq_one.",
+  "source": {
+   "roadmap": "ModularForms",
+   "path": "TauCetiRoadmap/ModularForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "HeckeRing.GL2.Newform.eq_of_forall_notMem_eigenvalue_eq",
+  "name": "Strong multiplicity one, fixed space",
+  "what": "result",
+  "about": "two newforms of the same level, weight and nebentypus whose eigenvalues agree at all good indices outside a finite set are equal: Newform.eq_of_forall_notMem_eigenvalue_eq. The cross-level version is not proved.",
+  "source": {
+   "roadmap": "ModularForms",
+   "path": "TauCetiRoadmap/ModularForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ModularForm.valence_formula_finiteIndex",
+  "name": "The general-level valence formula",
+  "what": "result",
+  "about": "for a nonzero form on a finite-index subgroup, the stabilizer-weighted interior and cusp-orbit orders total `k·[SL₂(ℤ):Γ]/12`: valence_formula_finiteIndex.",
+  "source": {
+   "roadmap": "ModularForms",
+   "path": "TauCetiRoadmap/ModularForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "HeckeRing.GL2.heckeTCompositeGamma0_mul_eq_sum_divisors_gcd",
+  "name": "The Γ₀(N) Hecke multiplication table",
+  "what": "result",
+  "about": "`T_m T_n` is the divisor sum over `d ∣ gcd(m,n)`, with no coprimality assumed: heckeTCompositeGamma0_mul_eq_sum_divisors_gcd.",
+  "source": {
+   "roadmap": "ModularForms",
+   "path": "TauCetiRoadmap/ModularForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Multiquadratic.finrank_adjoin_range",
+  "name": "The multiquadratic degree formula",
+  "what": "result",
+  "about": "square-class-independent radicands generate an extension of degree 2ⁿ, the base for the later Galois and subfield statements. Lean declaration",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Multiquadratic.ncard_primesOver_multiquadratic_iff_num_mul_den",
+  "name": "The rational-radicand splitting law",
+  "what": "result",
+  "about": "away from the radicands' numerator and denominator primes, a rational prime splits completely exactly when every radicand is a quadratic residue. Lean declaration",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Multiquadratic.isGenusField_candidateGenusField",
+  "name": "The genus-field maximality theorem",
+  "what": "result",
+  "about": "for an imaginary quadratic base, the prime-discriminant compositum is maximal among abelian-over-ℚ extensions unramified at every place. Lean declaration",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Multiquadratic.autCandidateGenusFieldEquivNarrowElementaryTwoQuotient",
+  "name": "The genus-field/class-group isomorphism",
+  "what": "result",
+  "about": "the relative Galois group is canonically the narrow class group modulo squares, with the ordinary quotient in the imaginary case. Lean declaration",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Multiquadratic.narrowTwoRank_eq_ncard_ramifiedPrimes_sub_one",
+  "name": "The narrow 2-rank formula",
+  "what": "result",
+  "about": "for either signature, rank₂ Cl⁺(K) = t − 1, where t counts ramified rational primes. Lean declaration",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.NarrowClassGroup",
+  "name": "The narrow class group",
+  "what": "definition",
+  "about": "quotienting by totally positive principal ideals makes the real genus-theory statements expressible. Definition",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Multiquadratic.genusCharFun",
+  "name": "Genus characters",
+  "what": "definition",
+  "about": "prime-discriminant characters descend to the narrow class group and separate its classes modulo squares. Definition",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.NumberFieldArithmetic.unramifiedArtinHom",
+  "name": "The unrestricted Artin map",
+  "what": "definition",
+  "about": "fractional ideals map directly to Frobenius automorphisms in everywhere-unramified abelian extensions, supplying the reciprocity interface. Definition",
+  "source": {
+   "roadmap": "Multiquadratic",
+   "path": "TauCetiRoadmap/Multiquadratic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.NumberField.factorizationType_eq_cycleType_isArithFrobAt",
+  "name": "Dedekind's theorem",
+  "what": "result",
+  "about": "the multiset of degrees of the monic irreducible factors of `minpoly ℤ θ` modulo `p` is the cycle type of a Frobenius at a prime above `p` acting on the roots of `minpoly ℚ θ`, with one part `1` restored for each fixed root.",
+  "source": {
+   "roadmap": "NumberFieldArithmetic",
+   "path": "TauCetiRoadmap/NumberFieldArithmetic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.NumberField.IntegralPrimitiveElement.not_dvd_index_iff",
+  "name": "Dedekind's criterion",
+  "what": "result",
+  "about": "the factorization of `minpoly ℤ θ` modulo `p` decides whether `p` divides the index `[𝓞 K : ℤ[θ]]`.",
+  "source": {
+   "roadmap": "NumberFieldArithmetic",
+   "path": "TauCetiRoadmap/NumberFieldArithmetic/STATUS.md"
+  }
+ },
+ {
+  "decl": "Ideal.doubleCosetQuotientEquivPrimesOver",
+  "name": "The double-coset splitting law",
+  "what": "result",
+  "about": "for `M/K` Galois with group `G` and `E` the fixed field of `H ≤ G`, the primes of `𝓞 E` above `p` are indexed by `H \\ G / D`.",
+  "source": {
+   "roadmap": "NumberFieldArithmetic",
+   "path": "TauCetiRoadmap/NumberFieldArithmetic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.NumberField.discr_emod_four_eq_zero_or_one",
+  "name": "Stickelberger's congruence",
+  "what": "result",
+  "about": "the discriminant of a number field is `0` or `1` modulo `4`.",
+  "source": {
+   "roadmap": "NumberFieldArithmetic",
+   "path": "TauCetiRoadmap/NumberFieldArithmetic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.dvd_relDiscr_iff_exists_not_isUnramifiedAt",
+  "name": "Ramification is the support of the relative discriminant",
+  "what": "result",
+  "about": "a nonzero prime divides it exactly when some prime above it is ramified, with no separability hypothesis on residue fields.",
+  "source": {
+   "roadmap": "NumberFieldArithmetic",
+   "path": "TauCetiRoadmap/NumberFieldArithmetic/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Semigroups.hilleYosida_generation_iff",
+  "name": "The Hille–Yosida characterization",
+  "what": "result",
+  "about": "a densely defined real Banach-space operator generates a C₀ semigroup of growth `(M, ω)` exactly when `(ω, ∞)` lies in its resolvent set and all resolvent powers satisfy the sharp bounds `‖R(λ,A)ⁿ‖ ≤ M/(λ−ω)ⁿ`.",
+  "source": {
+   "roadmap": "OneParameterSemigroups",
+   "path": "TauCetiRoadmap/OneParameterSemigroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Semigroups.exists_contractionSemigroup_generator_eq_iff",
+  "name": "The Lumer–Phillips characterization",
+  "what": "result",
+  "about": "an operator generates a contraction semigroup exactly when it is densely defined and maximally dissipative.",
+  "source": {
+   "roadmap": "OneParameterSemigroups",
+   "path": "TauCetiRoadmap/OneParameterSemigroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.hausdorff_bernstein_widder",
+  "name": "The Hausdorff–Bernstein–Widder theorem",
+  "what": "result",
+  "about": "closed-half-line complete monotonicity is equivalent to representation as the Laplace transform of a finite positive measure on `ℝ≥0`.",
+  "source": {
+   "roadmap": "OneParameterSemigroups",
+   "path": "TauCetiRoadmap/OneParameterSemigroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.bochner",
+  "name": "Bochner’s theorem",
+  "what": "result",
+  "about": "continuity and positive-definiteness on a finite-dimensional real inner-product space are equivalent to representation by a unique finite Borel measure under the project’s Fourier convention.",
+  "source": {
+   "roadmap": "OneParameterSemigroups",
+   "path": "TauCetiRoadmap/OneParameterSemigroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.bcr_semigroup_bochner",
+  "name": "The Berg–Christensen–Ressel representation",
+  "what": "result",
+  "about": "every bounded continuous positive-definite function on the involutive semigroup `ℝ≥0 × V` has a unique finite Laplace–Fourier representing measure.",
+  "source": {
+   "roadmap": "OneParameterSemigroups",
+   "path": "TauCetiRoadmap/OneParameterSemigroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.exists_isOptimalCoupling",
+  "name": "Primal attainment on Polish spaces",
+  "what": "result",
+  "about": "a lower semicontinuous cost `c : X × Y → ℝ≥0∞` admits an optimal plan between any two probability measures on Polish spaces, and the optimal plans form a compact set.",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.tendsto_transportCost",
+  "name": "Stability of optimal transport",
+  "what": "result",
+  "about": "under the liminf and recovery-plan hypotheses the README asks for, optimal values converge and optimal plans converge subsequentially to an optimal plan of the limit (TauCeti.tendsto_transportCost, TauCeti.exists_isOptimalCoupling_tendsto).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.exists_isOptimalCoupling_tendsto",
+  "name": "Stability of optimal transport",
+  "what": "result",
+  "about": "under the liminf and recovery-plan hypotheses the README asks for, optimal values converge and optimal plans converge subsequentially to an optimal plan of the limit (TauCeti.tendsto_transportCost, TauCeti.exists_isOptimalCoupling_tendsto).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isLUB_kantorovichDualValue_continuous",
+  "name": "Strong Kantorovich duality on compact spaces",
+  "what": "result",
+  "about": "for a continuous nonnegative cost on compact pseudometric spaces the primal value is the supremum of the continuous dual values, unchanged by admitting integrable potentials; monotone convergence extends this to lower semicontinuous costs on compact metrizable spaces (TauCeti.isLUB_kantorovichDualValue_continuous, TauCeti.isLUB_ofReal_kantorovichDualValue_continuous_of_lowerSemicontinuous).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isLUB_ofReal_kantorovichDualValue_continuous_of_lowerSemicontinuous",
+  "name": "Strong Kantorovich duality on compact spaces",
+  "what": "result",
+  "about": "for a continuous nonnegative cost on compact pseudometric spaces the primal value is the supremum of the continuous dual values, unchanged by admitting integrable potentials; monotone convergence extends this to lower semicontinuous costs on compact metrizable spaces (TauCeti.isLUB_kantorovichDualValue_continuous, TauCeti.isLUB_ofReal_kantorovichDualValue_continuous_of_lowerSemicontinuous).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Measure.exists_glue_of_standardBorel_right",
+  "name": "The gluing lemma",
+  "what": "result",
+  "about": "two plans sharing a middle marginal have a joint law with both prescribed two-coordinate marginals, in both standard-Borel-sided forms, with countable chains glued through a Kolmogorov extension theorem on countable index types (TauCeti.Measure.exists_glue_of_standardBorel_right, TauCeti.Measure.exists_isProjectiveLimit_of_countable).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Measure.exists_isProjectiveLimit_of_countable",
+  "name": "The gluing lemma",
+  "what": "result",
+  "about": "two plans sharing a middle marginal have a joint law with both prescribed two-coordinate marginals, in both standard-Borel-sided forms, with countable chains glued through a Kolmogorov extension theorem on countable index types (TauCeti.Measure.exists_glue_of_standardBorel_right, TauCeti.Measure.exists_isProjectiveLimit_of_countable).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isDualCertificate_iff",
+  "name": "Complementary slackness and optimality certificates",
+  "what": "result",
+  "about": "a coupling and an integrable dual feasible pair certify each other exactly when the plan is concentrated on the contact set; a certified plan is then optimal, with no duality gap, and concentrated on a measurable `c`-cyclically monotone set (TauCeti.isDualCertificate_iff, TauCeti.IsDualCertificate.exists_isCyclicallyMonotone).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.IsDualCertificate.exists_isCyclicallyMonotone",
+  "name": "Complementary slackness and optimality certificates",
+  "what": "result",
+  "about": "a coupling and an integrable dual feasible pair certify each other exactly when the plan is concentrated on the contact set; a certified plan is then optimal, with no duality gap, and concentrated on a measurable `c`-cyclically monotone set (TauCeti.isDualCertificate_iff, TauCeti.IsDualCertificate.exists_isCyclicallyMonotone).",
+  "source": {
+   "roadmap": "OptimalTransport",
+   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PDE.existsUnique_isWeakSolutionDirichlet",
+  "name": "Existence and uniqueness for the Dirichlet problem",
+  "what": "result",
+  "about": "for a divergence-form `L` whose energy form is bounded and coercive on `H¹₀(Ω)`, exactly one `u ∈ H¹₀(Ω)` satisfies `a(u, v) = ∫_Ω f v` for every test `v`. Gårding plus Poincaré discharge coercivity concretely for `-Δ`, and for uniformly elliptic operators with small drift, on domains inside a ball or slab.",
+  "source": {
+   "roadmap": "PDE",
+   "path": "TauCetiRoadmap/PDE/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PDE.exists_hilbertBasis_forall_isDirichletEigenvalue",
+  "name": "The Dirichlet eigenfunction basis",
+  "what": "result",
+  "about": "on a bounded domain with symmetric energy form, `L²(Ω)` has an orthonormal basis of Dirichlet eigenfunctions at positive eigenvalues, and the first eigenvalue is both the minimum of the Rayleigh quotient and the optimal Poincaré constant of the form.",
+  "source": {
+   "roadmap": "PDE",
+   "path": "TauCetiRoadmap/PDE/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PDE.isLeast_rayleighQuotient_firstDirichletEigenvalue",
+  "name": "The Dirichlet eigenfunction basis",
+  "what": "result",
+  "about": "on a bounded domain with symmetric energy form, `L²(Ω)` has an orthonormal basis of Dirichlet eigenfunctions at positive eigenvalues, and the first eigenvalue is both the minimum of the Rayleigh quotient and the optimal Poincaré constant of the form.",
+  "source": {
+   "roadmap": "PDE",
+   "path": "TauCetiRoadmap/PDE/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.W1p0.isCompactOperator_valueL",
+  "name": "Rellich-Kondrachov",
+  "what": "result",
+  "about": "for bounded `Ω` and `1 ≤ p < ∞`, the value map `W^{1,p}_0(Ω) → Lᵖ(Ω)` is compact, by a Fréchet-Kolmogorov criterion. This is the compactness that powers everything spectral; the `W^{1,p}(Ω)` statement, which needs boundary regularity, is not available.",
+  "source": {
+   "roadmap": "PDE",
+   "path": "TauCetiRoadmap/PDE/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.le_of_mul_le_laplacian_add_fderiv_le_frontier",
+  "name": "The weak maximum principle for second-order elliptic operators",
+  "what": "result",
+  "about": "a `C²` function on a compact set with `c u ≤ Δu + b·∇u`, `c ≥ 0` and `b` bounded inside, is bounded by any nonnegative bound it respects on the frontier, with a counterexample showing `c ≥ 0` cannot be dropped.",
+  "source": {
+   "roadmap": "PDE",
+   "path": "TauCetiRoadmap/PDE/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.eLpNorm_maximalFunction_le",
+  "name": "The Hardy-Littlewood maximal inequality",
+  "what": "result",
+  "about": "the weak `(1,1)` bound, and by Marcinkiewicz interpolation against `L^∞` the strong `(p, p)` bound for `1 < p < ∞`.",
+  "source": {
+   "roadmap": "PDE",
+   "path": "TauCetiRoadmap/PDE/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.exists_isCycle_mem_of_isPretransitive_of_prime_card",
+  "name": "Full cycles in prime degree",
+  "what": "result",
+  "about": "a transitive permutation group of prime degree contains a cycle on all the points, the first of Layer 1's recognition theorems.",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.is_two_pretransitive_of_isCycle_mem_of_card_support_add_one_eq_card",
+  "name": "Double transitivity from a long cycle",
+  "what": "result",
+  "about": "a transitive subgroup of a finite symmetric group that contains a cycle moving all but one point is doubly transitive.",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isPreprimitive_of_isCycle_mem_of_card_support_add_one_eq_card",
+  "name": "Primitivity from a long cycle",
+  "what": "result",
+  "about": "the same hypothesis gives primitivity, the form Layer 9's group-theoretic steps consume.",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.natCard_galActionHom_range",
+  "name": "The Galois image has the order of the Galois group",
+  "what": "result",
+  "about": "in any splitting extension the image of the root action has the same order as `Polynomial.Gal`, so permutation invariants of the Galois group can be computed in the image.",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "Equiv.Perm.parts_partition_conj",
+  "name": "Cycle types with fixed points are a class function",
+  "what": "result",
+  "about": "the parts of `Equiv.Perm.partition`, the cycle type with fixed points restored as parts equal to one, are constant on conjugacy classes.",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.nonempty_rootSet_splittingField_equiv_fin",
+  "name": "Numbering the roots",
+  "what": "definition",
+  "about": "a separable polynomial's roots in its splitting field are in bijection with `Fin p.natDegree`, the temporary numbering every later comparison with a reference subgroup will pass through.",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "Equiv.Perm.count_parts_partition_of_ne_one",
+  "name": "The parts of `Equiv.Perm.partition` as the corrected cycle type",
+  "what": "definition",
+  "about": "parts other than one agree with `cycleType` and the ones count fixed points, which is what will let a factorization type of `f mod p` be compared with a permutation in Layers 5 and 6 (Equiv.Perm.count_parts_partition_of_ne_one, Equiv.Perm.count_one_parts_partition).",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "Equiv.Perm.count_one_parts_partition",
+  "name": "The parts of `Equiv.Perm.partition` as the corrected cycle type",
+  "what": "definition",
+  "about": "parts other than one agree with `cycleType` and the ones count fixed points, which is what will let a factorization type of `f mod p` be compared with a permutation in Layers 5 and 6 (Equiv.Perm.count_parts_partition_of_ne_one, Equiv.Perm.count_one_parts_partition).",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.card_support_add_one_eq_card_iff_existsUnique_fixedPoint",
+  "name": "Unique fixed points",
+  "what": "definition",
+  "about": "a permutation moves all but one point exactly when it has a unique fixed point, bridging the two spellings of the long-cycle theorems.",
+  "source": {
+   "roadmap": "PolynomialGaloisGroups",
+   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ContCohomology.explicitShapiro1",
+  "name": "Shapiro's lemma in degrees 0 and 1",
+  "what": "result",
+  "about": "for profinite `G` and closed `U`, evaluation at `1` is an isomorphism `H¹(G, Coind_U^G A) ≃+ H¹(U, A)`, with inverse a section formula for any continuous coset factorization.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ContCohomology.DiscreteShortExact.explicitDelta1",
+  "name": "The low-degree long exact sequence",
+  "what": "result",
+  "about": "a short exact sequence of discrete `G`-modules over any topological group gives `δ⁰`, `δ¹` and exactness at all eight nodes from `H⁰(G, A)` to `H²(G, B)`.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ContCohomology.explicitCor2_comp_res2",
+  "name": "`cor ∘ res = (G : U)` in degrees 0, 1 and 2",
+  "what": "result",
+  "about": "corestriction along a finite-index open subgroup, independent of the transversal by an explicit coboundary, satisfies the index identity on cohomology with its correction terms named.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ContCohomology.explicitCup11_eq_neg_flip",
+  "name": "The low-degree cup products",
+  "what": "result",
+  "about": "the six shapes with `p + q ≤ 2`, associativity in all ten tridegrees, graded commutativity on classes, and the projection formula in every shape.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ContCohomology.explicitH1IsoGroupCohomology",
+  "name": "The explicit complex is Mathlib's over a discrete group",
+  "what": "result",
+  "about": "in degrees 0, 1, 2 the explicit cohomology is `groupCohomology` of `Rep.ofDistribMulAction ℤ G M`.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.discreteRepEquivSmoothTopRep",
+  "name": "The discrete-module dictionary",
+  "what": "definition",
+  "about": "`ofDiscreteModule` lands in the smooth discrete subcategory of `TopRep R G`, equivalent to the discrete `G`-modules, with a non-smooth discrete object exhibited; it is where explicit statements meet the canonical carrier.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.finiteQuotientSystem",
+  "name": "The finite-quotient system",
+  "what": "definition",
+  "about": "the functor `U ↦ Hⁿ(G ⧸ U, A^U)` on `(OpenNormalSubgroup G)ᵒᵖ`, with all six Layer 4 milestones.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.kummerShortExact",
+  "name": "The Galois coefficient modules",
+  "what": "definition",
+  "about": "`AbsoluteGaloisGroup K = Gal(Kˢ/K)` identified topologically with Mathlib's, `UnitsCoeff` and `KummerCoeff` as discrete `G_K`-modules, and the Kummer sequence.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.existsUnique_forall_mk_eq",
+  "name": "Limit description of a profinite group",
+  "what": "result",
+  "about": "a compatible family of elements of the finite quotients of `G` comes from a unique element of `G`, stated outside the category so that later layers can consume it.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.QuotientGroup.comapMk'OpenNormalOrderIso",
+  "name": "Correspondence theorem for open normal subgroups",
+  "what": "result",
+  "about": "the open normal subgroups of `G ⧸ N` correspond, as lattices, to the open normal subgroups of `G` containing `N`.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ProfiniteCompletion.continuousMonoidHomEquiv",
+  "name": "Universal property of the profinite completion",
+  "what": "result",
+  "about": "continuous homomorphisms from the completion of `G` to a profinite group correspond to abstract homomorphisms from `G`, with the unit bijective when `G` is finite.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.QuotientGroup.instTotallyDisconnectedSpace",
+  "name": "Quotients by closed normal subgroups are totally disconnected",
+  "what": "result",
+  "about": "the ingredient the README singles out as missing for `G ⧸ N` to be profinite, proved by the clopen-image argument.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "Subgroup.iInf_openNormalSubgroup_eq_bot",
+  "name": "Open normal subgroups separate points",
+  "what": "result",
+  "about": "in a profinite group the intersection of the open normal subgroups is trivial.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.IsProP",
+  "name": "The pro-`p` predicate",
+  "what": "definition",
+  "about": "`IsProP` says every quotient by an open normal subgroup is a `p`-group; it is the carrier that Layer 2's Sylow predicate, the maximal pro-`p` quotient and the free pro-`p` groups will be stated against, and it already transports along continuous surjections, quotients and topological isomorphisms.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "Subgroup.eq_iInf_sup_openNormalSubgroup",
+  "name": "Cofinality of open normal subgroups",
+  "what": "definition",
+  "about": "a closed subgroup is the infimum of its joins with the open normal subgroups, which lets arguments over open subgroups above a closed subgroup be run over normal ones.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.QuotientGroup.isClopen_image_mk",
+  "name": "Clopen images in quotients",
+  "what": "definition",
+  "about": "the image of an open subgroup in `G ⧸ N` is clopen, the lemma behind the totally-disconnected instance.",
+  "source": {
+   "roadmap": "ProfiniteProPGroups",
+   "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.stdPeterWeylBasis",
+  "name": "[The character table of a finite group](https://taucetiproject.github.io/TauCeti/docs/TauCeti/RepresentationTheory/CharacterTable/Table.html#TauCeti.characterTable)",
+  "what": "result",
+  "about": "the irreducible characters are a basis of the class functions, with both orthogonality relations; the [table of `Sₙ`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/RepresentationTheory/Symmetric/Specht/Character.html#TauCeti.symmetricCharacterTable) and Peter-Weyl sit beside it.",
+  "source": {
+   "roadmap": "RepresentationTheory",
+   "path": "TauCetiRoadmap/RepresentationTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.wishartGramMeasure_eq_nonsingularWishartMeasure",
+  "name": "The agreement of the two Wishart families",
+  "what": "result",
+  "about": "for positive-definite scale and natural degree at least the dimension, the Gaussian-Gram law is the nonsingular density law.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.bartlett_nonsingularWishartMeasure",
+  "name": "The Bartlett decomposition",
+  "what": "result",
+  "about": "the Cholesky factor of a standard nonsingular Wishart matrix has independent standard-Gaussian strict-lower entries and chi-squared diagonal squares.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.integral_posDef_multivariateGamma",
+  "name": "The multivariate Gamma integral",
+  "what": "result",
+  "about": "the determinant-power exponential integral over the positive-definite cone is the multivariate Gamma function in its classical convergence range.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.condDistrib_multivariateGaussian",
+  "name": "The conditional Gaussian law",
+  "what": "result",
+  "about": "conditioning one block of a positive-definite jointly Gaussian vector gives the affine-mean, Schur-complement Gaussian kernel.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Probability.hasLaw_studentT_of_gaussian_chiSquared",
+  "name": "The Student t ratio",
+  "what": "result",
+  "about": "a standard Gaussian divided by the square root of an independent normalized chi-squared variable has Student's t law.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.wishartGramMeasure",
+  "name": "The two Wishart measures",
+  "what": "definition",
+  "about": "TauCeti.wishartGramMeasure retains singular Gaussian-Gram laws, while TauCeti.nonsingularWishartMeasure provides the real-degree density family on the positive-definite cone.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.nonsingularWishartMeasure",
+  "name": "The two Wishart measures",
+  "what": "definition",
+  "about": "TauCeti.wishartGramMeasure retains singular Gaussian-Gram laws, while TauCeti.nonsingularWishartMeasure provides the real-degree density family on the positive-definite cone.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.choleskyEquiv",
+  "name": "Cholesky coordinates",
+  "what": "definition",
+  "about": "TauCeti.choleskyEquiv and the measure change of variables turn cone integrals into independent lower-triangular coordinates.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.map_cholesky_symmetricLebesgue",
+  "name": "Cholesky coordinates",
+  "what": "definition",
+  "about": "TauCeti.choleskyEquiv and the measure change of variables turn cone integrals into independent lower-triangular coordinates.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Probability.dirichletMeasure_eq_map_withDensity_dirichletChartPDF",
+  "name": "The Dirichlet chart density",
+  "what": "definition",
+  "about": "TauCeti.Probability.dirichletMeasure_eq_map_withDensity_dirichletChartPDF gives the constrained law a lower-dimensional Lebesgue density without asserting ambient absolute continuity.",
+  "source": {
+   "roadmap": "StandardDistributions",
+   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.zigzagGradedCartanMatrix_eq",
+  "name": "Graded Cartan formula",
+  "what": "result",
+  "about": "for a finite simple graph with no isolated vertex, the graded Cartan matrix of the zigzag relation quotient is `(1 + q²) I + q A_G`, proved entrywise and equal to the graded dimensions `∑_d dim Hom(P_i{d}, P_j) q^d` of the vertex projectives.",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.reorientPreprojectiveAlgebraEquiv",
+  "name": "Orientation independence of the preprojective algebra",
+  "what": "result",
+  "about": "reversing any set of arrows of a finite quiver gives an isomorphic additive preprojective algebra, the isomorphism negating exactly the reverses of the turned-around arrows, over any commutative ring.",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.zigzagTracePairing_isPerfPair",
+  "name": "Symmetric perfect Frobenius pairing",
+  "what": "result",
+  "about": "`(x, y) ↦ tr(xy)` on a zigzag algebra without isolated vertices is symmetric and perfect, its Gram matrix being the permutation matrix of an involution of the basis.",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.finrank_center_nonisolatedZigzagQuotient",
+  "name": "Centre of a zigzag algebra",
+  "what": "result",
+  "about": "for a preconnected graph with at least two vertices the centre has basis `1` and the volume classes, hence dimension `|V| + 1`.",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AffineDynkinType.posSemidef_realCartanMatrix",
+  "name": "Affine simply-laced form is positive semidefinite",
+  "what": "result",
+  "about": "with radical exactly the line of the marks, for every valid affine diagram including `Ã₁`.",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.ncard_setOf_finiteDimensional_abs_discr_le_le",
+  "name": "Effective Hermite–Minkowski count",
+  "what": "result",
+  "about": "inside a fixed extension `A/ℚ`, the number of number fields with `|d_K| ≤ N` is at most `(2C+1)^(D+1)·D`, with `D` Mathlib's degree bound and `C` an explicit coefficient height; Mathlib gives only finiteness.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.exists_mem_rootSet_eq_adjoin_of_abs_discr_le",
+  "name": "Hermite–Minkowski generating step",
+  "what": "result",
+  "about": "every such field is generated over `ℚ` by a root in `A` of an integer polynomial of bounded degree and coefficient height, extracted from Mathlib's finiteness proof.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.card_ideal_absNorm_le",
+  "name": "Explicit ideal count",
+  "what": "result",
+  "about": "for `X ≥ 1` the nonzero integral ideals of norm at most `X` number at most `X²·2ⁿ`, the uniform bound the asymptotic count cannot supply.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GeometryOfNumbers.ncard_inter_box_two_le_pow_mul_ncard_inter_box_one",
+  "name": "Lattice doubling bound",
+  "what": "result",
+  "about": "for an additive subgroup `Λ` of `ι → ℂ`, `#(Λ ∩ box r 2) ≤ 49^#ι · #(Λ ∩ box r 1)`, measure-free.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.Units.regulator_eq_one_of_rank_eq_zero",
+  "name": "Rank-zero regulator",
+  "what": "result",
+  "about": "a number field of unit rank zero has regulator `1`, the base case of Layer 3.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GeometryOfNumbers.box",
+  "name": "Polydisc boxes",
+  "what": "definition",
+  "about": "the per-coordinate polydisc `box r c` in `ι → ℂ` on which the packing and doubling bounds are stated, so lattice-point counts can be made without a measure.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.coeffBoundOfDiscrBdd",
+  "name": "Hermite-count constants",
+  "what": "definition",
+  "about": "the explicit coefficient height and the monotone count expression, which let a consumer substitute coarser degree or height bounds, a larger threshold, or a natural-number discriminant.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.hermiteCountBound",
+  "name": "Hermite-count constants",
+  "what": "definition",
+  "about": "the explicit coefficient height and the monotone count expression, which let a consumer substitute coarser degree or height bounds, a larger threshold, or a natural-number discriminant.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.index_square_le_of_closure_eq_top",
+  "name": "Squares in a finitely generated commutative group",
+  "what": "definition",
+  "about": "the subgroup of squares has index at most `2^#S` for a generating set `S`, the engine behind the unit-square index.",
+  "source": {
+   "roadmap": "EffectiveBounds",
+   "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.IntegralLattice.typeE₈IsometryD8Plus",
+  "name": "The `D₈⁺ ≅ E₈` isometry",
+  "what": "result",
+  "about": "the spinor glue enlargement of the checkerboard lattice `D₈` is isometric, as an integral lattice, to the `E₈` root lattice, via a rational map sending Bourbaki's simple roots to eight glue roots whose Gram matrix is the `E₈` Cartan matrix; `D₈⁺` is even and unimodular with trivial discriminant form.",
+  "source": {
+   "roadmap": "IntegralLattices",
+   "path": "Completed/IntegralLattices/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.IntegralLattice.evenIntermediateCarrierOrderIsoIsotropicSubgroup",
+  "name": "Nikulin's even-overlattice correspondence",
+  "what": "result",
+  "about": "for an even nondegenerate lattice, even overlattices `L ≤ M ≤ L^∨` are order-isomorphic to quadratic-isotropic subgroups of `A_L`, with the integral/bilinear-isotropic version stated separately and `[L_H:L]=|H|`, `disc(L_H)·|H|²=disc(L)` alongside.",
+  "source": {
+   "roadmap": "IntegralLattices",
+   "path": "Completed/IntegralLattices/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.IntegralLattice.IntermediateCarrier.discriminantOrthogonalQuotientIsometry",
+  "name": "The discriminant form of an even overlattice",
+  "what": "result",
+  "about": "`A_M ≅ H⊥/H` as finite quadratic modules for `H = M/L`, with representative formulas, the order identity, naturality in lattice isometries, and the corollary that `L_H` is unimodular exactly when `H` is Lagrangian.",
+  "source": {
+   "roadmap": "IntegralLattices",
+   "path": "Completed/IntegralLattices/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.IntegralLattice.natCard_discriminantGroup",
+  "name": "The order of the discriminant group",
+  "what": "result",
+  "about": "`#A_L = |det Gram L|` for every nondegenerate lattice, with the load-bearing converse that `L^∨` is a full lattice, and `A_L` finite, exactly when `L` is nondegenerate.",
+  "source": {
+   "roadmap": "IntegralLattices",
+   "path": "Completed/IntegralLattices/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.IntegralLattice.checkerboardDiscriminantQuadraticIsometry",
+  "name": "The ADE discriminant forms",
+  "what": "result",
+  "about": "`Aₙ`, `Dₙ` of even and odd rank, `E₆`, `E₇` and `E₈` each have their discriminant quadratic module identified up to isometry with an explicit cyclic or Klein-four model carrying the table's half-norm values, not merely the group order; even `Dₙ` is the case order alone cannot settle.",
+  "source": {
+   "roadmap": "IntegralLattices",
+   "path": "Completed/IntegralLattices/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.hermiteHilbertBasis",
+  "name": "The Hermite basis of `L²(ℝ)`",
+  "what": "result",
+  "about": "hermiteHilbertBasis is a `HilbertBasis ℕ 𝕜 (Lp 𝕜 2 volume)` for every `RCLike` scalar field, with coe_hermiteHilbertBasis pinning its vectors to the Hermite functions `ψₙ`.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.coe_hermiteHilbertBasis",
+  "name": "The Hermite basis of `L²(ℝ)`",
+  "what": "result",
+  "about": "hermiteHilbertBasis is a `HilbertBasis ℕ 𝕜 (Lp 𝕜 2 volume)` for every `RCLike` scalar field, with coe_hermiteHilbertBasis pinning its vectors to the Hermite functions `ψₙ`.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.chebyshevTHilbertBasis",
+  "name": "The Chebyshev basis",
+  "what": "result",
+  "about": "chebyshevTHilbertBasis is a Hilbert basis of `L²(measureT)` whose vectors are the normalized `Tₙ`, exercising the general construction on a compact weighted measure rather than the Gaussian.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Measure.ext_of_forall_integral_pow_eq_of_exists_integrable_exp",
+  "name": "Moment determinacy",
+  "what": "result",
+  "about": "Measure.ext_of_forall_integral_pow_eq_of_exists_integrable_exp: one finite exponential moment `∫ e^{a|x|}` forces a finite measure on `ℝ` to be determined by its polynomial moments, with the function-level form ae_eq_zero_of_forall_moment_eq_zero. This is the single completeness mechanism behind both summits; it goes via characteristic functions and strip-analyticity of the complex moment generating function, not via an entire Fourier integral as the roadmap sketched.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ae_eq_zero_of_forall_moment_eq_zero",
+  "name": "Moment determinacy",
+  "what": "result",
+  "about": "Measure.ext_of_forall_integral_pow_eq_of_exists_integrable_exp: one finite exponential moment `∫ e^{a|x|}` forces a finite measure on `ℝ` to be determined by its polynomial moments, with the function-level form ae_eq_zero_of_forall_moment_eq_zero. This is the single completeness mechanism behind both summits; it goes via characteristic functions and strip-analyticity of the complex moment generating function, not via an entire Fourier integral as the roadmap sketched.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.hasSum_hermiteFunctionLp_expansion",
+  "name": "Parseval and the Hermite expansion",
+  "what": "result",
+  "about": "hasSum_hermiteFunctionLp_expansion sums an arbitrary `f ∈ L²(ℝ)` back from its Hermite coefficients; tsum_inner_mul_inner_hermiteFunctionLp is the polarized identity, sitting on the basis-generic HilbertBasis.tsum_norm_sq_inner.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.tsum_inner_mul_inner_hermiteFunctionLp",
+  "name": "Parseval and the Hermite expansion",
+  "what": "result",
+  "about": "hasSum_hermiteFunctionLp_expansion sums an arbitrary `f ∈ L²(ℝ)` back from its Hermite coefficients; tsum_inner_mul_inner_hermiteFunctionLp is the polarized identity, sitting on the basis-generic HilbertBasis.tsum_norm_sq_inner.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "HilbertBasis.tsum_norm_sq_inner",
+  "name": "Parseval and the Hermite expansion",
+  "what": "result",
+  "about": "hasSum_hermiteFunctionLp_expansion sums an arbitrary `f ∈ L²(ℝ)` back from its Hermite coefficients; tsum_inner_mul_inner_hermiteFunctionLp is the polarized identity, sitting on the basis-generic HilbertBasis.tsum_norm_sq_inner.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.fourier_twoPiHermiteFunction",
+  "name": "The Fourier eigenrelation",
+  "what": "result",
+  "about": "fourier_twoPiHermiteFunction gives eigenvalue `(-i)ⁿ` for the `√(2π)`-rescaled functions `Φₙ`, which is the form Mathlib's `e^{-2πixξ}` convention forces. It is a statement about the Fourier integral of each `Φₙ`, not yet about the Fourier transform as an operator on `L²`.",
+  "source": {
+   "roadmap": "OrthogonalL2Bases",
+   "path": "Completed/OrthogonalL2Bases/STATUS.md"
+  }
+ }
+]

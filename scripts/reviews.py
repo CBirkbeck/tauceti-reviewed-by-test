@@ -26,6 +26,11 @@ on the `reviews` issue (reviews/tests.jsonl), and tests anyone suggests with
 the "Suggest a test" form (label `test-suggestion`), each an issue that stays
 open until the test is written (reviews/suggestions.jsonl).
 
+Lines `Named: <declaration> — <name> — <a sentence>` in the same comments add a
+declaration to the list of named results and notable definitions
+(reviews/named.jsonl), which Voyager writes to after each announcement; the
+roadmaps' own named results are read from their status files (scripts/named.py).
+
 A problem report says that a declaration is wrong, and why: the "Report a
 problem" form (label `problem`), opened from the page. The report is the issue
 that gets the declaration fixed, so it stays open. Its events (reported, edited,
@@ -52,6 +57,8 @@ TRAILERS = ("Reviewed-by",)
 LINE = re.compile(r"^\s*([A-Z][a-z]+-by)\s*:\s*`?([^\s`]+)`?(?:\s+(?:—|–|--|-)\s+(.*?))?\s*$")
 MARKER = re.compile(r"<!--\s*reviewed-by:v1\s+(\{.*?\})\s*-->", re.S)
 TEST_LINE = re.compile(r"^\s*Test\s*:\s*`?([^\s`]+)`?\s+(?:—|–|--|-)\s+`?([^\s`]+)`?(?:\s+(?:—|–|--|-)\s+(.*?))?\s*$")
+# A name may hold a dash of its own (Atkin–Lehner), so only a spaced em dash separates.
+NAMED_LINE = re.compile(r"^\s*Named\s*:\s*`?([^\s`]+)`?\s+(?:—|--)\s+(.+?)\s*$")
 AGENT_FIELD = "Agent, model and session"
 # The problem form's choices, by how they begin, and the names the ledger keeps.
 WHAT = {"It is wrong": "wrong", "Its name or docstring is misleading": "misleading", "Something else is off": "other"}
@@ -123,6 +130,17 @@ def comment_tests(text: str) -> list:
              "agent": agent} for match in map(TEST_LINE.match, text.splitlines()) if match]
 
 
+def comment_named(text: str) -> list:
+    agent = comment_agent(text)
+    found = []
+    for match in map(NAMED_LINE.match, text.splitlines()):
+        if not match:
+            continue
+        name, _, about = match.group(2).partition(" — ")
+        found.append({"decl": match.group(1), "name": name.strip(), "about": about.strip(), "kind": "agent" if agent else "person", "agent": agent})
+    return found
+
+
 def comment_marks(text: str) -> list:
     agent = comment_agent(text)
     return [{"decl": match.group(2), "version": "", "trailer": match.group(1), "kind": "agent" if agent else "person",
@@ -190,6 +208,19 @@ def make_test(entry: dict, index: dict, login: str, source: dict, at: str):
     if entry["kind"] == "agent" and not entry["checks"]:
         return None, "an AI says what its test checks"
     return {"schema": "tests/v1", "decl": item["name"], "test": test["name"], "checks": entry["checks"], "by": login, "kind": entry["kind"],
+            "agent": entry["agent"], "source": source, "at": at}, None
+
+
+def make_named(entry: dict, index: dict, login: str, source: dict, at: str):
+    """(record, None), or (None, why the name cannot be recorded). Whether it is a
+    result or a notable definition comes from the declaration itself."""
+    item, missing = find(entry["decl"], index)
+    if missing:
+        return None, missing
+    if not entry["name"]:
+        return None, "a named line gives the declaration its name, as it is known in the literature"
+    return {"schema": "named/v1", "decl": item["name"], "name": entry["name"], "about": entry["about"],
+            "what": "result" if item.get("kind") == "theorem" else "definition", "by": login, "kind": entry["kind"],
             "agent": entry["agent"], "source": source, "at": at}, None
 
 
@@ -393,11 +424,11 @@ def from_event(event: dict, index: dict, ledger: Path, site: str, at: str) -> tu
             return report_event(event, index, ledger.with_name(kind["ledger"]), site, at, kind)
     if "comment" not in event and event.get("action") in ("closed", "reopened"):
         return "", {"recorded": 0, "invalid": 0, "close": "false", "number": issue["number"], "message": ""}
-    tests = []
+    tests, names = [], []
     if "comment" in event:
         text = event["comment"]["body"] or ""
         login, marks, source = event["comment"]["user"]["login"], comment_marks(text), {"issue": issue["number"], "comment": event["comment"]["id"]}
-        tests = comment_tests(text)
+        tests, names = comment_tests(text), comment_named(text)
     else:
         login, marks, source = issue["user"]["login"], [form_mark(issue["body"] or "")], {"issue": issue["number"]}
     lines, recorded, invalid = [], 0, 0
@@ -424,6 +455,23 @@ def from_event(event: dict, index: dict, ledger: Path, site: str, at: str) -> tu
             append(listed, record)
             recorded += 1
             lines.append(f"- ✓ **Test:** `{record['test']}` for `{record['decl']}`" + (f": {record['checks']}" if record["checks"] else "") + ".")
+    catalogue = ledger.with_name("named.jsonl")
+    known = {record["decl"]: record["name"] for record in load(catalogue)}
+    roadmap = ledger.parent.parent / "data" / "named-roadmaps.json"
+    if roadmap.exists():
+        known.update({entry["decl"]: entry["name"] for entry in json.loads(roadmap.read_text(encoding="utf-8"))})
+    for entry in names:
+        record, refusal = make_named(entry, index, login, source, at)
+        if refusal:
+            invalid += 1
+            lines.append(f"- ✗ {refusal}" + ("" if refusal.endswith(("?", ".")) else "."))
+        elif record["decl"] in known:
+            lines.append(f"- = `{record['decl']}` is already named: {known[record['decl']]}.")
+        else:
+            append(catalogue, record)
+            known[record["decl"]] = record["name"]
+            recorded += 1
+            lines.append(f"- ✓ **Named:** `{record['decl']}` is {record['name']}.")
     reply = ""
     if lines:
         reply = "\n".join(["Recorded without a pull request." if recorded else "Nothing new was recorded.", "", *lines, "",

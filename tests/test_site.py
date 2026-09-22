@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from build_site import (data, marks_by_declaration, page, problem_link, problems_by_declaration, review_link, search_index,  # noqa: E402
-                        shards, suggest_link, summary)
+                        module_link, named, shards, suggest_link, summary)
 from reviews import tests_by_declaration  # noqa: E402
 
 INDEX = {"tauceti": "c0ffee1234567", "read": "2026-09-21T15:00:00Z",
@@ -172,6 +172,30 @@ class Search(unittest.TestCase):
         self.assertEqual([d["name"] for d in found[0]["declarations"]], ["TauCeti.X.f", "TauCeti.X.f_one"])
         self.assertEqual(found[0]["declarations"][0]["source"], "abbrev f := 1")
         self.assertEqual(found[0]["summary"], "About X.")
+
+
+NAMED = [{"decl": "TauCeti.X.f", "name": "The function f", "what": "definition", "about": "it is one.",
+          "source": {"roadmap": "Functions", "path": "TauCetiRoadmap/Functions/STATUS.md"}}]
+ANNOUNCED = [{"schema": "named/v1", "decl": "TauCeti.X.f_one", "name": "The value of f", "what": "result", "about": "f is one.",
+              "source": {"voyager": 614, "prs": [7001]}, "at": "2026-09-22T10:00:00Z", "by": "voyager", "kind": "agent", "agent": "Voyager"}]
+
+
+class Named(unittest.TestCase):
+    def test_the_named_file_carries_each_name_its_sentence_and_its_sources(self):
+        out = named(INDEX, NAMED, ANNOUNCED)
+        self.assertEqual(sorted(out["declarations"]), ["TauCeti.X.f", "TauCeti.X.f_one"])
+        entry = out["declarations"]["TauCeti.X.f"]
+        self.assertEqual((entry["name"], entry["what"], entry["about"]), ("The function f", "definition", "it is one."))
+        self.assertEqual(out["declarations"]["TauCeti.X.f_one"]["sources"][0]["source"]["prs"], [7001])
+
+    def test_a_file_has_a_page_of_its_own(self):
+        self.assertEqual(module_link("CBirkbeck/test", INDEX["modules"][0], "https://example.org/reviews/"),
+                         "https://example.org/reviews/#m=TauCeti.NumberTheory.X")
+
+    def test_the_page_counts_the_named_declarations_and_offers_their_tab(self):
+        html = page(INDEX, RECORDS, SETTINGS, (), NAMED + [dict(NAMED[0], decl="TauCeti.Y.g")])
+        self.assertIn("2 named", html)
+        self.assertIn('data-group="named"', html)
 
 
 class Page(unittest.TestCase):

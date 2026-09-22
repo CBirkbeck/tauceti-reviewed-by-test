@@ -7,6 +7,9 @@ way the kernel's `b4 trailers -u` collects Reviewed-by replies into commits.
 Writes the marks into the tree in the two forms a batch into Tau Ceti could
 take, so the pull request shows both:
 
+- snapshot/headers.lean, the top of each module docstring with the one line that
+  takes a reader from the code to the file's page, where any of its declarations
+  can be reviewed;
 - snapshot/REVIEWED-BY.md, a data file counting each declaration's current marks
   and the tests it passes;
 - snapshot/docstrings.lean, the docstring of each declaration with marks or
@@ -70,6 +73,28 @@ def shown(index: dict, marks: dict, listed: list) -> list:
     return [item for item in index["declarations"] if item["name"] in named]
 
 
+def headers(index: dict, records: list, site: str) -> str:
+    """The top of the module docstring of each file with marks, carrying the link to
+    its page. One line per file, wherever the reader is in the code; the link has a
+    line of its own, since only a line with a URL may pass 100 characters."""
+    marks = current(index, records)
+    files = {item["module"] for item in index["declarations"] if item["name"] in marks}
+    blocks = []
+    for module in index.get("modules", []):
+        if module["module"] not in files:
+            continue
+        link = f"[Reviews and tests of this file]({site}#m={module['module']})"
+        doc = module["doc"].strip()
+        if doc:
+            title, _, rest = doc.partition("\n")
+            body = f"{title}\n\n{link}" + (f"\n\n{rest.strip()}" if rest.strip() else "")
+        else:
+            body = f"# {module['module']}\n\n{link}"
+        blocks.append(f"-- {module['path']}\n/-!\n{body}\n-/")
+    return ("-- The line each file would carry at the top of its module docstring, taking a reader\n"
+            "-- from the code to the file's page on the review site.\n\n" + "\n\n".join(blocks) + "\n")
+
+
 def docstrings(index: dict, records: list, site: str, listed: list) -> str:
     marks, tests = current(index, records), tests_by_declaration(index, listed, [])
     blocks = []
@@ -110,6 +135,7 @@ def main() -> int:
     if new:
         SNAPSHOT.mkdir(exist_ok=True)
         listed = load(ROOT / "reviews" / "tests.jsonl")
+        (SNAPSHOT / "headers.lean").write_text(headers(index, records, site), encoding="utf-8")
         (SNAPSHOT / "REVIEWED-BY.md").write_text(table(index, records, site, listed), encoding="utf-8")
         (SNAPSHOT / "docstrings.lean").write_text(docstrings(index, records, site, listed), encoding="utf-8")
         mark_file.write_text(json.dumps({"records": len(records)}) + "\n")

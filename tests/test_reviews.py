@@ -6,13 +6,13 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from reviews import (add, comment_marks, comment_tests, count_text, form_mark, form_report, form_suggestion, from_event,  # noqa: E402
-                     make_record, make_report, make_suggestion, make_test, tally)
+from reviews import (add, comment_marks, comment_named, comment_tests, count_text, form_mark, form_report,  # noqa: E402
+                     form_suggestion, from_event, make_named, make_record, make_report, make_suggestion, make_test, tally)
 
 INDEX = {"tauceti": "c0ffee", "declarations": [
-    {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt", "hash": "aaaaaaaaaaaa"},
-    {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt_one", "hash": "dddddddddddd"},
-    {"name": "NumberField.Set.HasNaturalDensity", "hash": "bbbbbbbbbbbb"}]}
+    {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt", "kind": "def", "hash": "aaaaaaaaaaaa"},
+    {"name": "TauCeti.IdealArithmeticFunction.vonMangoldt_one", "kind": "theorem", "hash": "dddddddddddd"},
+    {"name": "NumberField.Set.HasNaturalDensity", "kind": "def", "hash": "bbbbbbbbbbbb"}]}
 
 FORM = """### Declaration
 
@@ -159,6 +159,43 @@ class Tests(unittest.TestCase):
             reply, outputs = from_event({"issue": {"number": 1, "user": {"login": "bob"}, "body": ""}, "comment": dict(comment, id=10)}, INDEX, ledger,
                                         "https://example.org/", "later")
             self.assertEqual(len((Path(folder) / "tests.jsonl").read_text().splitlines()), 1)
+
+
+class NamedLines(unittest.TestCase):
+    """Voyager, and anyone else, adds a named result or definition to the list."""
+
+    LINE = "Named: TauCeti.IdealArithmeticFunction.vonMangoldt — The ideal von Mangoldt function — log N(P) on prime powers."
+
+    def test_each_line_gives_a_declaration_its_name_and_a_sentence(self):
+        self.assertEqual(comment_named("Announced today.\n" + self.LINE), [
+            {"decl": "TauCeti.IdealArithmeticFunction.vonMangoldt", "name": "The ideal von Mangoldt function",
+             "about": "log N(P) on prime powers.", "kind": "person", "agent": ""}])
+
+    def test_what_it_is_comes_from_the_declaration_itself(self):
+        [entry] = comment_named(self.LINE)
+        record, refusal = make_named(entry, INDEX, "voyager", {"issue": 1, "comment": 3}, "now")
+        self.assertIsNone(refusal)
+        self.assertEqual((record["schema"], record["what"], record["name"]), ("named/v1", "definition", "The ideal von Mangoldt function"))
+        [theorem] = comment_named("Named: TauCeti.IdealArithmeticFunction.vonMangoldt_one — Vanishing at the unit ideal")
+        theorem["decl"] = "TauCeti.IdealArithmeticFunction.vonMangoldt_one"
+        self.assertEqual(make_named(theorem, INDEX, "voyager", {}, "now")[0]["what"], "result")
+
+    def test_a_line_says_what_the_name_is(self):
+        entry = dict(comment_named(self.LINE)[0], name="")
+        self.assertIn("name", make_named(entry, INDEX, "voyager", {}, "now")[1])
+
+    def test_a_declaration_already_named_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = Path(folder) / "records.jsonl"
+            comment = {"id": 3, "user": {"login": "voyager"}, "body": self.LINE}
+            event = {"issue": {"number": 1, "user": {"login": "alice"}, "body": ""}, "comment": comment}
+            reply, outputs = from_event(event, INDEX, ledger, "https://example.org/", "now")
+            self.assertEqual(outputs["recorded"], 1)
+            self.assertIn("✓ **Named:** `TauCeti.IdealArithmeticFunction.vonMangoldt`", reply)
+            reply, outputs = from_event(event, INDEX, ledger, "https://example.org/", "later")
+            self.assertEqual(outputs["recorded"], 0)
+            self.assertIn("already named", reply)
+            self.assertEqual(len((Path(folder) / "named.jsonl").read_text().splitlines()), 1)
 
 
 SUGGESTION = """### Declaration

@@ -9,8 +9,8 @@ marks, listed tests, suggested tests and problem reports) and
 data/settings.json, and writes site/:
 
 - index.html, the page: search every declaration by name or docstring, filter
-  definitions from theorems and lemmas, by area and by review, and open one to
-  read it and review it;
+  the named results and definitions, definitions from theorems and lemmas, by
+  area and by review, and open one to read it and review it;
 - data/search.json, one row per declaration (name, keyword, module, line),
   which the page loads first; data/docs.json, each declaration's docstring in
   one sentence, which it loads next;
@@ -33,6 +33,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from named import named_by_declaration  # noqa: E402
 from reviews import load, reports, tally, tests_by_declaration  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +46,11 @@ PROBLEM_KEYS = ("issue", "status", "what", "why", "fix", "by", "kind", "agent", 
 def review_link(repo: str, item: dict) -> str:
     query = urlencode({"template": "reviewed-by.yml", "title": f"Review: {item['name']}", "declaration": item["name"], "version": item["hash"]})
     return f"https://github.com/{repo}/issues/new?{query}"
+
+
+def module_link(repo: str, module: dict, site: str) -> str:
+    """A file's own page: what the line at the top of its module docstring points to."""
+    return f"{site}#m={module['module']}"
 
 
 def suggest_link(repo: str, item: dict) -> str:
@@ -116,6 +122,13 @@ def shards(index: dict) -> dict:
     return out
 
 
+def named(index: dict, roadmap: list = (), ledger: list = ()) -> dict:
+    """The named results and notable definitions: what to read first in a library
+    whose other declarations are mostly API, glue and steps of proofs."""
+    return {"schema": "named/v1", "tauceti": index["tauceti"], "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "declarations": named_by_declaration(index, list(roadmap), list(ledger))}
+
+
 def data(index: dict, records: list, problems: list = (), listed: list = (), suggestions: list = ()) -> dict:
     marks = marks_by_declaration(index, records)
     found = problems_by_declaration(index, list(problems))
@@ -172,6 +185,9 @@ select { border-radius: 8px; max-width: 220px; }
 .kw { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .7px; color: var(--faint); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
 .kw.def { color: var(--accent); border-color: currentColor; }
 .tickmini { flex: none; font-size: 11px; font-weight: 700; color: var(--person); }
+.named { flex: none; font-weight: 600; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.panel .namedline { margin: 6px 0 2px; font-size: 15px; } .panel .namedline strong { font-size: 16px; }
+.panel .namedline .from { color: var(--faint); font-size: 12.5px; }
 .flag { flex: none; font-size: 11px; font-weight: 700; color: var(--problem); }
 .more { font: inherit; font-size: 13px; margin: 6px 0; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; }
 .panel { position: sticky; top: 70px; max-height: calc(100vh - 86px); overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
@@ -209,6 +225,8 @@ details.who .head, details.which .head { font-size: 12.5px; font-weight: 600; ma
 .siblings { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .siblings button { font: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; text-align: left; background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; overflow-wrap: anywhere; }
 .siblings button[aria-current="true"] { color: var(--ink); font-weight: 600; }
+.linkish { font: inherit; font-size: 13px; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; }
+.detail-note { color: var(--faint); font-size: 12.5px; margin: 2px 0 6px; }
 .areas { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 14px; }
 .areas button { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 .areas button span { color: var(--faint); margin-left: 4px; }
@@ -233,6 +251,7 @@ const WHAT = {wrong: 'Wrong', misleading: 'Misleading name or docstring', other:
 const CLOSED = {fixed: 'Fixed', 'not planned': 'Closed without a fix', duplicate: 'Closed as a duplicate'};
 const PAGE = 60;
 let index = null, lower = [], leafLower = [], area = [], docs = null, docsLower = null, marks = {}, reviewed = new Set(), flagged = new Set(), tested = new Set();
+let namedOf = {}, namedLower = [];
 let state = {q: '', group: 'all', status: 'all', area: '', d: ''}, shown = PAGE, results = [];
 const shardCache = new Map();
 
@@ -259,20 +278,23 @@ const issueUrl = n => 'https://github.com/' + SETTINGS.repo + '/issues/' + n;
 
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  state = {q: p.get('q') || '', group: p.get('kind') || 'all', status: p.get('status') || 'all', area: p.get('area') || '', d: p.get('d') || ''};
+  state = {q: p.get('q') || '', group: p.get('kind') || 'all', status: p.get('status') || 'all', area: p.get('area') || '',
+           d: p.get('d') || '', m: p.get('m') || ''};
 }
 function writeHash(replace) {
   const p = new URLSearchParams();
   if (state.q) p.set('q', state.q); if (state.group !== 'all') p.set('kind', state.group); if (state.status !== 'all') p.set('status', state.status);
-  if (state.area) p.set('area', state.area); if (state.d) p.set('d', state.d);
+  if (state.area) p.set('area', state.area); if (state.m) p.set('m', state.m); if (state.d) p.set('d', state.d);
   const hash = '#' + p.toString();
   if (location.hash !== hash) history[replace ? 'replaceState' : 'pushState'](null, '', hash || '#');
 }
 
 function passes(i) {
   const kw = index.keywords[index.rows[i][1]];
+  if (state.m && index.modules[index.rows[i][2]] !== state.m) return false;
   if (state.group === 'def' && !DEFS.has(kw)) return false;
   if (state.group === 'thm' && DEFS.has(kw)) return false;
+  if (state.group === 'named' && !namedOf[index.rows[i][0]]) return false;
   if (state.area && area[i] !== state.area) return false;
   if (state.status === 'reviewed' && !reviewed.has(index.rows[i][0])) return false;
   if (state.status === 'open' && reviewed.has(index.rows[i][0])) return false;
@@ -289,7 +311,8 @@ function search() {
     let score = 0;
     for (const t of tokens) {
       const leaf = leafLower[i], full = lower[i];
-      const s = leaf === t ? 100 : leaf.startsWith(t) ? 60 : leaf.includes(t) ? 40 : full.includes(t) ? 25 : docsLower && docsLower[i].includes(t) ? 8 : 0;
+      const s = leaf === t ? 100 : leaf.startsWith(t) ? 60 : leaf.includes(t) ? 40 : full.includes(t) ? 25
+        : namedLower[i] && namedLower[i].includes(t) ? 30 : docsLower && docsLower[i].includes(t) ? 8 : 0;
       if (!s) { score = -1; break; }
       score += s;
     }
@@ -307,15 +330,16 @@ function nameHtml(name) {
 }
 function resultHtml(i) {
   const [name, k] = index.rows[i], kw = index.keywords[k];
-  const doc = docs ? docs[i] : '';
+  const doc = docs ? docs[i] : '', named = namedOf[name];
   return '<button class="result" data-i="' + i + '"' + (state.d === name ? ' aria-current="true"' : '') + '><div class="name">' + nameHtml(name) + '</div>' +
     '<div class="line2"><span class="kw' + (DEFS.has(kw) ? ' def' : '') + '">' + esc(kw) + '</span>' + (flagged.has(name) ? '<span class="flag" title="A problem is reported">!</span>' : '') +
     (reviewed.has(name) ? '<span class="tickmini" title="' + esc(reviewedTip(name)) + '">✓</span>' : '') +
+    (named ? '<span class="named" title="A named result or definition">' + esc(named.name) + '</span>' : '') +
     '<span class="doc1">' + esc(doc || index.modules[index.rows[i][2]]) + '</span></div></button>';
 }
 function renderResults() {
   const box = $('results');
-  const filtered = state.q || state.group !== 'all' || state.status !== 'all' || state.area;
+  const filtered = state.q || state.group !== 'all' || state.status !== 'all' || state.area || state.m;
   if (!filtered) {
     const counts = {};
     area.forEach(a => { counts[a] = (counts[a] || 0) + 1; });
@@ -332,6 +356,7 @@ function renderResults() {
     return;
   }
   results = search();
+  if (state.m) results.sort((a, b) => index.rows[a][3] - index.rows[b][3]);
   const n = results.length;
   $('status').textContent = n ? n.toLocaleString() + ' match' + (n === 1 ? '' : 'es') + (state.q && !docs ? ' by name (docstrings still loading)' : '') : 'No matches.';
   box.innerHTML = '<div class="results">' + results.slice(0, shown).map(resultHtml).join('') + '</div>' + (n > shown ? '<button class="more" id="more">Show more</button>' : '');
@@ -386,6 +411,22 @@ function testsHtml(tests) {
     (unit ? '<p class="head">Unit tests: examples in Tau Ceti that name it</p>' + unit : '') +
     (results ? '<p class="head">Key results listed as tests</p>' + results : '') + (suggested ? '<p class="head">Suggested tests</p>' + suggested : '') + '</details>';
 }
+function namedHtml(name) {
+  const named = namedOf[name];
+  if (!named) return '';
+  const from = named.sources.map(s => {
+    if (s.source && s.source.roadmap) {
+      return 'the <a href="https://github.com/TauCetiProject/TauCetiRoadmap/blob/main/' + esc(s.source.path) + '">' + esc(s.source.roadmap) + '</a> roadmap';
+    }
+    if (s.source && s.source.voyager) {
+      const prs = (s.source.prs || []).map(n => '<a href="https://github.com/TauCetiProject/TauCeti/pull/' + n + '">TauCeti#' + n + '</a>').join(', ');
+      return 'Voyager' + (prs ? ', ' + prs : '') + (s.at ? ', ' + when(s.at) : '');
+    }
+    return esc(s.by ? '@' + s.by : 'a reader');
+  });
+  return '<p class="namedline"><strong>' + esc(named.name) + '</strong>' + (named.about ? ' — ' + esc(named.about) : '') +
+    '<br><span class="from">Named ' + (named.what === 'definition' ? 'as a notable definition' : 'as a result') + ' by ' + from.join('; ') + '.</span></p>';
+}
 function whoHtml(entry) {
   return Object.keys(MEANING).map(trailer => {
     const given = entry.marks.filter(m => m.trailer === trailer);
@@ -408,9 +449,23 @@ function problemHtml(p) {
     (p.fix ? '<p class="fix">Suggested fix</p><pre>' + esc(p.fix) + '</pre>' : '') +
     '<p><a href="' + esc(issueUrl(p.issue)) + '">Issue #' + esc(p.issue) + '</a>' + (p.closedAt ? ' · closed by @' + esc(p.closedBy) + ', ' + when(p.closedAt) : '') + '</p></div>';
 }
+function moduleHtml(name) {
+  const m = index.modules.indexOf(name);
+  if (m < 0) return '<p class="empty">' + esc(name) + ' is not a module at this commit.</p>';
+  const rows = index.rows.map((r, i) => [r, i]).filter(([r]) => r[2] === m);
+  const named = rows.filter(([r]) => namedOf[r[0]]), seen = rows.filter(([r]) => reviewed.has(r[0]));
+  const shown = rows.filter(([r]) => tested.has(r[0])), reported = rows.filter(([r]) => flagged.has(r[0]));
+  return '<button class="quiet back" id="back">← Back</button><p class="where">File</p><h2>' + esc(name) + '</h2>' +
+    '<p class="where">' + rows.length + ' declaration' + (rows.length === 1 ? '' : 's') + ' · ' + seen.length + ' reviewed · ' +
+    shown.length + ' with tests' + (reported.length ? ' · <span class="fail">' + reported.length + ' reported</span>' : '') + '</p>' +
+    (named.length ? '<p class="sub">Named here</p><div class="results">' + named.map(([, i]) => resultHtml(i)).join('') + '</div>' : '') +
+    '<p class="sub">Every declaration in this file</p><p class="detail-note">Choose one to read it, review it, suggest a test or report a problem.</p>' +
+    '<div class="siblings">' + rows.map(([r]) => '<button data-name="' + esc(r[0]) + '">' + esc(r[0]) + '</button>').join('') + '</div>';
+}
 async function renderPanel() {
   const panel = $('panel');
-  document.body.classList.toggle('reading', !!state.d);
+  document.body.classList.toggle('reading', !!state.d || !!state.m);
+  if (!state.d && state.m) { panel.innerHTML = moduleHtml(state.m); return; }
   if (!state.d) { panel.innerHTML = '<p class="empty">Choose a declaration to read it, see its marks and review it.</p>'; return; }
   const i = rowOf.get(state.d);
   if (i === undefined) { panel.innerHTML = '<button class="quiet back" id="back">← Back</button><p class="empty">' + esc(state.d) + ' is not a declaration at this commit.</p>'; return; }
@@ -424,8 +479,9 @@ async function renderPanel() {
   const lines = item.source.split('\n'), long = lines.length > 60;
   panel.innerHTML = '<button class="quiet back" id="back">← Back</button>' +
     '<span class="kw' + (DEFS.has(item.keyword) ? ' def' : '') + '">' + esc(item.keyword) + '</span><h2>' + nameHtml(name) + '</h2>' +
-    '<p class="where"><a href="' + esc(data.url) + '">' + esc(data.module) + '</a>, lines ' + item.line + '–' + item.end + ' · version <span class="mono">' + esc(item.hash) + '</span></p>' +
-    (item.doc ? '<div class="doc">' + prose(item.doc) + '</div>' : '') +
+    '<p class="where"><a href="' + esc(data.url) + '">' + esc(data.module) + '</a> (<button class="linkish" id="file">this file</button>), lines ' +
+    item.line + '–' + item.end + ' · version <span class="mono">' + esc(item.hash) + '</span></p>' +
+    namedHtml(name) + (item.doc ? '<div class="doc">' + prose(item.doc) + '</div>' : '') +
     '<pre><code id="src">' + esc(long ? lines.slice(0, 60).join('\n') + '\n…' : item.source) + '</code></pre>' +
     '<div class="actions"><a class="primary" href="' + esc(reviewLink(name, item.hash)) + '">Review this</a>' +
     '<a class="quiet" href="' + esc(suggestLink(name, item.hash)) + '">Suggest a test</a>' +
@@ -438,6 +494,8 @@ async function renderPanel() {
     '<p class="sub">Tests</p>' + (entry && entry.tests ? testsHtml(entry.tests) : '<p class="empty">No tests yet: no example in Tau Ceti names it, and none is listed or suggested.</p>') +
     '<p class="sub">In ' + esc(data.module.split('.').slice(-1)[0]) + '</p><div class="siblings">' + data.declarations.map(d =>
       '<button data-name="' + esc(d.name) + '"' + (d.name === name ? ' aria-current="true"' : '') + '>' + esc(d.name.split('.').slice(-1)[0]) + '</button>').join('') + '</div>';
+  const file = $('file');
+  if (file) file.addEventListener('click', () => update({m: data.module, d: ''}));
   const all = $('all');
   if (all) all.addEventListener('click', () => { $('src').textContent = item.source; all.remove(); });
   $('copy').addEventListener('click', () => navigator.clipboard && navigator.clipboard.writeText(name).then(() => { $('copy').textContent = 'Copied'; }));
@@ -461,7 +519,7 @@ document.addEventListener('click', event => {
   const areaButton = event.target.closest('[data-area]');
   if (areaButton) { update({area: areaButton.dataset.area}); return; }
   if (event.target.id === 'more') { shown += PAGE * 2; renderResults(); return; }
-  if (event.target.closest('#back')) { update({d: ''}); }
+  if (event.target.closest('#back')) { update(state.d ? {d: ''} : {m: ''}); }
 });
 let timer;
 $('search').addEventListener('input', event => { clearTimeout(timer); timer = setTimeout(() => update({q: event.target.value.trim()}, true), 120); });
@@ -477,8 +535,10 @@ window.addEventListener('popstate', () => { readHash(); render(); });
 (async () => {
   readHash();
   $('status').textContent = 'Loading ' + SETTINGS.count.toLocaleString() + ' declarations…';
-  const [loaded, reviews] = await Promise.all([fetch('data/search.json').then(r => r.json()), fetch('reviews.json').then(r => r.json()).catch(() => ({declarations: {}}))]);
+  const [loaded, reviews, namedFile] = await Promise.all([fetch('data/search.json').then(r => r.json()),
+    fetch('reviews.json').then(r => r.json()).catch(() => ({declarations: {}})), fetch('named.json').then(r => r.json()).catch(() => ({declarations: {}}))]);
   index = loaded;
+  namedOf = namedFile.declarations || {};
   marks = reviews.declarations || {};
   reviewed = new Set(Object.entries(marks).filter(([, e]) => e.marks.some(m => m.current)).map(([name]) => name));
   flagged = new Set(Object.entries(marks).filter(([, e]) => (e.problems || []).some(p => p.status === 'open')).map(([name]) => name));
@@ -487,6 +547,7 @@ window.addEventListener('popstate', () => { readHash(); render(); });
   leafLower = lower.map(n => n.slice(n.lastIndexOf('.') + 1));
   area = index.rows.map(r => (index.modules[r[2]].split('.')[1] || index.modules[r[2]]));
   rowOf = new Map(index.rows.map((r, i) => [r[0], i]));
+  namedLower = index.rows.map(r => { const n = namedOf[r[0]]; return n ? (n.name + ' ' + (n.about || '')).toLowerCase() : ''; });
   const areas = [...new Set(area)].sort();
   $('area-filter').innerHTML = '<option value="">Every area</option>' + areas.map(a => '<option value="' + esc(a) + '">' + esc(a) + '</option>').join('');
   window.TauReview = {state: () => ({...state}), results: () => results.map(i => index.rows[i][0]), ready: false};
@@ -498,8 +559,9 @@ window.addEventListener('popstate', () => { readHash(); render(); });
 """
 
 
-def page(index: dict, records: list, settings: dict, problems: list = ()) -> str:
+def page(index: dict, records: list, settings: dict, problems: list = (), named_list: list = ()) -> str:
     total = len(index["declarations"])
+    named_count = len(named_by_declaration(index, list(named_list), []))
     open_problems = sum(p["status"] == "open" for items in problems_by_declaration(index, list(problems)).values() for p in items)
     config = json.dumps({"repo": settings["repo"], "bulk_issue": settings["bulk_issue"], "count": total, "tauceti": index["tauceti"]})
     config = config.replace("<", "\\u003c")
@@ -521,7 +583,7 @@ def page(index: dict, records: list, settings: dict, problems: list = ()) -> str
   <p class="eyebrow">Test · review marks</p>
   <h1>Reviewed-by for Tau Ceti</h1>
   <p class="lede">Every declaration of Tau Ceti, searchable, with who has checked which and on which version, recorded from the browser without pull requests.</p>
-  <p class="meta">Tau Ceti <a href="https://github.com/TauCetiProject/TauCeti/tree/{html.escape(index['tauceti'])}">{html.escape(index['tauceti'][:7])}</a> · {total:,} declarations in {len(index['modules']):,} modules · {len(records)} mark{'s' if len(records) != 1 else ''}{f" · {open_problems} open problem{'s' if open_problems != 1 else ''}" if open_problems else ''}</p>
+  <p class="meta">Tau Ceti <a href="https://github.com/TauCetiProject/TauCeti/tree/{html.escape(index['tauceti'])}">{html.escape(index['tauceti'][:7])}</a> · {total:,} declarations in {len(index['modules']):,} modules · {named_count:,} named{f" · {len(records)} review{'s' if len(records) != 1 else ''}" if records else ''}{f" · {open_problems} open problem{'s' if open_problems != 1 else ''}" if open_problems else ''}</p>
 </header>
 <details class="how">
   <summary>How to leave a mark</summary>
@@ -530,6 +592,7 @@ def page(index: dict, records: list, settings: dict, problems: list = ()) -> str
     <li>A bot records the mark, answers on the issue and closes it. There is no pull request, and this page updates within a few minutes.</li>
     <li>If the declaration changes later, the mark stays but is greyed: it applies to the earlier version until someone reviews the new one.</li>
     <li>Each declaration counts its reviews, people apart from AI agents; <strong>Who</strong> lists them, with dates, versions and evidence.</li>
+    <li><strong>Named</strong> shows only the named results and notable definitions: the ones the roadmaps' status files and Voyager's announcements single out, rather than the API and proof steps around them.</li>
   </ol>
   <p><strong>Tests</strong> are what a declaration passes, rather than a mark: its unit tests (the examples in Tau Ceti that name it), key results listed as its tests, mostly by AI agents, and tests anyone suggests with <strong>Suggest a test</strong>. A test passes while it is in Tau Ceti at the pinned commit without <code>sorry</code>. <strong>Which</strong> shows each with its statement.</p>
   <p>If a declaration is wrong, press <strong>Report a problem</strong> instead and say why. The report is the issue for fixing it: it stays open, and the page flags the declaration, until it is closed as fixed or as not a problem.</p>
@@ -539,7 +602,7 @@ def page(index: dict, records: list, settings: dict, problems: list = ()) -> str
 <div class="bar"><div class="bar-inner">
   <input id="search" type="search" placeholder="Search {total:,} declarations: a name, part of one, or words from a docstring" autocomplete="off" spellcheck="false" aria-label="Search declarations">
   <div class="chips" role="group" aria-label="Kind">
-    <button data-group="all" aria-pressed="true">All</button><button data-group="def" aria-pressed="false">Definitions</button><button data-group="thm" aria-pressed="false">Theorems and lemmas</button>
+    <button data-group="all" aria-pressed="true">All</button><button data-group="named" aria-pressed="false">Named</button><button data-group="def" aria-pressed="false">Definitions</button><button data-group="thm" aria-pressed="false">Theorems and lemmas</button>
   </div>
   <select id="state-filter" aria-label="Review"><option value="all">Reviewed or not</option><option value="reviewed">Reviewed</option><option value="open">Not yet reviewed</option><option value="tested">Tested</option><option value="problem">Reported problems</option></select>
   <select id="area-filter" aria-label="Area"><option value="">Every area</option></select>
@@ -561,6 +624,8 @@ def page(index: dict, records: list, settings: dict, problems: list = ()) -> str
 def main() -> int:
     index = json.loads((ROOT / "data" / "declarations.json").read_text(encoding="utf-8"))
     settings = json.loads((ROOT / "data" / "settings.json").read_text(encoding="utf-8"))
+    roadmap_named = json.loads((ROOT / "data" / "named-roadmaps.json").read_text(encoding="utf-8")) if (ROOT / "data" / "named-roadmaps.json").exists() else []
+    announced = load(ROOT / "reviews" / "named.jsonl")
     records = load(ROOT / "reviews" / "records.jsonl")
     problems = load(ROOT / "reviews" / "problems.jsonl")
     listed, suggestions = load(ROOT / "reviews" / "tests.jsonl"), load(ROOT / "reviews" / "suggestions.jsonl")
@@ -569,14 +634,15 @@ def main() -> int:
         shutil.rmtree(out / "data")
     (out / "data" / "m").mkdir(parents=True)
     compact = {"ensure_ascii": False, "separators": (",", ":")}
-    (out / "index.html").write_text(page(index, records, settings, problems), encoding="utf-8")
+    (out / "index.html").write_text(page(index, records, settings, problems, roadmap_named + announced), encoding="utf-8")
+    (out / "named.json").write_text(json.dumps(named(index, roadmap_named, announced), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     (out / "data" / "search.json").write_text(json.dumps(search_index(index), **compact), encoding="utf-8")
     (out / "data" / "docs.json").write_text(json.dumps([summary(item["doc"]) for item in index["declarations"]], **compact), encoding="utf-8")
     for n, shard in shards(index).items():
         (out / "data" / "m" / f"{n}.json").write_text(json.dumps(shard, **compact), encoding="utf-8")
     (out / "reviews.json").write_text(json.dumps(data(index, records, problems, listed, suggestions), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"site: {len(index['declarations'])} declarations in {len(index['modules'])} modules, {len(records)} marks, "
-          f"{len(reports(problems))} problem reports")
+    print(f"site: {len(index['declarations'])} declarations in {len(index['modules'])} modules, "
+          f"{len(named_by_declaration(index, roadmap_named, announced))} named, {len(records)} marks, {len(reports(problems))} problem reports")
     return 0
 
 

@@ -1,8 +1,10 @@
 name: Follow Tau Ceti
 
-# Moves the page to Tau Ceti's current main once a day. Marks stay pinned to
-# the versions they were made on: a declaration that changed shows its marks
-# greyed until someone reviews it again.
+# Moves the page to Tau Ceti's current main once a day, and reads the named
+# results and notable definitions out of the roadmaps' status files again, so
+# the page keeps up as the library grows. Marks stay pinned to the versions they
+# were made on: a declaration that changed shows its marks greyed until someone
+# reviews it again.
 on:
   schedule:
     - cron: '40 5 * * *'
@@ -28,6 +30,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read the roadmaps' named results
+        run: |
+          git clone -q --depth 1 https://github.com/TauCetiProject/TauCetiRoadmap "$RUNNER_TEMP/roadmaps"
+          python3 scripts/named.py roadmaps "$RUNNER_TEMP/roadmaps"
+          if ! git diff --quiet -- data/named-roadmaps.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -q -m "The roadmaps' named results, as they stand today" -- data/named-roadmaps.json
+            for attempt in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep $((attempt * 5)); done
+          fi
       - name: Pin Tau Ceti's current main
         id: pin
         run: |

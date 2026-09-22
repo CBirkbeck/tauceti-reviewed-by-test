@@ -4,9 +4,12 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from batch import commit_message, docstrings, table  # noqa: E402
+from batch import commit_message, docstrings, headers, table  # noqa: E402
 
-INDEX = {"tauceti": "c0ffee1234567", "declarations": [
+INDEX = {"tauceti": "c0ffee1234567",
+         "modules": [{"module": "TauCeti.X", "path": "TauCeti/X.lean", "doc": "# The function f\n\nIt is one, and this is the rest.", "url": "u"},
+                     {"module": "TauCeti.Y", "path": "TauCeti/Y.lean", "doc": "", "url": "v"}],
+         "declarations": [
     {"name": "TauCeti.X.f", "kind": "def", "module": "TauCeti.X", "path": "TauCeti/X.lean", "line": 7, "doc": "The function `f`.",
      "source": "def f : ℕ := 1", "hash": "aaaaaaaaaaaa"},
     {"name": "TauCeti.X.g", "kind": "def", "module": "TauCeti.X", "path": "TauCeti/X.lean", "line": 9, "doc": "", "source": "def g : ℕ := 2", "hash": "cccccccccccc"}]}
@@ -49,6 +52,20 @@ class Batch(unittest.TestCase):
         text = docstrings(index, many, "https://cbirkbeck.github.io/tauceti-reviewed-by-test/", [])
         self.assertTrue(any(len(line) > 100 for line in text.splitlines()))
         self.assertEqual([line for line in text.splitlines() if len(line) > 100 and "http" not in line], [])
+
+    def test_a_file_gets_one_link_at_the_top_of_its_module_docstring(self):
+        text = headers(INDEX, [ALICE], SITE)
+        self.assertIn("-- TauCeti/X.lean\n/-!\n# The function f\n\n"
+                      "[Reviews and tests of this file](https://example.org/reviews/#m=TauCeti.X)\n\n"
+                      "It is one, and this is the rest.\n-/", text)
+        # Only the files with something to show, and nothing over the line limit but the link.
+        self.assertNotIn("TauCeti/Y.lean", text)
+        self.assertEqual([line for line in text.splitlines() if len(line) > 100 and "http" not in line], [])
+
+    def test_a_file_without_a_module_docstring_gets_one(self):
+        index = dict(INDEX, modules=[dict(INDEX["modules"][0], doc="")])
+        self.assertIn("-- TauCeti/X.lean\n/-!\n# TauCeti.X\n\n"
+                      "[Reviews and tests of this file](https://example.org/reviews/#m=TauCeti.X)\n-/", headers(index, [ALICE], SITE))
 
     def test_the_table_counts_each_mark(self):
         text = table(INDEX, [ALICE, BOT, OLD], SITE, [])

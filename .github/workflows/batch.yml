@@ -1,12 +1,13 @@
 name: Batch marks into the code
 
 # Collects the marks recorded since the last batch into one pull request, the
-# way the kernel's `b4 trailers -u` collects Reviewed-by replies. By hand here;
-# a weekly schedule in real use.
+# way the kernel's `b4 trailers -u` collects Reviewed-by replies. Weekly, on
+# Monday mornings, and by hand whenever wanted. The pull request waits for a
+# human: nothing here writes to Tau Ceti.
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 6 * * 1'
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: write
