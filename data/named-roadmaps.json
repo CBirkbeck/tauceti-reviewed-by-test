@@ -860,50 +860,60 @@
   }
  },
  {
-  "decl": "NumberField.exists_auxiliaryPrime",
-  "name": "The auxiliary-prime theorem",
+  "decl": "NumberField.Chebotarev.hasDirichletDensity_frobeniusPrimeSet",
+  "name": "The Chebotarev density theorem",
   "what": "result",
-  "about": "above any bound it produces a prime congruent to `1` modulo a prescribed nonzero level, unramified in both number fields, with the corresponding cyclotomic polynomial irreducible over the base.",
+  "about": "for a finite Galois extension `L / K` of number fields and a conjugacy class `C` of `Gal(L/K)`, the primes of `𝓞 K` with Frobenius class `C` have density `#C / #Gal(L/K)`.",
   "source": {
    "roadmap": "Chebotarev",
    "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
   }
  },
  {
-  "decl": "NumberField.artinSymbol_map_restrictNormalHom",
-  "name": "Artin-symbol restriction to a normal subextension",
+  "decl": "NumberField.Chebotarev.hasDirichletDensity_abelianFrobenius",
+  "name": "Chebotarev for abelian extensions",
   "what": "result",
-  "about": "shrinking the top field carries the Artin class to the lower Artin class with no power or inverse.",
+  "about": "for abelian `Gal(L/K)` each automorphism has fibre density `1 / #Gal(L/K)`; the cyclic fixed field contracts this into the general theorem.",
   "source": {
    "roadmap": "Chebotarev",
    "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
   }
  },
  {
-  "decl": "NumberField.artinSymbol_map_restrictScalarsHom_eq_pow_inertiaDeg",
-  "name": "The Artin-symbol base-change power law",
+  "decl": "NumberField.Chebotarev.fixedField_frobenius_fiber_card",
+  "name": "The cyclic fixed-field fibre count",
   "what": "result",
-  "about": "raising the base field raises the original Artin class to the intermediate residue degree.",
+  "about": "over an unramified prime with Artin class `C` represented by `σ`, the primes of `L^⟨σ⟩` of residue degree one whose relative Frobenius is `σ` number exactly `#G / (#C · orderOf σ)`, an exact ratio and not a truncated division.",
   "source": {
    "roadmap": "Chebotarev",
    "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.fixedField_zpowers_isCyclotomicExtension",
-  "name": "The tagged fixed-field cyclotomic theorem",
+  "decl": "NumberField.Chebotarev.hasDirichletDensity_primesCongruent",
+  "name": "Dirichlet's theorem on primes in arithmetic progressions, in density form",
   "what": "result",
-  "about": "when the order of a tag's first component divides that of its second, the compositum is cyclotomic over the fixed field of the generated cyclic subgroup.",
+  "about": "for `m ≠ 0` and `a` a unit modulo `m`, the rational primes congruent to `a` have Dirichlet density `1 / φ(m)`.",
   "source": {
    "roadmap": "Chebotarev",
    "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
   }
  },
  {
-  "decl": "NumberField.Chebotarev.frobeniusPsi_sub_frobeniusTheta_isLittleO",
-  "name": "Higher-prime-power removal for Frobenius `ψ`",
+  "decl": "NumberField.Chebotarev.hasDirichletDensity_frobeniusPrimeSet_one",
+  "name": "Splitting completely, including the non-Galois case",
   "what": "result",
-  "about": "the contribution beyond exponent one is `o(x)`, giving the first discard estimate needed to pass from `ψ_C` to `ϑ_C`.",
+  "about": "the completely split primes of a finite Galois extension have density `1 / [L : K]`, and for an intermediate field the count comes through its Galois closure.",
+  "source": {
+   "roadmap": "Chebotarev",
+   "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
+  }
+ },
+ {
+  "decl": "NumberField.Chebotarev.hasDirichletDensity_setOf_ncard_primesOver_eq_finrank",
+  "name": "Splitting completely, including the non-Galois case",
+  "what": "result",
+  "about": "the completely split primes of a finite Galois extension have density `1 / [L : K]`, and for an intermediate field the count comes through its Galois closure.",
   "source": {
    "roadmap": "Chebotarev",
    "path": "TauCetiRoadmap/Chebotarev/STATUS.md"
@@ -2393,7 +2403,7 @@
   "decl": "TauCeti.PDE.existsUnique_isWeakSolutionDirichlet",
   "name": "Existence and uniqueness for the Dirichlet problem",
   "what": "result",
-  "about": "for a divergence-form `L` whose energy form is bounded and coercive on `H¹₀(Ω)`, exactly one `u ∈ H¹₀(Ω)` satisfies `a(u, v) = ∫_Ω f v` for every test `v`. Gårding plus Poincaré discharge coercivity concretely for `-Δ`, and for uniformly elliptic operators with small drift, on domains inside a ball or slab.",
+  "about": "for a divergence-form `L` whose energy form is bounded and coercive on `H¹₀(Ω)`, exactly one `u ∈ H¹₀(Ω)` satisfies `a(u, v) = ∫_Ω f v` for every test `v`. Coercivity comes from Gårding with Poincaré inside a ball or slab, or from a mass floor `β² < 4λδ` on any domain.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
@@ -2403,17 +2413,27 @@
   "decl": "TauCeti.PDE.exists_hilbertBasis_forall_isDirichletEigenvalue",
   "name": "The Dirichlet eigenfunction basis",
   "what": "result",
-  "about": "on a bounded domain with symmetric energy form, `L²(Ω)` has an orthonormal basis of Dirichlet eigenfunctions at positive eigenvalues, and the first eigenvalue is both the minimum of the Rayleigh quotient and the optimal Poincaré constant of the form.",
+  "about": "on a bounded domain with symmetric energy form, `L²(Ω)` has an orthonormal basis of Dirichlet eigenfunctions, at positive eigenvalues; the first is the minimum of the Rayleigh quotient and the optimal Poincaré constant.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.PDE.isLeast_rayleighQuotient_firstDirichletEigenvalue",
-  "name": "The Dirichlet eigenfunction basis",
+  "decl": "TauCeti.eqOn_const_of_harmonicOnNhd_of_isMaxOn_of_isOpen",
+  "name": "The strong maximum principle and Harnack's inequality",
   "what": "result",
-  "about": "on a bounded domain with symmetric energy form, `L²(Ω)` has an orthonormal basis of Dirichlet eigenfunctions at positive eigenvalues, and the first eigenvalue is both the minimum of the Rayleigh quotient and the optimal Poincaré constant of the form.",
+  "about": "a harmonic or subharmonic function on a preconnected open set with an interior maximum is constant, and a nonnegative harmonic function has comparable values on a compact subset. Both rest on the `n`-dimensional mean-value property.",
+  "source": {
+   "roadmap": "PDE",
+   "path": "TauCetiRoadmap/PDE/STATUS.md"
+  }
+ },
+ {
+  "decl": "IsCompact.harnack_inequality",
+  "name": "The strong maximum principle and Harnack's inequality",
+  "what": "result",
+  "about": "a harmonic or subharmonic function on a preconnected open set with an interior maximum is constant, and a nonnegative harmonic function has comparable values on a compact subset. Both rest on the `n`-dimensional mean-value property.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
@@ -2423,27 +2443,27 @@
   "decl": "TauCeti.W1p0.isCompactOperator_valueL",
   "name": "Rellich-Kondrachov",
   "what": "result",
-  "about": "for bounded `Ω` and `1 ≤ p < ∞`, the value map `W^{1,p}_0(Ω) → Lᵖ(Ω)` is compact, by a Fréchet-Kolmogorov criterion. This is the compactness that powers everything spectral; the `W^{1,p}(Ω)` statement, which needs boundary regularity, is not available.",
+  "about": "for bounded `Ω` the value map `W^{1,p}_0(Ω) → Lᵖ(Ω)` is compact, as is restriction `W^{1,p}(Ω) → Lᵖ(V)` for `V` relatively compact in `Ω`. The global statement needs boundary regularity.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.le_of_mul_le_laplacian_add_fderiv_le_frontier",
-  "name": "The weak maximum principle for second-order elliptic operators",
+  "decl": "TauCeti.W1p.isCompactOperator_valueL_restrictL",
+  "name": "Rellich-Kondrachov",
   "what": "result",
-  "about": "a `C²` function on a compact set with `c u ≤ Δu + b·∇u`, `c ≥ 0` and `b` bounded inside, is bounded by any nonnegative bound it respects on the frontier, with a counterexample showing `c ≥ 0` cannot be dropped.",
+  "about": "for bounded `Ω` the value map `W^{1,p}_0(Ω) → Lᵖ(Ω)` is compact, as is restriction `W^{1,p}(Ω) → Lᵖ(V)` for `V` relatively compact in `Ω`. The global statement needs boundary regularity.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.eLpNorm_maximalFunction_le",
-  "name": "The Hardy-Littlewood maximal inequality",
+  "decl": "TauCeti.W1p.morreyEmbedding",
+  "name": "Morrey's embedding",
   "what": "result",
-  "about": "the weak `(1,1)` bound, and by Marcinkiewicz interpolation against `L^∞` the strong `(p, p)` bound for `1 < p < ∞`.",
+  "about": "for `p` above the dimension, a whole-space `W^{1,p}` function has a unique continuous representative, Hölder of exponent `1 - n/p`, and this is a continuous linear injection into the Hölder Banach space. On a domain only the inequality holds.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
