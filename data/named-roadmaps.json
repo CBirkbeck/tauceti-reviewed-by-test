@@ -243,7 +243,7 @@
   "decl": "TauCeti.FundamentalGroupoid.isColimitCechCocone",
   "name": "The van Kampen theorem",
   "what": "result",
-  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based group theorem for path-connected `A`, `B` and `A ∩ B` follows from it, and so does freeness of `π₁` of a wedge of circles.",
+  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based theorem for path-connected `A`, `B` and `A ∩ B` follows from it.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -253,17 +253,7 @@
   "decl": "TauCeti.isPushout_fundamentalGroup",
   "name": "The van Kampen theorem",
   "what": "result",
-  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based group theorem for path-connected `A`, `B` and `A ∩ B` follows from it, and so does freeness of `π₁` of a wedge of circles.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.WedgeSum.circleFundamentalGroupMulEquiv",
-  "name": "The van Kampen theorem",
-  "what": "result",
-  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based group theorem for path-connected `A`, `B` and `A ∩ B` follows from it, and so does freeness of `π₁` of a wedge of circles.",
+  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based theorem for path-connected `A`, `B` and `A ∩ B` follows from it.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -273,7 +263,7 @@
   "decl": "TopPair.isIso_singularHomologyMap_excisionMap_compl",
   "name": "Excision and Mayer–Vietoris",
   "what": "result",
-  "about": "relative singular homology is unchanged when a set with closure inside the interior of the subspace is removed. The Mayer–Vietoris sequence follows, starting with the pinned `(i_U, −i_V)`.",
+  "about": "relative singular homology does not change when a set whose closure lies in the interior of the subspace is removed. The Mayer–Vietoris sequence follows from it and starts with the pinned map `(i_U, −i_V)`.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -283,17 +273,17 @@
   "decl": "TopCat.mayerVietorisδ",
   "name": "Excision and Mayer–Vietoris",
   "what": "result",
-  "about": "relative singular homology is unchanged when a set with closure inside the interior of the subspace is removed. The Mayer–Vietoris sequence follows, starting with the pinned `(i_U, −i_V)`.",
+  "about": "relative singular homology does not change when a set whose closure lies in the interior of the subspace is removed. The Mayer–Vietoris sequence follows from it and starts with the pinned map `(i_U, −i_V)`.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.reducedSingularHomologySphereIso",
-  "name": "The homology of spheres",
+  "decl": "TopCat.eilenbergZilberHomotopyEquiv",
+  "name": "The Eilenberg–Zilber theorem",
   "what": "result",
-  "about": "the unit sphere of an `(n+1)`-dimensional real inner product space has reduced homology one copy of the coefficients in degree `n` and zero elsewhere.",
+  "about": "the Alexander–Whitney map `C(X × Y; R ⊗ S) → C(X; R) ⊗ C(Y; S)` is a chain homotopy equivalence with the shuffle map as its inverse. The proof is by acyclic models.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -303,7 +293,7 @@
   "decl": "TauCeti.cellularSingularHomologyIso",
   "name": "Cellular equals singular homology",
   "what": "result",
-  "about": "for a finite-dimensional relative CW complex, the comparison is natural in cellular maps.",
+  "about": "for a finite-dimensional relative CW complex, naturally in cellular maps.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -313,7 +303,17 @@
   "decl": "TauCeti.finsum_finrank_singularHomology_of_finite_cwComplex",
   "name": "Euler–Poincaré",
   "what": "result",
-  "about": "for a finite CW complex, the alternating sum of the dimensions of singular homology over a division ring is the alternating cell count times the dimension of the coefficients.",
+  "about": "for a finite CW complex, the alternating sum of the dimensions of singular homology over a division ring equals the alternating cell count times the dimension of the coefficients.",
+  "source": {
+   "roadmap": "AlgebraicTopology",
+   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.reducedSingularHomologySphereIso",
+  "name": "The homology of spheres",
+  "what": "definition",
+  "about": "the unit sphere of an `(n+1)`-dimensional real inner product space has reduced homology one copy of the coefficients in degree `n` and none elsewhere. The generators carry no orientation convention yet.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -323,7 +323,7 @@
   "decl": "TopCat.singularCup_assoc",
   "name": "Cup and cap products",
   "what": "definition",
-  "about": "the cup product is associative and unital. The cap product has the boundary formula, the projection formula and cap–cup associativity. These are the operations Poincaré duality is stated in.",
+  "about": "the cup product is associative and unital. The cap product has the boundary and projection formulas. Poincaré duality will be stated in terms of these operations.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -333,27 +333,17 @@
   "decl": "TopCat.singularCap",
   "name": "Cup and cap products",
   "what": "definition",
-  "about": "the cup product is associative and unital. The cap product has the boundary formula, the projection formula and cap–cup associativity. These are the operations Poincaré duality is stated in.",
+  "about": "the cup product is associative and unital. The cap product has the boundary and projection formulas. Poincaré duality will be stated in terms of these operations.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.cellularChainGroupIso",
-  "name": "Cellular chains on cells",
+  "decl": "SSet.prodChainComplexHomotopy",
+  "name": "Acyclic models for products",
   "what": "definition",
-  "about": "the cellular group `Hₙ(Xⁿ, Xⁿ⁻¹)` is one copy of the coefficients per `n`-cell. The differential on a cell is described through its attaching map. Together these make cellular calculations possible.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TopCat.shuffle",
-  "name": "The shuffle map",
-  "what": "definition",
-  "about": "the Eilenberg–Mac Lane map `C(X) ⊗ C(Y) → C(X × Y)`, natural in spaces and coefficients. It is the other half of Eilenberg–Zilber.",
+  "about": "any two natural families of chain maps on the chains of `K × L` that agree in degree zero are chain homotopic. There is a matching statement for tensor products of chains, so later comparisons of product maps reduce to a degree-zero check.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -833,7 +823,7 @@
   "decl": "TauCeti.ClassFieldTheory.localArtinEquiv",
   "name": "Finite local reciprocity",
   "what": "result",
-  "about": "for a finite Galois extension `L/K` of nonarchimedean local fields, localArtinEquiv identifies `Kˣ/N_{L/K}(Lˣ)` with `Gal(L/K)^ab`. It sends a uniformizer to arithmetic Frobenius, and on quadratic extensions it agrees with the Hilbert symbol when `2` is invertible.",
+  "about": "for a finite Galois extension `L/K` of nonarchimedean local fields, localArtinEquiv identifies `Kˣ/N_{L/K}(Lˣ)` with `Gal(L/K)^ab`, and it sends a uniformizer to arithmetic Frobenius.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -843,17 +833,7 @@
   "decl": "TauCeti.ClassFieldTheory.localArtinMap_uniformizer",
   "name": "Finite local reciprocity",
   "what": "result",
-  "about": "for a finite Galois extension `L/K` of nonarchimedean local fields, localArtinEquiv identifies `Kˣ/N_{L/K}(Lˣ)` with `Gal(L/K)^ab`. It sends a uniformizer to arithmetic Frobenius, and on quadratic extensions it agrees with the Hilbert symbol when `2` is invertible.",
-  "source": {
-   "roadmap": "ClassFieldTheory",
-   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ClassFieldTheory.localArtinMap_quadratic_eq_hilbertSymbol",
-  "name": "Finite local reciprocity",
-  "what": "result",
-  "about": "for a finite Galois extension `L/K` of nonarchimedean local fields, localArtinEquiv identifies `Kˣ/N_{L/K}(Lˣ)` with `Gal(L/K)^ab`. It sends a uniformizer to arithmetic Frobenius, and on quadratic extensions it agrees with the Hilbert symbol when `2` is invertible.",
+  "about": "for a finite Galois extension `L/K` of nonarchimedean local fields, localArtinEquiv identifies `Kˣ/N_{L/K}(Lˣ)` with `Gal(L/K)^ab`, and it sends a uniformizer to arithmetic Frobenius.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -863,7 +843,7 @@
   "decl": "TauCeti.ClassFieldTheory.artinMap",
   "name": "The absolute local Artin map",
   "what": "result",
-  "about": "artinMap `Kˣ → G_K^ab` is continuous with dense image, and its kernel is the intersection of the norm groups. It satisfies norm functoriality, `Art_L(x) ↦ Art_K(N_{L/K} x)`, and it is natural in the field.",
+  "about": "artinMap `Kˣ → G_K^ab` is continuous with dense image, and its kernel is the intersection of the norm groups. It satisfies norm functoriality. For `ℓ` prime to `q = #k_K`, the [`ℓ`-adic cyclotomic character of `Art_K(x)`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/NumberTheory/ClassFieldTheory/Local/Cyclotomic.html#TauCeti.ClassFieldTheory.abelianizedLocalCyclotomicCharacter_artinMap) is `q^{v(x)}`.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -873,17 +853,7 @@
   "decl": "TauCeti.ClassFieldTheory.artinMap_norm",
   "name": "The absolute local Artin map",
   "what": "result",
-  "about": "artinMap `Kˣ → G_K^ab` is continuous with dense image, and its kernel is the intersection of the norm groups. It satisfies norm functoriality, `Art_L(x) ↦ Art_K(N_{L/K} x)`, and it is natural in the field.",
-  "source": {
-   "roadmap": "ClassFieldTheory",
-   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ClassFieldTheory.artinMap_congr",
-  "name": "The absolute local Artin map",
-  "what": "result",
-  "about": "artinMap `Kˣ → G_K^ab` is continuous with dense image, and its kernel is the intersection of the norm groups. It satisfies norm functoriality, `Art_L(x) ↦ Art_K(N_{L/K} x)`, and it is natural in the field.",
+  "about": "artinMap `Kˣ → G_K^ab` is continuous with dense image, and its kernel is the intersection of the norm groups. It satisfies norm functoriality. For `ℓ` prime to `q = #k_K`, the [`ℓ`-adic cyclotomic character of `Art_K(x)`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/NumberTheory/ClassFieldTheory/Local/Cyclotomic.html#TauCeti.ClassFieldTheory.abelianizedLocalCyclotomicCharacter_artinMap) is `q^{v(x)}`.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -893,7 +863,7 @@
   "decl": "TauCeti.ClassFieldTheory.dualityMap0_kummerCoeff_bijective",
   "name": "Tate local duality",
   "what": "result",
-  "about": "for `n` invertible in `K` and every finite Galois module `A` killed by `n`, cup product gives bijections `Hⁱ(G_K, A) ≃ Hom(H²⁻ⁱ(G_K, Hom(A, μₙ)), H²(G_K, μₙ))` in degrees 0, 1 and 2. It is stated on the explicit cochain model, not yet as the README's `tateDualityPairing_perfect_mixed`.",
+  "about": "for `n` invertible in `K` and every finite Galois module `A` killed by `n`, cup product gives bijections `Hⁱ(G_K, A) ≃ Hom(H²⁻ⁱ(G_K, Hom(A, μₙ)), H²(G_K, μₙ))` in degrees 0, 1 and 2. These statements use the explicit cochain model, not the README's `tateDualityPairing_perfect_mixed`.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -903,7 +873,7 @@
   "decl": "TauCeti.ClassFieldTheory.dualityMap1_kummerCoeff_bijective",
   "name": "Tate local duality",
   "what": "result",
-  "about": "for `n` invertible in `K` and every finite Galois module `A` killed by `n`, cup product gives bijections `Hⁱ(G_K, A) ≃ Hom(H²⁻ⁱ(G_K, Hom(A, μₙ)), H²(G_K, μₙ))` in degrees 0, 1 and 2. It is stated on the explicit cochain model, not yet as the README's `tateDualityPairing_perfect_mixed`.",
+  "about": "for `n` invertible in `K` and every finite Galois module `A` killed by `n`, cup product gives bijections `Hⁱ(G_K, A) ≃ Hom(H²⁻ⁱ(G_K, Hom(A, μₙ)), H²(G_K, μₙ))` in degrees 0, 1 and 2. These statements use the explicit cochain model, not the README's `tateDualityPairing_perfect_mixed`.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -913,7 +883,7 @@
   "decl": "TauCeti.ClassFieldTheory.dualityMap2_kummerCoeff_bijective",
   "name": "Tate local duality",
   "what": "result",
-  "about": "for `n` invertible in `K` and every finite Galois module `A` killed by `n`, cup product gives bijections `Hⁱ(G_K, A) ≃ Hom(H²⁻ⁱ(G_K, Hom(A, μₙ)), H²(G_K, μₙ))` in degrees 0, 1 and 2. It is stated on the explicit cochain model, not yet as the README's `tateDualityPairing_perfect_mixed`.",
+  "about": "for `n` invertible in `K` and every finite Galois module `A` killed by `n`, cup product gives bijections `Hⁱ(G_K, A) ≃ Hom(H²⁻ⁱ(G_K, Hom(A, μₙ)), H²(G_K, μₙ))` in degrees 0, 1 and 2. These statements use the explicit cochain model, not the README's `tateDualityPairing_perfect_mixed`.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -923,7 +893,7 @@
   "decl": "TauCeti.ClassFieldTheory.invMap",
   "name": "The local invariant",
   "what": "result",
-  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. Restriction multiplies it by the degree, and corestriction preserves it.",
+  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. Restriction multiplies it by the degree.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -933,7 +903,7 @@
   "decl": "TauCeti.ClassFieldTheory.invMap_brRes",
   "name": "The local invariant",
   "what": "result",
-  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. Restriction multiplies it by the degree, and corestriction preserves it.",
+  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. Restriction multiplies it by the degree.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -941,19 +911,29 @@
  },
  {
   "decl": "TauCeti.ClassFieldTheory.ClassFormation.tateIso",
-  "name": "Tate's theorem and the character formula",
+  "name": "Tate's theorem",
   "what": "result",
-  "about": "for a class formation, tateIso `Ĥ^r(U/V, ℤ) ≃ Ĥ^{r+2}(U/V, A^V)` is cup product with the fundamental class. The resulting Artin map is characterized by `χ(artinMap a) = inv(a ∪ δχ)`, which fixes the sign convention once and for all.",
+  "about": "for a class formation, tateIso `Ĥ^r(U/V, ℤ) ≃ Ĥ^{r+2}(U/V, A^V)` is cup product with the fundamental class. In degree one it shows that the third cohomology of a class formation vanishes, and in particular H³(G_K, (Kˢ)ˣ) = 0.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.ClassFieldTheory.ClassFormation.eq_artinMap_of_character",
-  "name": "Tate's theorem and the character formula",
+  "decl": "TauCeti.ClassFieldTheory.ClassFormation.subsingleton_continuousCohomology_three",
+  "name": "Tate's theorem",
   "what": "result",
-  "about": "for a class formation, tateIso `Ĥ^r(U/V, ℤ) ≃ Ĥ^{r+2}(U/V, A^V)` is cup product with the fundamental class. The resulting Artin map is characterized by `χ(artinMap a) = inv(a ∪ δχ)`, which fixes the sign convention once and for all.",
+  "about": "for a class formation, tateIso `Ĥ^r(U/V, ℤ) ≃ Ĥ^{r+2}(U/V, A^V)` is cup product with the fundamental class. In degree one it shows that the third cohomology of a class formation vanishes, and in particular H³(G_K, (Kˢ)ˣ) = 0.",
+  "source": {
+   "roadmap": "ClassFieldTheory",
+   "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ClassFieldTheory.subsingleton_h3_unitsRep",
+  "name": "Tate's theorem",
+  "what": "result",
+  "about": "for a class formation, tateIso `Ĥ^r(U/V, ℤ) ≃ Ĥ^{r+2}(U/V, A^V)` is cup product with the fundamental class. In degree one it shows that the third cohomology of a class formation vanishes, and in particular H³(G_K, (Kˢ)ˣ) = 0.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -963,17 +943,17 @@
   "decl": "TauCeti.ClassFieldTheory.localClassFormation",
   "name": "The local class formation",
   "what": "definition",
-  "about": "localClassFormation takes `invMap` as its invariant, so the Brauer side and reciprocity share one normalization. The formation of a finite extension `E` is [the formation of `K` on corresponding layers](https://taucetiproject.github.io/TauCeti/docs/TauCeti/NumberTheory/ClassFieldTheory/Local/Restriction.html#TauCeti.ClassFieldTheory.localClassFormation_inv_localFormationLayerEquiv), and this comparison is what made norm functoriality provable.",
+  "about": "localClassFormation takes `invMap` as its invariant, so the Brauer side and reciprocity share one normalization.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.ClassFieldTheory.ClassFormation.absoluteArtinMap",
-  "name": "The absolute Artin map of a class formation",
+  "decl": "TauCeti.ClassFieldTheory.globalFormation",
+  "name": "The idele-class formation",
   "what": "definition",
-  "about": "absoluteArtinMap is the inverse limit of the finite maps. The global formation will inherit it unchanged.",
+  "about": "globalFormation is the discrete `G_K`-module of idele classes of a separable closure. Together with the idele formation and the [exact sequence `0 → Lˣ → I_L → C_L → 0`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/NumberTheory/ClassFieldTheory/Global/LiftingObstruction.html#TauCeti.ClassFieldTheory.ideleShortComplex_shortExact) on each layer, it is the carrier on which `globalInv` and the global class formation will be built.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -1563,7 +1543,7 @@
   "decl": "TauCeti.IsLocallyFlat.isBicollared_of_not_isPreconnected_compl_range",
   "name": "Brown's bicollaring theorem for spheres",
   "what": "result",
-  "about": "a locally flat `n`-sphere in `Sⁿ⁺¹` with disconnected complement is globally bicollared. With Jordan–Brouwer, the library discharges that hypothesis in every dimension, as `brownBicollaring`. This is the structural input to the Annulus Conjecture.",
+  "about": "a locally flat `n`-sphere in `Sⁿ⁺¹` with disconnected complement is globally bicollared. Jordan–Brouwer discharges that hypothesis in every dimension, making this the structural input to the Annulus Conjecture.",
   "source": {
    "roadmap": "GeometricTopology",
    "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
@@ -1573,7 +1553,7 @@
   "decl": "TauCeti.AnnulusConjecture",
   "name": "Brown's bicollaring theorem for spheres",
   "what": "result",
-  "about": "a locally flat `n`-sphere in `Sⁿ⁺¹` with disconnected complement is globally bicollared. With Jordan–Brouwer, the library discharges that hypothesis in every dimension, as `brownBicollaring`. This is the structural input to the Annulus Conjecture.",
+  "about": "a locally flat `n`-sphere in `Sⁿ⁺¹` with disconnected complement is globally bicollared. Jordan–Brouwer discharges that hypothesis in every dimension, making this the structural input to the Annulus Conjecture.",
   "source": {
    "roadmap": "GeometricTopology",
    "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
@@ -1603,7 +1583,7 @@
   "decl": "TauCeti.exists_isOpenEmbedding_normalTube",
   "name": "The tubular neighbourhood theorem in Euclidean space",
   "what": "result",
-  "about": "a compact `C²` embedded submanifold of `ℝⁿ` has an open tubular embedding of its `ε`-normal tube. It does not yet cover submanifolds of a general manifold.",
+  "about": "a compact `C²` embedded submanifold of `ℝⁿ` has an open tubular embedding of its `ε`-normal tube. Submanifolds of a general manifold are not yet covered.",
   "source": {
    "roadmap": "GeometricTopology",
    "path": "TauCetiRoadmap/GeometricTopology/STATUS.md"
@@ -1800,126 +1780,6 @@
   }
  },
  {
-  "decl": "TauCeti.Hodge.PolarizableHodgeStructureCat.exists_iso_biproduct_simple",
-  "name": "Semisimplicity of polarizable rational Hodge structures, categorically",
-  "what": "result",
-  "about": "polarizable rational Hodge structures of weight n form an abelian category, and every object in it is isomorphic to a finite biproduct of simple objects. This rests on the orthogonal-complement theorem.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.exists_isCompl_of_isPolarizable",
-  "name": "Semisimplicity of polarizable rational Hodge structures, categorically",
-  "what": "result",
-  "about": "polarizable rational Hodge structures of weight n form an abelian category, and every object in it is isomorphic to a finite biproduct of simple objects. This rests on the orthogonal-complement theorem.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.HodgeStructureOn.isInternal_piece",
-  "name": "The Hodge decomposition",
-  "what": "result",
-  "about": "the components H^{p,n−p} = F^p ∩ conj F^{n−p} of a bounded n-opposed filtration form an internal direct sum, and conversely. The Hodge numbers then partition the dimension, which is the L3 milestone.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.HodgeStructureOn.finsum_hodgeNumber_eq_finrank",
-  "name": "The Hodge decomposition",
-  "what": "result",
-  "about": "the components H^{p,n−p} = F^p ∩ conj F^{n−p} of a bounded n-opposed filtration form an internal direct sum, and conversely. The Hodge numbers then partition the dimension, which is the L3 milestone.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.MixedHodgeStructure.isInternal_deligneSplittingFamily",
-  "name": "Deligne's bigrading and strictness",
-  "what": "result",
-  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.MixedHodgeStructure.Hom.range_inf_F_eq_map_F",
-  "name": "Deligne's bigrading and strictness",
-  "what": "result",
-  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.MixedHodgeStructureCat.abelian",
-  "name": "Deligne's bigrading and strictness",
-  "what": "result",
-  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.MixedHodgeStructure.map_latticeConj_deligneSplitting_sup_below",
-  "name": "Deligne's bigrading and strictness",
-  "what": "result",
-  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlmostComplexStructure.isRiemannForm_iff_isPolarization",
-  "name": "Riemann forms are polarizations",
-  "what": "result",
-  "about": "for a complex structure J on the realification of a flat lattice, the Riemann forms of J are exactly the forms that polarize its effective weight-one Hodge structure. This is the abelian-variety case of the theory.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.Polarization.exists_comp_toDualHom_eq_nsmul_id",
-  "name": "Self-duality of polarized structures",
-  "what": "result",
-  "about": "a polarization of V gives a Hodge morphism V → V^*(−n) that is invertible up to a nonzero integer. From it, the dual and the internal Hom of polarizable structures are polarizable.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.IsPolarizable.dual",
-  "name": "Self-duality of polarized structures",
-  "what": "result",
-  "about": "a polarization of V gives a Hodge morphism V → V^*(−n) that is invertible up to a nonzero integer. From it, the dual and the internal Hom of polarizable structures are polarizable.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Hodge.IsPolarizable.internalHom",
-  "name": "Self-duality of polarized structures",
-  "what": "result",
-  "about": "a polarization of V gives a Hodge morphism V → V^*(−n) that is invertible up to a nonzero integer. From it, the dual and the internal Hom of polarizable structures are polarizable.",
-  "source": {
-   "roadmap": "HodgeStructures",
-   "path": "TauCetiRoadmap/HodgeStructures/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.Manifold.tfae_expDomain_eq_univ",
   "name": "The Hopf–Rinow theorem",
   "what": "result",
@@ -2107,6 +1967,46 @@
   "source": {
    "roadmap": "LocalFieldsRamification",
    "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isDemushkin_absoluteGaloisGroupProP_of_mu",
+  "name": "Demushkin's theorem",
+  "what": "result",
+  "about": "if `μ_p ⊆ K`, then `G_K(p)` is a Demushkin group, read off from `G_K` through inflation, which is an isomorphism in degrees one and two: isDemushkin_absoluteGaloisGroupProP_of_mu. Over `ℚ_p` its rank is `[K:ℚ_p] + 2`.",
+  "source": {
+   "roadmap": "LocalGaloisGroups",
+   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.demushkinRank_absoluteGaloisGroupProP",
+  "name": "Demushkin's theorem",
+  "what": "result",
+  "about": "if `μ_p ⊆ K`, then `G_K(p)` is a Demushkin group, read off from `G_K` through inflation, which is an isomorphism in degrees one and two: isDemushkin_absoluteGaloisGroupProP_of_mu. Over `ℚ_p` its rank is `[K:ℚ_p] + 2`.",
+  "source": {
+   "roadmap": "LocalGaloisGroups",
+   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.cyclotomicOrientation_hasPrescriptionProperty",
+  "name": "The prescription property of the cyclotomic orientation",
+  "what": "result",
+  "about": "every reduction `H¹(G_K(p), I(χ)/pⁱ) → H¹(G_K(p), I(χ)/p)` is onto, which identifies Labute's canonical character with the cyclotomic one: cyclotomicOrientation_hasPrescriptionProperty.",
+  "source": {
+   "roadmap": "LocalGaloisGroups",
+   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.nonempty_linearEquiv_tameFrameModule_prod",
+  "name": "The integral decomposition `(∗∗)` of NSW (7.4.1)",
+  "what": "result",
+  "about": "any extension `Y` of `I_G` by `A(L)` of projective dimension at most one satisfies `Y ≃ M₀ ⊕ ℤ_p[G]^N`, so it has `N+2` generators: nonempty_linearEquiv_tameFrameModule_prod.",
+  "source": {
+   "roadmap": "LocalGaloisGroups",
+   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
   }
  },
  {
@@ -2923,7 +2823,7 @@
   "decl": "TauCeti.awayDecomposition",
   "name": "The away-`S` decomposition",
   "what": "result",
-  "about": "for a finite set `S` of indices, a restricted product is the plain product of the factors at `S` times the restricted product away from `S`, continuous for every reference family and a homeomorphism once the reference subgroups away from `S` are open (awayDecomposition, continuous_awayDecomposition_symm).",
+  "about": "for a finite set `S` of indices, a restricted product is the plain product of the factors at `S` times the restricted product away from `S`. It is continuous for every reference family, and a homeomorphism once the reference subgroups away from `S` are open (awayDecomposition, continuous_awayDecomposition_symm).",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -2933,7 +2833,7 @@
   "decl": "TauCeti.continuous_awayDecomposition_symm",
   "name": "The away-`S` decomposition",
   "what": "result",
-  "about": "for a finite set `S` of indices, a restricted product is the plain product of the factors at `S` times the restricted product away from `S`, continuous for every reference family and a homeomorphism once the reference subgroups away from `S` are open (awayDecomposition, continuous_awayDecomposition_symm).",
+  "about": "for a finite set `S` of indices, a restricted product is the plain product of the factors at `S` times the restricted product away from `S`. It is continuous for every reference family, and a homeomorphism once the reference subgroups away from `S` are open (awayDecomposition, continuous_awayDecomposition_symm).",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -2943,7 +2843,7 @@
   "decl": "TauCeti.not_isTopologicalGroup_restrictedProduct_rat_bot",
   "name": "Non-open reference subgroups can break the group topology",
   "what": "result",
-  "about": "the restricted product of copies of `ℚ` relative to the trivial subgroups (finitely supported rational sequences, with the final topology over their finite-dimensional stages) is not a topological group, so for this family the inverses of the sum splitting and of the away decomposition are discontinuous (not_continuous_restrictedProductSum_symm, not_continuous_awayDecomposition_symm).",
+  "about": "take copies of `ℚ` with the trivial subgroups as reference family, so the restricted product is the finitely supported sequences with the final topology over their finite-dimensional stages. That restricted product is not a topological group, so the inverse of the cofinite sum splitting is discontinuous, and so is the inverse of the away decomposition.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -2953,17 +2853,27 @@
   "decl": "TauCeti.not_continuous_restrictedProductSum_symm",
   "name": "Non-open reference subgroups can break the group topology",
   "what": "result",
-  "about": "the restricted product of copies of `ℚ` relative to the trivial subgroups (finitely supported rational sequences, with the final topology over their finite-dimensional stages) is not a topological group, so for this family the inverses of the sum splitting and of the away decomposition are discontinuous (not_continuous_restrictedProductSum_symm, not_continuous_awayDecomposition_symm).",
+  "about": "take copies of `ℚ` with the trivial subgroups as reference family, so the restricted product is the finitely supported sequences with the final topology over their finite-dimensional stages. That restricted product is not a topological group, so the inverse of the cofinite sum splitting is discontinuous, and so is the inverse of the away decomposition.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.not_continuous_awayDecomposition_symm",
-  "name": "Non-open reference subgroups can break the group topology",
+  "decl": "TauCeti.restrictedProductSum",
+  "name": "The sum splitting over any filter",
   "what": "result",
-  "about": "the restricted product of copies of `ℚ` relative to the trivial subgroups (finitely supported rational sequences, with the final topology over their finite-dimensional stages) is not a topological group, so for this family the inverses of the sum splitting and of the away decomposition are discontinuous (not_continuous_restrictedProductSum_symm, not_continuous_awayDecomposition_symm).",
+  "about": "over `ι₁ ⊕ ι₂`, a restricted product is the product of the restricted products over the summands, with respect to the comap filters. For a principal filter it is a homeomorphism for every reference family.",
+  "source": {
+   "roadmap": "RestrictedProducts",
+   "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.continuous_restrictedProductSum_symm_of_principal",
+  "name": "The sum splitting over any filter",
+  "what": "result",
+  "about": "over `ι₁ ⊕ ι₂`, a restricted product is the product of the restricted products over the summands, with respect to the comap filters. For a principal filter it is a homeomorphism for every reference family.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -2973,7 +2883,7 @@
   "decl": "TauCeti.continuous_rationalDiagonal",
   "name": "The continuity criterion for diagonals",
   "what": "result",
-  "about": "the diagonal of continuous coordinate homomorphisms is continuous when one cofinite set of indices is integral for every element; pointwise eventual integrality is not enough, since for discrete factors with trivial reference subgroups, infinitely many of them nontrivial, the restricted-product topology is strictly finer than the induced one.",
+  "about": "the diagonal of continuous coordinate homomorphisms is continuous when a single cofinite set of indices is integral for every element. Pointwise eventual integrality is not enough.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -2983,7 +2893,7 @@
   "decl": "TauCeti.continuous_eval_and_not_continuous_rationalDiagonal_range_coeMonoidHom",
   "name": "The continuity criterion for diagonals",
   "what": "result",
-  "about": "the diagonal of continuous coordinate homomorphisms is continuous when one cofinite set of indices is integral for every element; pointwise eventual integrality is not enough, since for discrete factors with trivial reference subgroups, infinitely many of them nontrivial, the restricted-product topology is strictly finer than the induced one.",
+  "about": "the diagonal of continuous coordinate homomorphisms is continuous when a single cofinite set of indices is integral for every element. Pointwise eventual integrality is not enough.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -2993,37 +2903,7 @@
   "decl": "TauCeti.restrictedProductMap_surjective_iff",
   "name": "The surjectivity criterion for componentwise maps",
   "what": "result",
-  "about": "a componentwise map is surjective exactly when every coordinate map is and all but finitely many carry the source reference subgroup onto the target one, so for coordinatewise isomorphisms eventual bijectivity on reference subgroups is necessary, not just sufficient, for an equivalence.",
-  "source": {
-   "roadmap": "RestrictedProducts",
-   "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.restrictedProductMap_surjective_iff_eventually_bijOn",
-  "name": "The surjectivity criterion for componentwise maps",
-  "what": "result",
-  "about": "a componentwise map is surjective exactly when every coordinate map is and all but finitely many carry the source reference subgroup onto the target one, so for coordinatewise isomorphisms eventual bijectivity on reference subgroups is necessary, not just sufficient, for an equivalence.",
-  "source": {
-   "roadmap": "RestrictedProducts",
-   "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.isCompact_forall_mem_of_eventually_subset",
-  "name": "Compactness of integral subgroups",
-  "what": "result",
-  "about": "the subgroup cut out by compact subgroups eventually inside the reference subgroups is compact with no openness hypothesis, although FLT's version assumes the reference subgroups open; the everywhere-integral case follows from it.",
-  "source": {
-   "roadmap": "RestrictedProducts",
-   "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.isCompact_integralSubgroup",
-  "name": "Compactness of integral subgroups",
-  "what": "result",
-  "about": "the subgroup cut out by compact subgroups eventually inside the reference subgroups is compact with no openness hypothesis, although FLT's version assumes the reference subgroups open; the everywhere-integral case follows from it.",
+  "about": "a componentwise map is surjective exactly when every coordinate map is surjective and all but finitely many carry the source reference subgroup onto the target one. So for coordinatewise isomorphisms, eventual bijectivity on reference subgroups is necessary for an equivalence, not just sufficient.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -3033,17 +2913,7 @@
   "decl": "TauCeti.restrictedProductMap",
   "name": "Componentwise maps from eventual preservation",
   "what": "definition",
-  "about": "restrictedProductMap accepts coordinate maps that preserve the reference subgroups only outside a finite set, as arithmetic supplies them; only the everywhere-preserving form carries integral subgroups into integral subgroups.",
-  "source": {
-   "roadmap": "RestrictedProducts",
-   "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.not_forall_mapsTo_integralSubgroup",
-  "name": "Componentwise maps from eventual preservation",
-  "what": "definition",
-  "about": "restrictedProductMap accepts coordinate maps that preserve the reference subgroups only outside a finite set, as arithmetic supplies them; only the everywhere-preserving form carries integral subgroups into integral subgroups.",
+  "about": "restrictedProductMap accepts coordinate maps that preserve the reference subgroups only outside a finite set, which is how arithmetic supplies them.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -3053,7 +2923,7 @@
   "decl": "TauCeti.restrictedProductCongr",
   "name": "Change of reference family and double cosets",
   "what": "definition",
-  "about": "restrictedProductCongr identifies the restricted products of two families agreeing off a finite set, coordinatewise the identity and continuous both ways; double-coset spaces transport along it only to the transported subgroups, since the new family's integral subgroup is in general the wrong target.",
+  "about": "restrictedProductCongr identifies the restricted products of two families that agree off a finite set, continuously in both directions. Double-coset spaces transport along it only to the transported subgroups.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -3063,17 +2933,7 @@
   "decl": "TauCeti.doubleCosetCongr",
   "name": "Change of reference family and double cosets",
   "what": "definition",
-  "about": "restrictedProductCongr identifies the restricted products of two families agreeing off a finite set, coordinatewise the identity and continuous both ways; double-coset spaces transport along it only to the transported subgroups, since the new family's integral subgroup is in general the wrong target.",
-  "source": {
-   "roadmap": "RestrictedProducts",
-   "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.exists_map_integralSubgroup_ne",
-  "name": "Change of reference family and double cosets",
-  "what": "definition",
-  "about": "restrictedProductCongr identifies the restricted products of two families agreeing off a finite set, coordinatewise the identity and continuous both ways; double-coset spaces transport along it only to the transported subgroups, since the new family's integral subgroup is in general the wrong target.",
+  "about": "restrictedProductCongr identifies the restricted products of two families that agree off a finite set, continuously in both directions. Double-coset spaces transport along it only to the transported subgroups.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -3083,7 +2943,7 @@
   "decl": "TauCeti.addAwayDecomposition",
   "name": "Additive forms",
   "what": "definition",
-  "about": "the maps, equivalences and diagonal also exist for additive groups, for instance addAwayDecomposition and addRationalDiagonal, the forms an adelic consumer needs to split the adeles of a global field along finitely many places and to embed the field diagonally.",
+  "about": "the maps, equivalences and diagonal also exist for additive groups, for instance addAwayDecomposition and addRationalDiagonal. An adelic consumer needs these to split the adeles of a global field along finitely many places and to embed the field diagonally.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -3093,7 +2953,7 @@
   "decl": "TauCeti.addRationalDiagonal",
   "name": "Additive forms",
   "what": "definition",
-  "about": "the maps, equivalences and diagonal also exist for additive groups, for instance addAwayDecomposition and addRationalDiagonal, the forms an adelic consumer needs to split the adeles of a global field along finitely many places and to embed the field diagonally.",
+  "about": "the maps, equivalences and diagonal also exist for additive groups, for instance addAwayDecomposition and addRationalDiagonal. An adelic consumer needs these to split the adeles of a global field along finitely many places and to embed the field diagonally.",
   "source": {
    "roadmap": "RestrictedProducts",
    "path": "TauCetiRoadmap/RestrictedProducts/STATUS.md"
@@ -3427,6 +3287,126 @@
   "source": {
    "roadmap": "EffectiveBounds",
    "path": "Completed/EffectiveBounds/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.PolarizableHodgeStructureCat.exists_iso_biproduct_simple",
+  "name": "Semisimplicity of polarizable rational Hodge structures, categorically",
+  "what": "result",
+  "about": "polarizable rational Hodge structures of weight n form an abelian category, and every object in it is isomorphic to a finite biproduct of simple objects. This rests on the orthogonal-complement theorem.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.exists_isCompl_of_isPolarizable",
+  "name": "Semisimplicity of polarizable rational Hodge structures, categorically",
+  "what": "result",
+  "about": "polarizable rational Hodge structures of weight n form an abelian category, and every object in it is isomorphic to a finite biproduct of simple objects. This rests on the orthogonal-complement theorem.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.HodgeStructureOn.isInternal_piece",
+  "name": "The Hodge decomposition",
+  "what": "result",
+  "about": "the components H^{p,n−p} = F^p ∩ conj F^{n−p} of a bounded n-opposed filtration form an internal direct sum, and conversely. The Hodge numbers then partition the dimension, which is the L3 milestone.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.HodgeStructureOn.finsum_hodgeNumber_eq_finrank",
+  "name": "The Hodge decomposition",
+  "what": "result",
+  "about": "the components H^{p,n−p} = F^p ∩ conj F^{n−p} of a bounded n-opposed filtration form an internal direct sum, and conversely. The Hodge numbers then partition the dimension, which is the L3 milestone.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.MixedHodgeStructure.isInternal_deligneSplittingFamily",
+  "name": "Deligne's bigrading and strictness",
+  "what": "result",
+  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.MixedHodgeStructure.Hom.range_inf_F_eq_map_F",
+  "name": "Deligne's bigrading and strictness",
+  "what": "result",
+  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.MixedHodgeStructureCat.abelian",
+  "name": "Deligne's bigrading and strictness",
+  "what": "result",
+  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.MixedHodgeStructure.map_latticeConj_deligneSplitting_sup_below",
+  "name": "Deligne's bigrading and strictness",
+  "what": "result",
+  "about": "Deligne's closed-formula I^{p,q} form an internal direct sum that recovers both filtrations. As a consequence, morphisms of mixed Hodge structures are strict for F and W, and mixed Hodge structures form an abelian category. Conjugation exchanges I^{p,q} and I^{q,p} modulo strictly lower bidegree, in the fine form Peters–Steenbrink state.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.AlmostComplexStructure.isRiemannForm_iff_isPolarization",
+  "name": "Riemann forms are polarizations",
+  "what": "result",
+  "about": "for a complex structure J on the realification of a flat lattice, the Riemann forms of J are exactly the forms that polarize its effective weight-one Hodge structure. This is the abelian-variety case of the theory.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.Polarization.exists_comp_toDualHom_eq_nsmul_id",
+  "name": "Self-duality of polarized structures",
+  "what": "result",
+  "about": "a polarization of V gives a Hodge morphism V → V^*(−n) that is invertible up to a nonzero integer. From it, the dual and the internal Hom of polarizable structures are polarizable.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.IsPolarizable.dual",
+  "name": "Self-duality of polarized structures",
+  "what": "result",
+  "about": "a polarization of V gives a Hodge morphism V → V^*(−n) that is invertible up to a nonzero integer. From it, the dual and the internal Hom of polarizable structures are polarizable.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.Hodge.IsPolarizable.internalHom",
+  "name": "Self-duality of polarized structures",
+  "what": "result",
+  "about": "a polarization of V gives a Hodge morphism V → V^*(−n) that is invertible up to a nonzero integer. From it, the dual and the internal Hom of polarizable structures are polarizable.",
+  "source": {
+   "roadmap": "HodgeStructures",
+   "path": "Completed/HodgeStructures/STATUS.md"
   }
  },
  {
