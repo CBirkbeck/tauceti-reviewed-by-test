@@ -110,136 +110,6 @@
   }
  },
  {
-  "decl": "Submodule.natCard_mul_weightEnumerator_euclideanDual",
-  "name": "The MacWilliams identity",
-  "what": "result",
-  "about": "for a linear code `C` over a finite field with `q` elements, `#C · W_{C⊥}(X, Y) = W_C(X + (q - 1)Y, X - Y)` in `ℤ[X, Y]`. The proof is Poisson summation over the code, not theta series.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.BinaryCode.IsTypeII.eight_dvd_card",
-  "name": "Type II lengths are divisible by eight",
-  "what": "result",
-  "about": "a doubly even, Euclidean self-dual binary code has length `≡ 0 (mod 8)`.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.BinaryGolay.weightEnumerator_code",
-  "name": "The extended binary Golay code",
-  "what": "result",
-  "about": "the row space of `[I₁₂ | B]` is a doubly even self-dual `[24, 12, 8]` code with enumerator `X^24 + 759 X^16 Y^8 + 2576 X^12 Y^12 + 759 X^8 Y^16 + Y^24`. Gluing `2ℤ²⁴` along it gives a lattice that is even and unimodular.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.BinaryGolay.isEven_ofIsotropicSubgroup_codeInZeroLatticeDiscriminantGroup",
-  "name": "The extended binary Golay code",
-  "what": "result",
-  "about": "the row space of `[I₁₂ | B]` is a doubly even self-dual `[24, 12, 8]` code with enumerator `X^24 + 759 X^16 Y^8 + 2576 X^12 Y^12 + 759 X^8 Y^16 + Y^24`. Gluing `2ℤ²⁴` along it gives a lattice that is even and unimodular.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.BinaryGolay.isUnimodular_ofIsotropicSubgroup_codeInZeroLatticeDiscriminantGroup",
-  "name": "The extended binary Golay code",
-  "what": "result",
-  "about": "the row space of `[I₁₂ | B]` is a doubly even self-dual `[24, 12, 8]` code with enumerator `X^24 + 759 X^16 Y^8 + 2576 X^12 Y^12 + 759 X^8 Y^16 + Y^24`. Gluing `2ℤ²⁴` along it gives a lattice that is even and unimodular.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ConstructionA.isEven_and_isUnimodular_integralLattice_two_iff_isTypeII",
-  "name": "Ebeling's Construction A criterion",
-  "what": "result",
-  "about": "a self-orthogonal binary linear code has an even unimodular Construction A lattice exactly when it is Type II. The same equivalence holds over `ℤ/2^r` for the Dougherty-Gulliver-Harada notion of Type II.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ConstructionA.isEven_and_isUnimodular_integralLattice_iff_isTypeII",
-  "name": "Ebeling's Construction A criterion",
-  "what": "result",
-  "about": "a self-orthogonal binary linear code has an even unimodular Construction A lattice exactly when it is Type II. The same equivalence holds over `ℤ/2^r` for the Dougherty-Gulliver-Harada notion of Type II.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ConstructionA.discriminantBilinearOrthogonalQuotientIsometry",
-  "name": "The discriminant module of Construction A is `C⊥/C`",
-  "what": "result",
-  "about": "for a self-orthogonal additive code over `ℤ/m`, the discriminant bilinear module of `P_m(C)` is isometric to the actual quotient `C⊥/C`, with a quadratic version for even `m`. Gluing along a code gives a unimodular lattice exactly when the code is Lagrangian.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ConstructionA.isUnimodular_ofIsotropicSubgroup_codeInZeroLatticeDiscriminantGroup_iff",
-  "name": "The discriminant module of Construction A is `C⊥/C`",
-  "what": "result",
-  "about": "for a self-orthogonal additive code over `ℤ/m`, the discriminant bilinear module of `P_m(C)` is isometric to the actual quotient `C⊥/C`, with a quadratic version for even `m`. Gluing along a code gives a unimodular lattice exactly when the code is Lagrangian.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "Set.weightEnumerator",
-  "name": "The weight enumerator",
-  "what": "definition",
-  "about": "`W_C(X, Y)` with integer coefficients, defined for any set of words. MacWilliams, the named-code computations and the Type II symmetries are all statements about this one polynomial, and its product formula under direct sums covers additive and linear codes alike.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ConstructionA.integralLattice",
-  "name": "The Construction A lattice",
-  "what": "definition",
-  "about": "the integer vectors of `ℚ^ι` that reduce into a code over `ℤ/m`, with the dot product divided by `m`. Every dual carrier lives in one rational space, so `P_m(C)^∨ = P_m(C^⊥)` is a literal equality. After scalar extension to `ℝ` it is [isometric to the usual `m^(-1/2) P_m(C)`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/LinearAlgebra/IntegralLattice/ConstructionA/Real.html#TauCeti.ConstructionA.image_realNormalizationIsometry_lattice).",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.monomialAutEquivEuclideanDual",
-  "name": "The dot-product contragredient",
-  "what": "definition",
-  "about": "the adjoint-inverse of a coordinate linear equivalence. It carries the dual of a code's image to the image of its dual, so a code and its dual have isomorphic monomial automorphism groups.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
-  "decl": "LinearEquiv.dotProductContragredient",
-  "name": "The dot-product contragredient",
-  "what": "definition",
-  "about": "the adjoint-inverse of a coordinate linear equivalence. It carries the dual of a code's image to the image of its dual, so a code and its dual have isomorphic monomial automorphism groups.",
-  "source": {
-   "roadmap": "AlgebraicCodingTheory",
-   "path": "TauCetiRoadmap/AlgebraicCodingTheory/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.FundamentalGroupoid.isColimitCechCocone",
   "name": "The van Kampen theorem",
   "what": "result",
@@ -903,7 +773,7 @@
   "decl": "TauCeti.ClassFieldTheory.invMap",
   "name": "The local invariant and the local class formation",
   "what": "definition",
-  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. localClassFormation takes it as its invariant, so the Brauer side and reciprocity share one normalization.",
+  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. localClassFormation uses it as its invariant, so the Brauer side and reciprocity share one normalization.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -913,7 +783,7 @@
   "decl": "TauCeti.ClassFieldTheory.localClassFormation",
   "name": "The local invariant and the local class formation",
   "what": "definition",
-  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. localClassFormation takes it as its invariant, so the Brauer side and reciprocity share one normalization.",
+  "about": "invMap identifies `Br K` with `ℚ/ℤ`, normalized by arithmetic Frobenius. localClassFormation uses it as its invariant, so the Brauer side and reciprocity share one normalization.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -923,7 +793,7 @@
   "decl": "TauCeti.ClassFieldTheory.globalFormation",
   "name": "The idele-class formation and the sum of local invariants",
   "what": "definition",
-  "about": "globalFormation is the discrete `G_K`-module of idele classes. On idele layers, ideleSumLocalInv adds up the local invariants. This sum is what `globalInv` will descend to idele classes.",
+  "about": "globalFormation is the discrete `G_K`-module of idele classes. On idele layers, ideleSumLocalInv adds up the local invariants, and `globalInv` will descend this sum to idele classes.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -933,7 +803,7 @@
   "decl": "TauCeti.ClassFieldTheory.ideleSumLocalInv",
   "name": "The idele-class formation and the sum of local invariants",
   "what": "definition",
-  "about": "globalFormation is the discrete `G_K`-module of idele classes. On idele layers, ideleSumLocalInv adds up the local invariants. This sum is what `globalInv` will descend to idele classes.",
+  "about": "globalFormation is the discrete `G_K`-module of idele classes. On idele layers, ideleSumLocalInv adds up the local invariants, and `globalInv` will descend this sum to idele classes.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -943,7 +813,7 @@
   "decl": "TauCeti.ClassFieldTheory.weilTopology_unique",
   "name": "The local Weil group",
   "what": "definition",
-  "about": "the Weil topology is the unique group topology in which inertia, with its profinite topology, is open. The Weil transfer `W_L → W_K` has open image of index `[L:K]`, and that image is the kernel of the surjection `W_K → Gal(L/K)`.",
+  "about": "the Weil topology is the unique group topology in which inertia, with its profinite topology, is open. The Weil transfer `W_L → W_K` has open image of index `[L:K]`, and that image is the kernel of `W_K → Gal(L/K)`.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -953,7 +823,7 @@
   "decl": "TauCeti.ClassFieldTheory.weilTransfer",
   "name": "The local Weil group",
   "what": "definition",
-  "about": "the Weil topology is the unique group topology in which inertia, with its profinite topology, is open. The Weil transfer `W_L → W_K` has open image of index `[L:K]`, and that image is the kernel of the surjection `W_K → Gal(L/K)`.",
+  "about": "the Weil topology is the unique group topology in which inertia, with its profinite topology, is open. The Weil transfer `W_L → W_K` has open image of index `[L:K]`, and that image is the kernel of `W_K → Gal(L/K)`.",
   "source": {
    "roadmap": "ClassFieldTheory",
    "path": "TauCetiRoadmap/ClassFieldTheory/STATUS.md"
@@ -3017,6 +2887,136 @@
   "source": {
    "roadmap": "StandardDistributions",
    "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "Submodule.natCard_mul_weightEnumerator_euclideanDual",
+  "name": "The MacWilliams identity",
+  "what": "result",
+  "about": "for a linear code `C` over a finite field with `q` elements, `#C · W_{C⊥}(X, Y) = W_C(X + (q - 1)Y, X - Y)` in `ℤ[X, Y]`. The proof is Poisson summation over the code, not theta series.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.BinaryCode.IsTypeII.eight_dvd_card",
+  "name": "Type II lengths are divisible by eight",
+  "what": "result",
+  "about": "a doubly even, Euclidean self-dual binary code has length `≡ 0 (mod 8)`.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.BinaryGolay.weightEnumerator_code",
+  "name": "The extended binary Golay code",
+  "what": "result",
+  "about": "the row space of `[I₁₂ | B]` is a doubly even self-dual `[24, 12, 8]` code with enumerator `X^24 + 759 X^16 Y^8 + 2576 X^12 Y^12 + 759 X^8 Y^16 + Y^24`. Gluing `2ℤ²⁴` along it gives a lattice that is even and unimodular.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.BinaryGolay.isEven_ofIsotropicSubgroup_codeInZeroLatticeDiscriminantGroup",
+  "name": "The extended binary Golay code",
+  "what": "result",
+  "about": "the row space of `[I₁₂ | B]` is a doubly even self-dual `[24, 12, 8]` code with enumerator `X^24 + 759 X^16 Y^8 + 2576 X^12 Y^12 + 759 X^8 Y^16 + Y^24`. Gluing `2ℤ²⁴` along it gives a lattice that is even and unimodular.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.BinaryGolay.isUnimodular_ofIsotropicSubgroup_codeInZeroLatticeDiscriminantGroup",
+  "name": "The extended binary Golay code",
+  "what": "result",
+  "about": "the row space of `[I₁₂ | B]` is a doubly even self-dual `[24, 12, 8]` code with enumerator `X^24 + 759 X^16 Y^8 + 2576 X^12 Y^12 + 759 X^8 Y^16 + Y^24`. Gluing `2ℤ²⁴` along it gives a lattice that is even and unimodular.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ConstructionA.isEven_and_isUnimodular_integralLattice_two_iff_isTypeII",
+  "name": "Ebeling's Construction A criterion",
+  "what": "result",
+  "about": "a self-orthogonal binary linear code has an even unimodular Construction A lattice exactly when it is Type II. The same equivalence holds over `ℤ/2^r` for the Dougherty-Gulliver-Harada notion of Type II.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ConstructionA.isEven_and_isUnimodular_integralLattice_iff_isTypeII",
+  "name": "Ebeling's Construction A criterion",
+  "what": "result",
+  "about": "a self-orthogonal binary linear code has an even unimodular Construction A lattice exactly when it is Type II. The same equivalence holds over `ℤ/2^r` for the Dougherty-Gulliver-Harada notion of Type II.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ConstructionA.discriminantBilinearOrthogonalQuotientIsometry",
+  "name": "The discriminant module of Construction A is `C⊥/C`",
+  "what": "result",
+  "about": "for a self-orthogonal additive code over `ℤ/m`, the discriminant bilinear module of `P_m(C)` is isometric to the actual quotient `C⊥/C`, with a quadratic version for even `m`. Gluing along a code gives a unimodular lattice exactly when the code is Lagrangian.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ConstructionA.isUnimodular_ofIsotropicSubgroup_codeInZeroLatticeDiscriminantGroup_iff",
+  "name": "The discriminant module of Construction A is `C⊥/C`",
+  "what": "result",
+  "about": "for a self-orthogonal additive code over `ℤ/m`, the discriminant bilinear module of `P_m(C)` is isometric to the actual quotient `C⊥/C`, with a quadratic version for even `m`. Gluing along a code gives a unimodular lattice exactly when the code is Lagrangian.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "Set.weightEnumerator",
+  "name": "The weight enumerator",
+  "what": "definition",
+  "about": "`W_C(X, Y)` with integer coefficients, defined for any set of words. MacWilliams, the named-code computations and the Type II symmetries are all statements about this one polynomial, and its product formula under direct sums covers additive and linear codes alike.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ConstructionA.integralLattice",
+  "name": "The Construction A lattice",
+  "what": "definition",
+  "about": "the integer vectors of `ℚ^ι` that reduce into a code over `ℤ/m`, with the dot product divided by `m`. Every dual carrier lives in one rational space, so `P_m(C)^∨ = P_m(C^⊥)` is a literal equality. After scalar extension to `ℝ` it is [isometric to the usual `m^(-1/2) P_m(C)`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/LinearAlgebra/IntegralLattice/ConstructionA/Real.html#TauCeti.ConstructionA.image_realNormalizationIsometry_lattice).",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.monomialAutEquivEuclideanDual",
+  "name": "The dot-product contragredient",
+  "what": "definition",
+  "about": "the adjoint-inverse of a coordinate linear equivalence. It carries the dual of a code's image to the image of its dual, so a code and its dual have isomorphic monomial automorphism groups.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "LinearEquiv.dotProductContragredient",
+  "name": "The dot-product contragredient",
+  "what": "definition",
+  "about": "the adjoint-inverse of a coordinate linear equivalence. It carries the dual of a code's image to the image of its dual, so a code and its dual have isomorphic monomial automorphism groups.",
+  "source": {
+   "roadmap": "AlgebraicCodingTheory",
+   "path": "Completed/AlgebraicCodingTheory/STATUS.md"
   }
  },
  {
