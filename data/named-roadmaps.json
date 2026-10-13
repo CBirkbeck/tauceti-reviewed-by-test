@@ -1,29 +1,9 @@
 [
  {
-  "decl": "TauCeti.ValuationSpectrum.instSpectralSpaceElemSpaOfIsHuberRing",
-  "name": "Spectrality of the adic spectrum",
+  "decl": "TauCeti.Huber.isSheafyRing_of_isStronglyNoetherian",
+  "name": "Sheafiness of strongly noetherian Tate rings",
   "what": "result",
-  "about": "for every Huber ring, `Spa(A,A⁺)` is a spectral space, which is Wedhorn's Theorem 7.35.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ValuationSpectrum.presentationLimitPreAdicSpaceLocIso",
-  "name": "Rational opens are affinoid",
-  "what": "result",
-  "about": "pullback along `A → A⟨T/s⟩` is [a homeomorphism from `Spa(A⟨T/s⟩, A_U⁺)` onto `R(T/s)`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/AlgebraicGeometry/AdicSpace/Spa/Localization/CompletedHomeomorph.html#TauCeti.ValuationSpectrum.spaCompletedLocalizationHomeomorph). It upgrades to an isomorphism of pre-adic spaces (Wedhorn's Proposition 8.2(2) and Remark 8.8).",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ValuationSpectrum.faithfullyFlat_pi_toCompletionLoc",
-  "name": "Faithful flatness along a rational cover",
-  "what": "result",
-  "about": "over a complete Hausdorff strongly noetherian Tate ring, the map from `A` into the product of the coordinate rings of a finite rational cover is faithfully flat, which is Corollary 8.32.",
+  "about": "Wedhorn's Theorem 8.28(b): a complete Hausdorff strongly noetherian Tate ring is sheafy, and at pair level no completeness is needed. Corollary 8.35 (stable sheafiness) and the Buzzard–Verberkmoes theorem for stably uniform rings are also in the library.",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
@@ -31,19 +11,19 @@
  },
  {
   "decl": "TauCeti.ValuationSpectrum.isSheafFor_ofArrows_spaRationalOpens_of_iSup_eq_topCommRingCat",
-  "name": "Tate acyclicity in degree zero",
+  "name": "Tate acyclicity",
   "what": "result",
-  "about": "over a strongly noetherian Tate pair, the structure presheaf of topological rings satisfies the sheaf condition for every rational cover of a rational subset. This is Lemma 8.34 in degree zero, and it makes the underlying presheaf of sets a sheaf.",
+  "about": "over a strongly noetherian Tate pair, the augmented Čech complex of the structure presheaf is exact in every degree for every rational cover of a rational subset, which is Wedhorn's Lemma 8.34. The degree-zero case is the sheaf condition for rational covers. The standard Laurent cover of the closed disc is recorded as an example.",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.ValuationSpectrum.isSheaf_underlying_presentationLimitPresheaf_of_isStronglyNoetherian",
-  "name": "Tate acyclicity in degree zero",
+  "decl": "TauCeti.ValuationSpectrum.instSpectralSpaceElemSpaOfIsHuberRing",
+  "name": "Spectrality of the adic spectrum",
   "what": "result",
-  "about": "over a strongly noetherian Tate pair, the structure presheaf of topological rings satisfies the sheaf condition for every rational cover of a rational subset. This is Lemma 8.34 in degree zero, and it makes the underlying presheaf of sets a sheaf.",
+  "about": "for every Huber ring, `Spa(A,A⁺)` is a spectral space (Wedhorn's Theorem 7.35).",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
@@ -53,7 +33,7 @@
   "decl": "TauCeti.FarguesFontaine.spaX",
   "name": "The Fargues–Fontaine orbit space",
   "what": "result",
-  "about": "the windows `U_n`, `V_n` are rational subsets, they [cover `𝒴`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/AlgebraicGeometry/AdicSpace/FarguesFontaine/Window.html#TauCeti.FarguesFontaine.iUnion_windowU_union_windowV) and they are wandering. As a result, 𝒳 = 𝒴 / φ^ℤ is quasi-compact and T0, with the windows embedding as opens.",
+  "about": "the Frobenius windows cover `𝒴`, they are wandering, and the quotient 𝒳 = 𝒴 / φ^ℤ is quasi-compact. Each window is identified with `Spa(B^I, B^{I,+})`, and `𝒳` is an adic space once `𝒪_𝒴` is shown to be a sheaf.",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
@@ -63,7 +43,7 @@
   "decl": "TauCeti.FarguesFontaine.compactSpace_spaX",
   "name": "The Fargues–Fontaine orbit space",
   "what": "result",
-  "about": "the windows `U_n`, `V_n` are rational subsets, they [cover `𝒴`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/AlgebraicGeometry/AdicSpace/FarguesFontaine/Window.html#TauCeti.FarguesFontaine.iUnion_windowU_union_windowV) and they are wandering. As a result, 𝒳 = 𝒴 / φ^ℤ is quasi-compact and T0, with the windows embedding as opens.",
+  "about": "the Frobenius windows cover `𝒴`, they are wandering, and the quotient 𝒳 = 𝒴 / φ^ℤ is quasi-compact. Each window is identified with `Spa(B^I, B^{I,+})`, and `𝒳` is an adic space once `𝒪_𝒴` is shown to be a sheaf.",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
@@ -73,37 +53,17 @@
   "decl": "TauCeti.PreAdicSpace.isAdic",
   "name": "Adic spaces",
   "what": "definition",
-  "about": "Wedhorn's Definition 8.22 makes adic spaces the sheafy objects of `𝒱^pre` with an affinoid adic cover. Since [`Spa(A,A⁺)` is pre-adic](https://taucetiproject.github.io/TauCeti/docs/TauCeti/AlgebraicGeometry/AdicSpace/PreAdicSpace/RationalOpen.html#TauCeti.ValuationSpectrum.isPreAdic_presentationLimitPreAdicSpace), any sheafiness theorem immediately yields affinoid adic spaces.",
+  "about": "Wedhorn's Definition 8.22, together with open and closed immersions, morphisms locally of finite type and gluing. Combined with sheafiness, this gives `Spa(K,K°)`, closed polydiscs and the open unit disc as adic spaces. The open unit disc is not affinoid because it is not quasi-compact.",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.ValuationSpectrum.isSheaf_presentationLimitPresheaf_of_isSheaf_rational",
-  "name": "The structure presheaf",
+  "decl": "TauCeti.Huber.restrictedOptionEquiv",
+  "name": "Iterated Tate algebras",
   "what": "definition",
-  "about": "it is a sheaf once it is one on rational opens, and a criterion reduces the topological sheaf condition to the one for sets plus an inducing condition. Both inputs are now available in the strongly noetherian case.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.TopCommRingCat.isSheaf_of_isSheaf_forget",
-  "name": "The structure presheaf",
-  "what": "definition",
-  "about": "it is a sheaf once it is one on rational opens, and a criterion reduces the topological sheaf condition to the one for sets plus an inducing condition. Both inputs are now available in the strongly noetherian case.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.CategoryTheory.quasiIso_cechAugmentation_iff",
-  "name": "Čech augmentation",
-  "what": "definition",
-  "about": "the augmented Čech complex is exact exactly when the sheaf condition holds and higher Čech cohomology vanishes. Layer 4's all-degree statement will take this form.",
+  "about": "A⟨X₁,…,Xₙ,Y⟩ ≅ A⟨X₁,…,Xₙ⟩⟨Y⟩, isometric for the Gauss norms. It lets one-variable arguments be run one variable at a time.",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
@@ -113,17 +73,17 @@
   "decl": "TauCeti.FundamentalGroupoid.isColimitCechCocone",
   "name": "The van Kampen theorem",
   "what": "result",
-  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based theorem for path-connected `A`, `B` and `A ∩ B` follows from it.",
+  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based pushout theorem follows, and the free product of the fundamental groups of two cover members maps onto `π₁(X)`.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.isPushout_fundamentalGroup",
+  "decl": "TauCeti.vanKampenLift_surjective",
   "name": "The van Kampen theorem",
   "what": "result",
-  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based theorem for path-connected `A`, `B` and `A ∩ B` follows from it.",
+  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based pushout theorem follows, and the free product of the fundamental groups of two cover members maps onto `π₁(X)`.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -133,7 +93,7 @@
   "decl": "TopPair.isIso_singularHomologyMap_excisionMap_compl",
   "name": "Excision and Mayer–Vietoris",
   "what": "result",
-  "about": "relative singular homology does not change when a set whose closure lies in the interior of the subspace is removed. The Mayer–Vietoris sequence follows from it and starts with the pinned map `(i_U, −i_V)`.",
+  "about": "relative singular homology is unchanged by removing a set whose closure lies in the interior of the subspace. The Mayer–Vietoris sequence starts with the pinned map `(i_U, −i_V)`.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -143,7 +103,7 @@
   "decl": "TopCat.mayerVietorisδ",
   "name": "Excision and Mayer–Vietoris",
   "what": "result",
-  "about": "relative singular homology does not change when a set whose closure lies in the interior of the subspace is removed. The Mayer–Vietoris sequence follows from it and starts with the pinned map `(i_U, −i_V)`.",
+  "about": "relative singular homology is unchanged by removing a set whose closure lies in the interior of the subspace. The Mayer–Vietoris sequence starts with the pinned map `(i_U, −i_V)`.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -151,39 +111,19 @@
  },
  {
   "decl": "TopCat.eilenbergZilberHomotopyEquiv",
-  "name": "The Eilenberg–Zilber theorem",
+  "name": "Eilenberg–Zilber and Künneth",
   "what": "result",
-  "about": "the Alexander–Whitney map `C(X × Y; R ⊗ S) → C(X; R) ⊗ C(Y; S)` is a chain homotopy equivalence with the shuffle map as its inverse. The proof is by acyclic models.",
+  "about": "Alexander–Whitney and shuffle maps are inverse chain homotopy equivalences. As a result the cross product is an isomorphism over a field, and over a principal ideal domain it fits into the short exact sequence with a `Tor₁` term.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.cellularSingularHomologyIso",
-  "name": "Cellular equals singular homology",
+  "decl": "TauCeti.eulerChar_eq_finsum_finrank_singularHomology",
+  "name": "Euler–Poincaré for spaces of finite CW type",
   "what": "result",
-  "about": "for a finite-dimensional relative CW complex, naturally in cellular maps.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.finsum_finrank_singularHomology_of_finite_cwComplex",
-  "name": "Euler–Poincaré",
-  "what": "result",
-  "about": "for a finite CW complex, the alternating sum of the dimensions of singular homology over a division ring equals the alternating cell count times the dimension of the coefficients.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.reducedSingularHomologySphereIso",
-  "name": "The homology of spheres",
-  "what": "definition",
-  "about": "the unit sphere of an `(n+1)`-dimensional real inner product space has reduced homology one copy of the coefficients in degree `n` and none elsewhere. The generators carry no orientation convention yet.",
+  "about": "the Euler characteristic of such a space is the alternating sum of the dimensions of its homology over any division ring. Hence it is a homotopy invariant, independent of the chosen CW model.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -193,7 +133,7 @@
   "decl": "TopCat.singularCup_assoc",
   "name": "Cup and cap products",
   "what": "definition",
-  "about": "the cup product is associative and unital. The cap product has the boundary and projection formulas. Poincaré duality will be stated in terms of these operations.",
+  "about": "the cup product is associative and unital and graded commutative. The cap product has the boundary and projection formulas. Poincaré duality will be stated in these terms.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -203,17 +143,7 @@
   "decl": "TopCat.singularCap",
   "name": "Cup and cap products",
   "what": "definition",
-  "about": "the cup product is associative and unital. The cap product has the boundary and projection formulas. Poincaré duality will be stated in terms of these operations.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "SSet.prodChainComplexHomotopy",
-  "name": "Acyclic models for products",
-  "what": "definition",
-  "about": "any two natural families of chain maps on the chains of `K × L` that agree in degree zero are chain homotopic. There is a matching statement for tensor products of chains, so later comparisons of product maps reduce to a degree-zero check.",
+  "about": "the cup product is associative and unital and graded commutative. The cap product has the boundary and projection formulas. Poincaré duality will be stated in these terms.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -403,7 +333,7 @@
   "decl": "TauCeti.PrimeBoundaryRemainder",
   "name": "Prime boundary data",
   "what": "definition",
-  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes now lives in an `LFunctions` file.",
+  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes lives in an `LFunctions` file.",
   "source": {
    "roadmap": "ArithmeticDirichletSeries",
    "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
@@ -413,7 +343,7 @@
   "decl": "TauCeti.LFunctions.primeIdealVonMangoldtBoundary",
   "name": "Prime boundary data",
   "what": "definition",
-  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes now lives in an `LFunctions` file.",
+  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes lives in an `LFunctions` file.",
   "source": {
    "roadmap": "ArithmeticDirichletSeries",
    "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
@@ -430,10 +360,20 @@
   }
  },
  {
-  "decl": "NumberField.Set.IsLowerDirichletDensityBound",
-  "name": "One-sided Dirichlet-density bounds",
+  "decl": "TauCeti.MultiplicativeIdealWeight.instCommMonoid",
+  "name": "Ideal weights as a monoid",
   "what": "definition",
-  "about": "the epsilon inequalities that squeeze arguments use; matching bounds force a density. Natural density has a parallel calculus: finite and density-zero changes, readings against `Li(x)` and `x / log x`, and fibre counts along contraction.",
+  "about": "completely multiplicative ideal weights form a commutative monoid under pointwise product, and a field isomorphism transports them by a multiplicative equivalence. Character-family consumers can therefore form products, powers and conjugates and move them between isomorphic fields without bookkeeping.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.MultiplicativeIdealWeight.mapEquiv",
+  "name": "Ideal weights as a monoid",
+  "what": "definition",
+  "about": "completely multiplicative ideal weights form a commutative monoid under pointwise product, and a field isomorphism transports them by a multiplicative equivalence. Character-family consumers can therefore form products, powers and conjugates and move them between isomorphic fields without bookkeeping.",
   "source": {
    "roadmap": "ArithmeticDirichletSeries",
    "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
@@ -843,7 +783,7 @@
   "decl": "TauCeti.GridDiagram.stabilizeXHomologyMap_bijective",
   "name": "Stabilization invariance of `GH⁻`",
   "what": "result",
-  "about": "the `X`-stabilization map is bijective on unblocked grid homology, and a half-turn symmetry carries this to the opposite corner, where τ is likewise preserved. Every stabilization reduces to one of these two corners modulo cyclic permutations and commutations.",
+  "about": "the `X`-stabilization map is bijective on unblocked grid homology, a half-turn carries this to the opposite corner, and every stabilization reduces to one of these two modulo cyclic permutations and commutations.",
   "source": {
    "roadmap": "CombinatorialHeegaardFloer",
    "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
@@ -853,17 +793,7 @@
   "decl": "TauCeti.GridDiagram.stabilizeXSuccHomologyMap_bijective",
   "name": "Stabilization invariance of `GH⁻`",
   "what": "result",
-  "about": "the `X`-stabilization map is bijective on unblocked grid homology, and a half-turn symmetry carries this to the opposite corner, where τ is likewise preserved. Every stabilization reduces to one of these two corners modulo cyclic permutations and commutations.",
-  "source": {
-   "roadmap": "CombinatorialHeegaardFloer",
-   "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.GridDiagram.IsKnot.tau_stabilizeX_succ",
-  "name": "Stabilization invariance of `GH⁻`",
-  "what": "result",
-  "about": "the `X`-stabilization map is bijective on unblocked grid homology, and a half-turn symmetry carries this to the opposite corner, where τ is likewise preserved. Every stabilization reduces to one of these two corners modulo cyclic permutations and commutations.",
+  "about": "the `X`-stabilization map is bijective on unblocked grid homology, a half-turn carries this to the opposite corner, and every stabilization reduces to one of these two modulo cyclic permutations and commutations.",
   "source": {
    "roadmap": "CombinatorialHeegaardFloer",
    "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
@@ -873,7 +803,7 @@
   "decl": "TauCeti.GridDiagram.IsStabilization.exists_commutationMovesTo",
   "name": "Stabilization invariance of `GH⁻`",
   "what": "result",
-  "about": "the `X`-stabilization map is bijective on unblocked grid homology, and a half-turn symmetry carries this to the opposite corner, where τ is likewise preserved. Every stabilization reduces to one of these two corners modulo cyclic permutations and commutations.",
+  "about": "the `X`-stabilization map is bijective on unblocked grid homology, a half-turn carries this to the opposite corner, and every stabilization reduces to one of these two modulo cyclic permutations and commutations.",
   "source": {
    "roadmap": "CombinatorialHeegaardFloer",
    "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
@@ -883,7 +813,7 @@
   "decl": "TauCeti.GridDiagram.two_mul_tau_torusLink",
   "name": "τ of torus knot grids",
   "what": "result",
-  "about": "on the standard grid of the `(p+1, q+1)` torus knot, 2τ = −pq, so `τ = −3` on the `T(3,4)` grid. This is the acceptance check `τ(T_{3,4}) = 3` up to an orientation sign that has not been reconciled, and it is still a statement about one grid.",
+  "about": "on the standard grid of the `(p+1, q+1)` torus knot, 2τ = −pq. This is the acceptance check `τ(T_{3,4}) = 3` up to an orientation sign that has not been reconciled, and it is still a statement about one grid.",
   "source": {
    "roadmap": "CombinatorialHeegaardFloer",
    "path": "TauCetiRoadmap/CombinatorialHeegaardFloer/STATUS.md"
@@ -973,7 +903,7 @@
   "decl": "TauCeti.AInfinityAlgebra.isIso_comp_minimalModelInclusion",
   "name": "Kadeishvili's theorem",
   "what": "result",
-  "about": "over a field, the cohomology of an `A∞` algebra carries a [minimal `A∞` structure](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Algebra/Homology/AInfinity/Algebra/Transfer/Cohomology.html#TauCeti.AInfinityAlgebra.minimalModel) with the induced product and an `A∞` quasi-isomorphism to the algebra that is the identity on cohomology. It is unique up to a non-canonical `A∞` isomorphism.",
+  "about": "over a field, the cohomology of an `A∞` algebra carries a [minimal `A∞` structure](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Algebra/Homology/AInfinity/Algebra/Transfer/Cohomology.html#TauCeti.AInfinityAlgebra.minimalModel) with the induced product, together with an `A∞` quasi-isomorphism to the algebra that is the identity on cohomology. This structure is unique up to a non-canonical `A∞` isomorphism.",
   "source": {
    "roadmap": "DGAInfinity",
    "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
@@ -983,7 +913,7 @@
   "decl": "TauCeti.AInfinityAlgebra.transfer",
   "name": "Homological transfer as a homotopy equivalence",
   "what": "result",
-  "about": "a special contraction transfers the `A∞` structure, with `m₃` in Merkulov's form. Over any commutative ring, the identity is homotopic to the transferred inclusion composed with the transferred projection. The construction is natural for compatible strict morphisms.",
+  "about": "a special contraction transfers the `A∞` structure. Over any commutative ring, the transferred maps are inverse up to an explicit homotopy.",
   "source": {
    "roadmap": "DGAInfinity",
    "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
@@ -993,17 +923,17 @@
   "decl": "TauCeti.AInfinityAlgebra.transferHomotopy",
   "name": "Homological transfer as a homotopy equivalence",
   "what": "result",
-  "about": "a special contraction transfers the `A∞` structure, with `m₃` in Merkulov's form. Over any commutative ring, the identity is homotopic to the transferred inclusion composed with the transferred projection. The construction is natural for compatible strict morphisms.",
+  "about": "a special contraction transfers the `A∞` structure. Over any commutative ring, the transferred maps are inverse up to an explicit homotopy.",
   "source": {
    "roadmap": "DGAInfinity",
    "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.AInfinityAlgebra.transferStrictHom",
-  "name": "Homological transfer as a homotopy equivalence",
+  "decl": "TauCeti.AInfinityRightModule.yonedaHomotopyEquiv",
+  "name": "The Yoneda lemma for right `A∞` modules",
   "what": "result",
-  "about": "a special contraction transfers the `A∞` structure, with `m₃` in Merkulov's form. Over any commutative ring, the identity is homotopic to the transferred inclusion composed with the transferred projection. The construction is natural for compatible strict morphisms.",
+  "about": "over a strictly unital `A∞` algebra, evaluation at the unit is a homotopy equivalence from the morphism complex out of the free rank-one module to the module. The module must have the unit as a right unit for `m₂`.",
   "source": {
    "roadmap": "DGAInfinity",
    "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
@@ -1013,27 +943,7 @@
   "decl": "TauCeti.AInfinityAlgebra.barDifferential_sq_iff_stasheff",
   "name": "`b² = 0` is the Stasheff identities",
   "what": "result",
-  "about": "the bar coderivation squares to zero exactly when every unsuspended Stasheff identity holds. The module version gives the module Stasheff equations.",
-  "source": {
-   "roadmap": "DGAInfinity",
-   "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AInfinityRightModule.stasheff",
-  "name": "`b² = 0` is the Stasheff identities",
-  "what": "result",
-  "about": "the bar coderivation squares to zero exactly when every unsuspended Stasheff identity holds. The module version gives the module Stasheff equations.",
-  "source": {
-   "roadmap": "DGAInfinity",
-   "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AInfinityHom.isIso_iff_linearPart_bijective",
-  "name": "Invertibility of `A∞` morphisms",
-  "what": "result",
-  "about": "an `A∞` morphism is invertible exactly when its linear part is bijective.",
+  "about": "the bar coderivation squares to zero exactly when every unsuspended Stasheff identity holds.",
   "source": {
    "roadmap": "DGAInfinity",
    "path": "TauCetiRoadmap/DGAInfinity/STATUS.md"
@@ -1713,37 +1623,17 @@
   "decl": "TauCeti.nonempty_continuousMulEquiv_iwasawaGroup",
   "name": "Iwasawa's theorem",
   "what": "result",
-  "about": "the tame quotient G_K/P_K is isomorphic as a topological group to the profinite group ⟨σ, τ | στσ⁻¹ = τ^q⟩, through an isomorphism fixed by an arithmetic Frobenius lift and a tame inertia generator (nonempty_continuousMulEquiv_iwasawaGroup, tameQuotientEquiv).",
+  "about": "the tame quotient G_K/P_K is isomorphic as a topological group to the profinite group ⟨σ, τ | στσ⁻¹ = τ^q⟩, via an isomorphism determined by an arithmetic Frobenius lift and a tame inertia generator.",
   "source": {
    "roadmap": "LocalFieldsRamification",
    "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.tameQuotientEquiv",
-  "name": "Iwasawa's theorem",
+  "decl": "TauCeti.LocalFieldsRamification.upperJump_iff_exists_isCyclic_intermediateField",
+  "name": "The Hasse–Arf theorem",
   "what": "result",
-  "about": "the tame quotient G_K/P_K is isomorphic as a topological group to the profinite group ⟨σ, τ | στσ⁻¹ = τ^q⟩, through an isomorphism fixed by an arithmetic Frobenius lift and a tame inertia generator (nonempty_continuousMulEquiv_iwasawaGroup, tameQuotientEquiv).",
-  "source": {
-   "roadmap": "LocalFieldsRamification",
-   "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.quotientWildInertiaSubgroupEquiv",
-  "name": "Tame inertia is the prime-to-p Tate module",
-  "what": "result",
-  "about": "the tame character σ ↦ (σ(π^{1/m})/π^{1/m})_m gives I_K/P_K ≅ Ẑ^{(p')}(1), independently of π and equivariantly for G_K. Its ℓ-adic component for a single prime ℓ ≠ p is a surjection onto ℤ_ℓ(1) on which Frobenius acts by the q-th power.",
-  "source": {
-   "roadmap": "LocalFieldsRamification",
-   "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.inertiaPadicTameCharacter",
-  "name": "Tame inertia is the prime-to-p Tate module",
-  "what": "result",
-  "about": "the tame character σ ↦ (σ(π^{1/m})/π^{1/m})_m gives I_K/P_K ≅ Ẑ^{(p')}(1), independently of π and equivariantly for G_K. Its ℓ-adic component for a single prime ℓ ≠ p is a surjection onto ℤ_ℓ(1) on which Frobenius acts by the q-th power.",
+  "about": "every upper ramification break of a finite abelian extension of local fields is an integer (`hasseArf`, TauCeti#13558). Upper breaks are first detected in a cyclic subextension, and the cyclic case then reduces to prime-power degree.",
   "source": {
    "roadmap": "LocalFieldsRamification",
    "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
@@ -1753,27 +1643,27 @@
   "decl": "TauCeti.LocalFieldsRamification.map_restrictNormalHom_upperRamificationGroup",
   "name": "Herbrand's theorem",
   "what": "result",
-  "about": "for a normal subgroup H, restriction carries G^v onto (G/H)^v in the upper numbering, and G_u onto (G/H)_{φ(u)} in the lower. On the subgroup side, H ∩ G^v = H^{ψ(v)}.",
+  "about": "for a normal subgroup H, restriction carries G^v onto (G/H)^v in the upper numbering. The lower numbering does not commute with quotients, and ℚ₂(ζ₈) gives a proved witness, G₃H/H ≠ (G/H)₃.",
   "source": {
    "roadmap": "LocalFieldsRamification",
    "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.LocalFieldsRamification.comap_restrictScalarsHom_upperRamificationGroup",
+  "decl": "TauCeti.DyadicCyclotomicEight.map_restrictSqrtTwo_lowerRamificationGroup_three_ne",
   "name": "Herbrand's theorem",
   "what": "result",
-  "about": "for a normal subgroup H, restriction carries G^v onto (G/H)^v in the upper numbering, and G_u onto (G/H)_{φ(u)} in the lower. On the subgroup side, H ∩ G^v = H^{ψ(v)}.",
+  "about": "for a normal subgroup H, restriction carries G^v onto (G/H)^v in the upper numbering. The lower numbering does not commute with quotients, and ℚ₂(ζ₈) gives a proved witness, G₃H/H ≠ (G/H)₃.",
   "source": {
    "roadmap": "LocalFieldsRamification",
    "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.LocalFieldsRamification.UpperJump.exists_eq_intCast_of_finrank_prime",
-  "name": "Hasse–Arf in prime degree",
+  "decl": "TauCeti.quotientWildInertiaSubgroupEquiv",
+  "name": "Tame inertia is the prime-to-p Tate module",
   "what": "result",
-  "about": "the upper break of a Galois extension of prime degree is an integer. It is read off from the norm on the unit filtration.",
+  "about": "the tame character gives I_K/P_K ≅ Ẑ^{(p')}(1), independently of the uniformizer and equivariantly for G_K.",
   "source": {
    "roadmap": "LocalFieldsRamification",
    "path": "TauCetiRoadmap/LocalFieldsRamification/STATUS.md"
@@ -1840,10 +1730,20 @@
   }
  },
  {
+  "decl": "WeierstrassCurve.lift_projModelPoint_additionMorphism_eq_add",
+  "name": "The group law over any base",
+  "what": "result",
+  "about": "an elliptic curve `E/S` is a commutative group object over `S`, with addition glued from the Bosma–Lenstra formulae and inverse given by negation. On field points of a Weierstrass model it is the classical addition. The group structure itself is `EllipticCurveGeom.grpObj`.",
+  "source": {
+   "roadmap": "ModularCurves",
+   "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
+  }
+ },
+ {
   "decl": "TauCeti.AlgHom.convPow_eq_one_of_rankAtStalk",
   "name": "Deligne's theorem",
   "what": "result",
-  "about": "a finite locally free commutative group scheme of constant rank `n` is killed by `n`. It is stated for a commutative, cocommutative Hopf algebra that is finite projective over the base ring.",
+  "about": "a finite locally free commutative group scheme of constant rank `n` is killed by `n`.",
   "source": {
    "roadmap": "ModularCurves",
    "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
@@ -1853,17 +1753,7 @@
   "decl": "TauCeti.ConstantGroup.cartierDualIso",
   "name": "Cartier duality of constant and diagonalizable groups",
   "what": "result",
-  "about": "over any commutative ring, the constant group on a finite abelian `G` and `D(G)` are dual to each other, which gives `(ℤ/Nℤ)ᴰ ≅ μ_N`.",
-  "source": {
-   "roadmap": "ModularCurves",
-   "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.GroupScheme.kernelBaseChangeIso",
-  "name": "Kernels commute with base change",
-  "what": "result",
-  "about": "over any base, the kernel of a homomorphism of group schemes is the fibre over the identity, and forming it commutes with arbitrary base change.",
+  "about": "over any commutative ring, the constant group on a finite abelian `G` and `D(G)` are dual, giving `(ℤ/Nℤ)ᴰ ≅ μ_N`.",
   "source": {
    "roadmap": "ModularCurves",
    "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
@@ -1873,27 +1763,17 @@
   "decl": "WeierstrassCurve.isProper_projModelOver",
   "name": "The Weierstrass model is a smooth proper curve",
   "what": "result",
-  "about": "the projective cubic is proper over its base for any Weierstrass curve. It is smooth of relative dimension one when the discriminant is a unit.",
+  "about": "the projective cubic is proper over any base ring and geometrically integral. It is smooth of relative dimension one when the discriminant is a unit.",
   "source": {
    "roadmap": "ModularCurves",
    "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
   }
  },
  {
-  "decl": "WeierstrassCurve.smoothOfRelativeDimension_one_projModelOver",
+  "decl": "WeierstrassCurve.geometricallyIntegral_projModelOver",
   "name": "The Weierstrass model is a smooth proper curve",
   "what": "result",
-  "about": "the projective cubic is proper over its base for any Weierstrass curve. It is smooth of relative dimension one when the discriminant is a unit.",
-  "source": {
-   "roadmap": "ModularCurves",
-   "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
-  }
- },
- {
-  "decl": "WeierstrassCurve.fst_additionOnPiece_eq_snd_additionOnPiece",
-  "name": "The Bosma–Lenstra addition laws glue",
-  "what": "result",
-  "about": "on a chart cover of `E ×_S E`, the addition formulae agree on overlaps as morphisms of schemes, over any base ring and including nonreduced ones.",
+  "about": "the projective cubic is proper over any base ring and geometrically integral. It is smooth of relative dimension one when the discriminant is a unit.",
   "source": {
    "roadmap": "ModularCurves",
    "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
@@ -1903,27 +1783,7 @@
   "decl": "TauCeti.Algebra.WeilRestriction",
   "name": "Weil restriction along a finite projective algebra",
   "what": "definition",
-  "about": "WeilRestriction is a finitely presented algebra representing `T ↦ Hom_B(C, B ⊗ T)`, and its formation commutes with base change. This is the general result of 0F over an affine base, and the source of the Hom-schemes of Layer 3.",
-  "source": {
-   "roadmap": "ModularCurves",
-   "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.EllipticCurveGeom.baseChange",
-  "name": "Elliptic curves over a scheme",
-  "what": "definition",
-  "about": "`EllipticCurveGeom`, defined through the pointed local-Weierstrass condition, with base change. Every later moduli problem is stated in terms of this object.",
-  "source": {
-   "roadmap": "ModularCurves",
-   "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AffineInvariantQuotient.quotient",
-  "name": "The affine invariant quotient",
-  "what": "definition",
-  "about": "AffineInvariantQuotient.quotient is `Spec A^G` for a finite group acting on `Spec A`. Its fibres are the orbits, and its universal property is proved for affine targets. It is the affine building block for the later Katz–Mazur quotients.",
+  "about": "WeilRestriction represents `T ↦ Hom_B(C, B ⊗ T)` and commutes with base change. It is the affine source of the Hom-schemes that Layer 3 needs.",
   "source": {
    "roadmap": "ModularCurves",
    "path": "TauCetiRoadmap/ModularCurves/STATUS.md"
@@ -2193,7 +2053,7 @@
   "decl": "TauCeti.PDE.exists_holderOnWith_preciseRepresentative",
   "name": "De Giorgi's theorem",
   "what": "result",
-  "about": "a weak solution of `-div(a∇u) = 0` with merely measurable, uniformly elliptic `a` has a precise representative that is Hölder continuous on compact subsets, with exponent depending only on `λ`, `Λ` and `n`; it needs `n ≥ 3`.",
+  "about": "a weak solution of `-div(a∇u) = 0` with merely measurable, uniformly elliptic `a` has a precise representative that is locally Hölder continuous, with exponent depending only on `λ`, `Λ` and the dimension, now for every `n ≥ 1`. Moser's weak Harnack and Harnack inequalities for nonnegative supersolutions and solutions sit beside it.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
@@ -2203,27 +2063,17 @@
   "decl": "TauCeti.harmonicOnNhd_perronSolution",
   "name": "Perron's theorem",
   "what": "result",
-  "about": "on any bounded open set, the supremum of the subharmonic functions lying below bounded boundary data is harmonic, with no boundary regularity assumed.",
+  "about": "on any bounded open set, the supremum of the subharmonic functions lying below bounded boundary data is harmonic, and it attains continuous data at every boundary point with a barrier, which the Newtonian kernel supplies under an exterior sphere condition.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.eqOn_const_of_mul_le_laplacian_add_fderiv_of_isMaxOn",
-  "name": "Strong maximum principle and Hopf's lemma",
+  "decl": "TauCeti.le_of_deriv_le_laplacian_add_fderiv_le_parabolicBoundary",
+  "name": "The parabolic maximum principle",
   "what": "result",
-  "about": "for `-Δ - b·∇ + c` with `c ≥ 0`, an interior maximum on a preconnected open set forces constancy, and a boundary maximum on a ball has strictly positive outward derivative.",
-  "source": {
-   "roadmap": "PDE",
-   "path": "TauCetiRoadmap/PDE/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.fderiv_pos_of_mul_le_laplacian_add_fderiv_of_lt_ball_of_le_sphere",
-  "name": "Strong maximum principle and Hopf's lemma",
-  "what": "result",
-  "about": "for `-Δ - b·∇ + c` with `c ≥ 0`, an interior maximum on a preconnected open set forces constancy, and a boundary maximum on a ball has strictly positive outward derivative.",
+  "about": "a subsolution of `∂ₜu ≤ Δu + b·∇u` on a cylinder over a compact set is bounded by its supremum on the parabolic boundary, with no bound on the drift.",
   "source": {
    "roadmap": "PDE",
    "path": "TauCetiRoadmap/PDE/STATUS.md"
@@ -2323,7 +2173,7 @@
   "decl": "TauCeti.exists_monic_int_polynomial_hasFullSymmetricGaloisGroup",
   "name": "Sₙ is a Galois group over ℚ",
   "what": "result",
-  "about": "for every n ≥ 1 there is a monic integral polynomial of degree n that is irreducible over ℚ and has the full symmetric group as its Galois group. This is van der Waerden's construction from reductions at 2, 3 and 5.",
+  "about": "for every n ≥ 1 there is a monic integral polynomial of degree n that is irreducible over ℚ and has the full symmetric group as its Galois group, by van der Waerden's construction from reductions at 2, 3 and 5.",
   "source": {
    "roadmap": "PolynomialGaloisGroups",
    "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
@@ -2340,20 +2190,20 @@
   }
  },
  {
-  "decl": "TauCeti.ResolventSpec.orbitQuotientEquivFactors",
-  "name": "The factorization theorem for resolvents",
+  "decl": "TauCeti.HasGaloisLabel.isSquare_discr_iff_label",
+  "name": "The discriminant test by label",
   "what": "result",
-  "about": "when a specialized resolvent is separable, its irreducible factors correspond to the orbits of the Galois image on Sₙ/H, and their degrees are the orbit sizes.",
+  "about": "away from characteristic two, a labelled monic polynomial has square discriminant exactly when its label is one of `1T1`, `3T1`, `4T2`, `4T4`, `5T1`, `5T2`, `5T4`.",
   "source": {
    "roadmap": "PolynomialGaloisGroups",
    "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.ResolventSpec.exists_le_map_conj_of_isRoot_specialize_tschirnhausPolynomial",
-  "name": "Resolvents through a Tschirnhaus transform",
+  "decl": "TauCeti.ResolventSpec.orbitQuotientEquivFactors",
+  "name": "The factorization theorem for resolvents",
   "what": "result",
-  "about": "if T is admissible for f and the transformed resolvent is separable with a root in the base field, then the Galois image of f lies in a conjugate of H. This is the classical remedy for a degenerate resolvent.",
+  "about": "when a specialized resolvent is separable, its irreducible factors correspond to the orbits of the Galois image on Sₙ/H, and their degrees are the orbit sizes. Tschirnhaus transforms carry a resolvent bound back to the original polynomial when the resolvent degenerates.",
   "source": {
    "roadmap": "PolynomialGaloisGroups",
    "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
@@ -2363,7 +2213,7 @@
   "decl": "TauCeti.isSolvable_gal_iff_exists_isRoot_specialize_quinticF20Spec",
   "name": "The quintic solvability criterion",
   "what": "result",
-  "about": "an irreducible separable quintic has a solvable Galois group exactly when its separable F₂₀ resolvent sextic has a root in the base field. The sextic and the discriminant together still cannot separate C₅ from D₅, and that limitation is proved with explicit witnesses.",
+  "about": "an irreducible separable quintic has a solvable Galois group exactly when its separable F₂₀ resolvent sextic has a root in the base field.",
   "source": {
    "roadmap": "PolynomialGaloisGroups",
    "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
@@ -2373,7 +2223,7 @@
   "decl": "TauCeti.ResolventSpec",
   "name": "Resolvent specifications",
   "what": "definition",
-  "about": "an integral invariant whose stabilizer is exactly H, together with its orbit product written in the elementary symmetric polynomials. It can be specialized at any polynomial over any ring, so one universal object serves every polynomial, every field and every reduction mod p.",
+  "about": "an integral invariant whose stabilizer is exactly H, together with its orbit product in the elementary symmetric polynomials. One universal object specializes to every polynomial, every field and every reduction mod p.",
   "source": {
    "roadmap": "PolynomialGaloisGroups",
    "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
@@ -2383,27 +2233,17 @@
   "decl": "TauCeti.HasGaloisLabel",
   "name": "Galois labels",
   "what": "definition",
-  "about": "a polynomial has label `nTj` when some numbering of its roots carries its Galois image onto a conjugate of the reference subgroup. The label does not depend on the numbering, and it transports order, parity, primitivity and solvability. The reference subgroups are now also identified abstractly, for instance 5T3 with `AGL(1, 5)`.",
+  "about": "a polynomial has label `nTj` when some numbering of its roots carries its Galois image onto a conjugate of the reference subgroup. The label is independent of the numbering, and it transports order, parity, primitivity and solvability.",
   "source": {
    "roadmap": "PolynomialGaloisGroups",
    "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.referenceSubgroupFiveTwoMulEquivAffineGroup",
-  "name": "Galois labels",
+  "decl": "Polynomial.Gal.sign",
+  "name": "The parity character",
   "what": "definition",
-  "about": "a polynomial has label `nTj` when some numbering of its roots carries its Galois image onto a conjugate of the reference subgroup. The label does not depend on the numbering, and it transports order, parity, primitivity and solvability. The reference subgroups are now also identified abstractly, for instance 5T3 with `AGL(1, 5)`.",
-  "source": {
-   "roadmap": "PolynomialGaloisGroups",
-   "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.exists_mem_range_galActionHom_fullCycleType_eq_factorDegrees",
-  "name": "Dedekind's theorem as membership",
-  "what": "definition",
-  "about": "for a prime not dividing the discriminant, the degrees of the factors of f mod p form the full cycle type of some element of the Galois image. The theorem itself is supplied by Number Field Arithmetic.",
+  "about": "the sign of the Galois action on the roots, as a character of `p.Gal` that can be computed in any splitting extension. It is trivial exactly when the image is in the alternating group.",
   "source": {
    "roadmap": "PolynomialGaloisGroups",
    "path": "TauCetiRoadmap/PolynomialGaloisGroups/STATUS.md"
@@ -2520,6 +2360,66 @@
   }
  },
  {
+  "decl": "TauCeti.abelianizationProPClass_generates_of_isCyclic",
+  "name": "The class module of strict dimension two",
+  "what": "result",
+  "about": "NSW (3.6.4) in `p`-primary form: if `scd_p G ≤ 2` and `V` is open and normal, then `H¹(G ⧸ V, V^ab(p)) = 0` and `u_{G/V}(p)` generates `H²(G ⧸ V, V^ab(p))`, a group whose order is the `p`-part of `#(G ⧸ V)` (`abelianizationProPClass_generates`). The cyclic case is abelianizationProPClass_generates_of_isCyclic.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.strictCohomologicalDimensionLE_iff_forall_openSubgroup",
+  "name": "The strict-dimension criterion",
+  "what": "result",
+  "about": "NSW (3.3.4): `scd_p G ≤ n` exactly when `cd_p G ≤ n` and the `p`-primary part of `H^{n+1}(U, ℤ)` vanishes for every open `U`.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.hilbert90",
+  "name": "Hilbert 90 and the Kummer isomorphism",
+  "what": "result",
+  "about": "continuous `H¹(G_K, (Kˢ)ˣ)` vanishes, so `Kˣ/(Kˣ)ⁿ ≅ H¹(G_K, μₙ)` for `n` invertible in `K` (TauCeti.hilbert90, TauCeti.kummerIso).",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.kummerIso",
+  "name": "Hilbert 90 and the Kummer isomorphism",
+  "what": "result",
+  "about": "continuous `H¹(G_K, (Kˢ)ˣ)` vanishes, so `Kˣ/(Kˣ)ⁿ ≅ H¹(G_K, μₙ)` for `n` invertible in `K` (TauCeti.hilbert90, TauCeti.kummerIso).",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.zHat.cohomologicalDimensionAt_eq_one",
+  "name": "The cohomological dimension of `ℤ̂`",
+  "what": "result",
+  "about": "`cd_p ℤ̂ = 1` for every prime `p`, and the upper bound holds because profinite extensions of `ℤ̂` split.",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ContCohomology.evensNormIndexTwo",
+  "name": "The index-two Evens norm",
+  "what": "result",
+  "about": "for an open subgroup `U` of index two, a map `H¹(U, 𝔽₂) → H²(G, 𝔽₂)` defined by descending the graph class. On classes it equals the pullback of the `D₁₆` extension class (`evensNormIndexTwo_eq_ind_pullback`).",
+  "source": {
+   "roadmap": "ProfiniteCohomology",
+   "path": "TauCetiRoadmap/ProfiniteCohomology/STATUS.md"
+  }
+ },
+ {
   "decl": "TauCeti.IsDemushkin.nonempty_continuousMulEquiv_of_range_demushkinCharacter_eq",
   "name": "The classification of Demushkin groups",
   "what": "result",
@@ -2560,10 +2460,10 @@
   }
  },
  {
-  "decl": "TauCeti.freeProP.exists_convergesToOne_continuousMulEquiv_of_isClosed",
+  "decl": "GroupExtension.exists_splitting_continuous_of_isProjective",
   "name": "Serre's theorem at arbitrary rank",
   "what": "result",
-  "about": "a pro-`p` group has `cd_p ≤ 1` exactly when it is [free pro-`p` on a pointed profinite space](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Topology/Algebra/Group/Profinite/Free/Pointed/Serre.html#TauCeti.IsProP.cohomologicalDimensionAt_le_one_iff_exists_convergesToOne_continuousMulEquiv_presentation). It gives the pro-`p` Nielsen–Schreier theorem. Separately, a pro-`p` group is [projective exactly when it solves its finite `p`-embedding problems](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Topology/Algebra/Group/Profinite/EmbeddingProblem/Projective.html#TauCeti.isProjective_iff_hasPGroupSolutions).",
+  "about": "a pro-`p` group has `cd_p ≤ 1` exactly when it is [free pro-`p` on a pointed profinite space](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Topology/Algebra/Group/Profinite/Free/Pointed/Serre.html#TauCeti.IsProP.cohomologicalDimensionAt_le_one_iff_exists_convergesToOne_continuousMulEquiv_presentation). Relatedly, an extension of a projective pro-`p` group by a pro-`p` group splits continuously.",
   "source": {
    "roadmap": "ProfiniteProPGroups",
    "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
@@ -2673,17 +2573,7 @@
   "decl": "TauCeti.ExactStructure.IsFrobenius.stableIsTriangulated",
   "name": "Happel's theorem",
   "what": "result",
-  "about": "the stable category of a Frobenius exact category, with the shift generated by stable suspension and the triangles coming from conflations, is triangulated. Exact functors that preserve projective-injectives induce triangle functors.",
-  "source": {
-   "roadmap": "StablePeriodicCurved",
-   "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.StableConflationExact.stableFunctorIsTriangulated",
-  "name": "Happel's theorem",
-  "what": "result",
-  "about": "the stable category of a Frobenius exact category, with the shift generated by stable suspension and the triangles coming from conflations, is triangulated. Exact functors that preserve projective-injectives induce triangle functors.",
+  "about": "the stable category of a Frobenius exact category is triangulated, with the shift generated by stable suspension and the triangles coming from conflations.",
   "source": {
    "roadmap": "StablePeriodicCurved",
    "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
@@ -2693,7 +2583,7 @@
   "decl": "TauCeti.MatrixFactorization.HomotopyCategory.instIsTriangulated",
   "name": "`HMF(S,w)` is triangulated",
   "what": "result",
-  "about": "finite-projective matrix factorizations with componentwise split conflations form a Frobenius category whose stable category is `HMF(S,w)`. Its shift by one is the parity shift.",
+  "about": "finite-projective matrix factorizations with componentwise split conflations form a Frobenius category whose stable category is `HMF(S,w)`, and its shift by one is the parity shift.",
   "source": {
    "roadmap": "StablePeriodicCurved",
    "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
@@ -2703,7 +2593,17 @@
   "decl": "TauCeti.CurvedDuplex.HomotopyCategory.instIsTriangulated",
   "name": "The homotopy category of curved duplexes is triangulated",
   "what": "result",
-  "about": "this is proved for any curvature, by the same Frobenius route.",
+  "about": "this holds for any curvature, by the same Frobenius route.",
+  "source": {
+   "roadmap": "StablePeriodicCurved",
+   "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.isIndecomposableModule_iff_exists_linearEquiv_quotient_span_op_root_X_pow_pow",
+  "name": "The indecomposables over `k[x]/(x^n)`",
+  "what": "result",
+  "about": "over any field, the finitely generated indecomposable right modules over `A = k[x]/(x^n)` are exactly the cyclic modules `M_i = A/(x^i)` for `1 ≤ i ≤ n`, up to isomorphism.",
   "source": {
    "roadmap": "StablePeriodicCurved",
    "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
@@ -2711,9 +2611,9 @@
  },
  {
   "decl": "TauCeti.FGModuleCat.stableModuleLoopCyclicModuleRootPowIso",
-  "name": "Syzygies over `k[x]/(x^n)`",
+  "name": "Syzygies and stable Homs over `k[x]/(x^n)`",
   "what": "result",
-  "about": "for `M_i = A/(x^i)`, `ΩM_i ≅ M_(n-i)`, so every `M_i` is stably two-periodic. Over any field, the stable Hom space `M_i → M_j` has dimension `min(i, j, n-i, n-j)`.",
+  "about": "`ΩM_i ≅ M_(n-i)`, so every `M_i` is stably two-periodic, and the stable Hom space `M_i → M_j` has dimension `min(i, j, n-i, n-j)`.",
   "source": {
    "roadmap": "StablePeriodicCurved",
    "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
@@ -2721,19 +2621,9 @@
  },
  {
   "decl": "TauCeti.FGModuleCat.finrank_stableModuleHom_cyclicModule_root_pow",
-  "name": "Syzygies over `k[x]/(x^n)`",
+  "name": "Syzygies and stable Homs over `k[x]/(x^n)`",
   "what": "result",
-  "about": "for `M_i = A/(x^i)`, `ΩM_i ≅ M_(n-i)`, so every `M_i` is stably two-periodic. Over any field, the stable Hom space `M_i → M_j` has dimension `min(i, j, n-i, n-j)`.",
-  "source": {
-   "roadmap": "StablePeriodicCurved",
-   "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.isCurvedDGLeftModule_iff_gradedOppositeRight",
-  "name": "The curved opposite",
-  "what": "result",
-  "about": "the Koszul-signed graded opposite of a curved DG algebra has curvature `-op(w)`. Left curved modules are exactly right curved modules over it.",
+  "about": "`ΩM_i ≅ M_(n-i)`, so every `M_i` is stably two-periodic, and the stable Hom space `M_i → M_j` has dimension `min(i, j, n-i, n-j)`.",
   "source": {
    "roadmap": "StablePeriodicCurved",
    "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
@@ -2743,7 +2633,7 @@
   "decl": "TauCeti.MorphismIdeal",
   "name": "Morphism-ideal quotients",
   "what": "definition",
-  "about": "one two-sided ideal construction underlies the stable category, the duplex homotopy category and `HMF(S,w)`. Identifying a stable ideal with null-homotopy is what turns each Frobenius statement into a triangulation.",
+  "about": "one two-sided ideal construction underlies the stable category, the duplex homotopy category and `HMF(S,w)`.",
   "source": {
    "roadmap": "StablePeriodicCurved",
    "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
@@ -2753,7 +2643,17 @@
   "decl": "TauCeti.ExactStructure.homologicalComplex_split_isFrobenius",
   "name": "Complexes as a Frobenius category",
   "what": "definition",
-  "about": "for any shape in which every index has a successor and a predecessor, including `ZMod n`-periodic shapes, the contractible complexes are the projective-injectives. The stable category is the homotopy category, which gives the route to triangulating `K_n`.",
+  "about": "for any shape in which every index has a successor and a predecessor, including `ZMod n`-periodic shapes, the contractible complexes are the projective-injectives and the stable category is the homotopy category. For periodic complexes, stable suspension is the signed cyclic shift and the usual mapping-cone triangle is distinguished in the stable category.",
+  "source": {
+   "roadmap": "StablePeriodicCurved",
+   "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PeriodicComplex.mappingCone_distinguished",
+  "name": "Complexes as a Frobenius category",
+  "what": "definition",
+  "about": "for any shape in which every index has a successor and a predecessor, including `ZMod n`-periodic shapes, the contractible complexes are the projective-injectives and the stable category is the homotopy category. For periodic complexes, stable suspension is the signed cyclic shift and the usual mapping-cone triangle is distinguished in the stable category.",
   "source": {
    "roadmap": "StablePeriodicCurved",
    "path": "TauCetiRoadmap/StablePeriodicCurved/STATUS.md"
