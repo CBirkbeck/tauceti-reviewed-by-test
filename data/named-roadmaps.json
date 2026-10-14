@@ -1073,7 +1073,7 @@
   "decl": "WeierstrassCurve.hasse_bound",
   "name": "The Hasse bound",
   "what": "result",
-  "about": "an elliptic curve over `𝔽_q` satisfies (#E(𝔽_q) − (q + 1))² ≤ 4q, where the count includes the point at infinity. It is proved through the degree form: the Frobenius pencil has deg(rπ − s) = qr² − a_q rs + s² when `p ∤ s`, and that form is non-negative.",
+  "about": "an elliptic curve over `𝔽_q` satisfies (#E(𝔽_q) − (q + 1))² ≤ 4q, with the point at infinity counted. It is proved through the positive-definite degree form on the Frobenius pencil, deg(rπ − s) = qr² − a_q rs + s².",
   "source": {
    "roadmap": "EllipticCurves",
    "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
@@ -1083,7 +1083,7 @@
   "decl": "TauCeti.Isogeny.Hom.degree_zsmul_ofIsogeny_baseChangeFrobenius_sub_zsmul_id_eq_frobeniusTrace",
   "name": "The Hasse bound",
   "what": "result",
-  "about": "an elliptic curve over `𝔽_q` satisfies (#E(𝔽_q) − (q + 1))² ≤ 4q, where the count includes the point at infinity. It is proved through the degree form: the Frobenius pencil has deg(rπ − s) = qr² − a_q rs + s² when `p ∤ s`, and that form is non-negative.",
+  "about": "an elliptic curve over `𝔽_q` satisfies (#E(𝔽_q) − (q + 1))² ≤ 4q, with the point at infinity counted. It is proved through the positive-definite degree form on the Frobenius pencil, deg(rπ − s) = qr² − a_q rs + s².",
   "source": {
    "roadmap": "EllipticCurves",
    "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
@@ -1093,7 +1093,7 @@
   "decl": "WeierstrassCurve.Affine.fg_point_of_numberField",
   "name": "The Mordell–Weil theorem",
   "what": "result",
-  "about": "the points of an elliptic curve over a number field form a finitely generated group, proved through a general version over Dedekind fraction fields.",
+  "about": "the points of an elliptic curve over a number field form a finitely generated group, proved through a version over Dedekind fraction fields.",
   "source": {
    "roadmap": "EllipticCurves",
    "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
@@ -1103,7 +1103,7 @@
   "decl": "WeierstrassCurve.Affine.fg_point",
   "name": "The Mordell–Weil theorem",
   "what": "result",
-  "about": "the points of an elliptic curve over a number field form a finitely generated group, proved through a general version over Dedekind fraction fields.",
+  "about": "the points of an elliptic curve over a number field form a finitely generated group, proved through a version over Dedekind fraction fields.",
   "source": {
    "roadmap": "EllipticCurves",
    "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
@@ -1114,46 +1114,6 @@
   "name": "The determinant of the Tate module is cyclotomic",
   "what": "result",
   "about": "for `ℓ` invertible over a separably closed field, `T_ℓ E` is [free of rank 2 over `ℤ_ℓ`](https://taucetiproject.github.io/TauCeti/docs/TauCeti/AlgebraicGeometry/EllipticCurve/TateModule/Basic.html#WeierstrassCurve.nonempty_linearEquiv_tateModule), and the determinant of its Galois representation is the cyclotomic character.",
-  "source": {
-   "roadmap": "EllipticCurves",
-   "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
-  }
- },
- {
-  "decl": "WeierstrassCurve.weilPairing_torsionGaloisAction",
-  "name": "The Weil pairing",
-  "what": "result",
-  "about": "over a separably closed field with `N` invertible, `e_N` is bilinear, alternating, nondegenerate, Galois-equivariant and adjoint to the dual. It is built from a Kummer character, not from Weil reciprocity.",
-  "source": {
-   "roadmap": "EllipticCurves",
-   "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Isogeny.weilPairing_eq_weilPairing_dual",
-  "name": "The Weil pairing",
-  "what": "result",
-  "about": "over a separably closed field with `N` invertible, `e_N` is bilinear, alternating, nondegenerate, Galois-equivariant and adjoint to the dual. It is built from a Kummer character, not from Weil reciprocity.",
-  "source": {
-   "roadmap": "EllipticCurves",
-   "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
-  }
- },
- {
-  "decl": "WeierstrassCurve.globalMinimalityClass_eq_one_iff",
-  "name": "Global minimal models and Kraus's criterion",
-  "what": "result",
-  "about": "over a Dedekind domain, the global-minimality class is trivial exactly when a globally minimal equation exists (VIII.8.2). Kraus's criterion decides which pairs `(c₄, c₆)` come from an integral equation, away from characteristic 2 and 3.",
-  "source": {
-   "roadmap": "EllipticCurves",
-   "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.krausGlobalCondition_iff_exists_integralModel",
-  "name": "Global minimal models and Kraus's criterion",
-  "what": "result",
-  "about": "over a Dedekind domain, the global-minimality class is trivial exactly when a globally minimal equation exists (VIII.8.2). Kraus's criterion decides which pairs `(c₄, c₆)` come from an integral equation, away from characteristic 2 and 3.",
   "source": {
    "roadmap": "EllipticCurves",
    "path": "TauCetiRoadmap/EllipticCurves/STATUS.md"
@@ -1323,7 +1283,17 @@
   "decl": "TauCeti.GlobalNumberFields.HeckeCharacter.isFiniteOrder_iff_exists_rayClassCharacter",
   "name": "Finite-order Hecke characters are ray class characters",
   "what": "result",
-  "about": "a Hecke character has finite order exactly when it factors through some ray class group.",
+  "about": "a Hecke character has finite order exactly when it factors through some ray class group. Over `ℚ` these are exactly the characters coming from Dirichlet characters, each with a unique primitive representative.",
+  "source": {
+   "roadmap": "GlobalNumberFields",
+   "path": "TauCetiRoadmap/GlobalNumberFields/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.GlobalNumberFields.HeckeCharacter.existsUnique_primitive_dirichletCharacter",
+  "name": "Finite-order Hecke characters are ray class characters",
+  "what": "result",
+  "about": "a Hecke character has finite order exactly when it factors through some ray class group. Over `ℚ` these are exactly the characters coming from Dirichlet characters, each with a unique primitive representative.",
   "source": {
    "roadmap": "GlobalNumberFields",
    "path": "TauCetiRoadmap/GlobalNumberFields/STATUS.md"
@@ -1340,20 +1310,20 @@
   }
  },
  {
-  "decl": "TauCeti.NumberField.span_natCast_eq_prod_primesOverFinset_pow",
-  "name": "The splitting law in cyclotomic fields",
+  "decl": "TauCeti.GlobalNumberFields.NumberFieldOrder.mem_ker_rayClassToPic",
+  "name": "The Picard group of an order is a ray class quotient",
   "what": "result",
-  "about": "if `n = p^k m` with `p ∤ m`, then `p` factors in `ℚ(ζ_n)` as a product of distinct primes to the power `φ(p^k)`, and each has residue degree equal to the order of `p` mod `m`.",
+  "about": "`Pic O` is the image of the ray class group of the conductor, with kernel the classes of ideals generated by an element of the order, so `Pic O` is finite.",
   "source": {
    "roadmap": "GlobalNumberFields",
    "path": "TauCetiRoadmap/GlobalNumberFields/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.GlobalNumberFields.NumberFieldOrder.mem_ker_rayClassToPic",
-  "name": "The Picard group of an order is a ray class quotient",
+  "decl": "TauCeti.GlobalNumberFields.NumberFieldOrder.isGorenstein_iff_forall_isUnit",
+  "name": "The Gorenstein criterion",
   "what": "result",
-  "about": "`Pic O` is the image of the ray class group of the conductor. The kernel consists of the classes of ideals generated by an element of the order, so `Pic O` is finite.",
+  "about": "an order is Gorenstein exactly when every proper fractional ideal is invertible, and every monogenic order `ℤ[x]` is Gorenstein.",
   "source": {
    "roadmap": "GlobalNumberFields",
    "path": "TauCetiRoadmap/GlobalNumberFields/STATUS.md"
@@ -1400,10 +1370,10 @@
   }
  },
  {
-  "decl": "QuadraticForm.hasFiniteMulSupport_finiteHasse",
-  "name": "Almost-all triviality of the Hasse sign",
+  "decl": "TauCeti.NumberField.QuadraticForm.not_equivalent_sumTwoSquaresSubThreeSq_sumTwoSquaresSubSq",
+  "name": "The obstruction at 3",
   "what": "result",
-  "about": "the finite Hasse sign of a regular global form is `1` at all but finitely many finite places (O'Meara 63:14).",
+  "about": "`⟨1, 1, -3⟩` and `⟨1, 1, -1⟩` agree at every real place but are not isometric over `ℚ`, because the first is anisotropic at 3 and the second is isotropic.",
   "source": {
    "roadmap": "GlobalQuadraticForms",
    "path": "TauCetiRoadmap/GlobalQuadraticForms/STATUS.md"
@@ -1413,7 +1383,7 @@
   "decl": "QuadraticForm.finiteHasse",
   "name": "The finite Hasse sign",
   "what": "definition",
-  "about": "the local Hasse invariant of the localized form, computed from any global diagonalization. Its sum, scaling and negation formulas are what the existence argument's plane swap uses.",
+  "about": "the local Hasse invariant of the localized form, computed from any global diagonalization and trivial at almost every place. Its sum, scaling and negation formulas feed the existence argument.",
   "source": {
    "roadmap": "GlobalQuadraticForms",
    "path": "TauCetiRoadmap/GlobalQuadraticForms/STATUS.md"
@@ -1423,7 +1393,7 @@
   "decl": "QuadraticForm.globalInvariants",
   "name": "The invariants of a form",
   "what": "definition",
-  "about": "every regular form has a system of local invariants in the admissible-invariant carrier GlobalFormInvariants. That system is admissible exactly when the rank is positive and the Hasse product is one, the target of the eventual classification.",
+  "about": "every regular form has a system of local invariants in the carrier GlobalFormInvariants. That system is admissible exactly when the rank is positive and the Hasse product is one.",
   "source": {
    "roadmap": "GlobalQuadraticForms",
    "path": "TauCetiRoadmap/GlobalQuadraticForms/STATUS.md"
@@ -1433,7 +1403,17 @@
   "decl": "TauCeti.NumberField.QuadraticForm.GlobalFormInvariants",
   "name": "The invariants of a form",
   "what": "definition",
-  "about": "every regular form has a system of local invariants in the admissible-invariant carrier GlobalFormInvariants. That system is admissible exactly when the rank is positive and the Hasse product is one, the target of the eventual classification.",
+  "about": "every regular form has a system of local invariants in the carrier GlobalFormInvariants. That system is admissible exactly when the rank is positive and the Hasse product is one.",
+  "source": {
+   "roadmap": "GlobalQuadraticForms",
+   "path": "TauCetiRoadmap/GlobalQuadraticForms/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.NumberField.QuadraticForm.range_ideleNormMap_le_ker_ideleHilbertCharacter",
+  "name": "The idele Hilbert character",
+  "what": "definition",
+  "about": "`φ_b(x) = ∏_v (x_v, b)_v`, with a kernel of index two when `b` is a nonsquare somewhere. The kernel contains the idele norms from any field in which `b` is a square. Sign prescription runs through it.",
   "source": {
    "roadmap": "GlobalQuadraticForms",
    "path": "TauCetiRoadmap/GlobalQuadraticForms/STATUS.md"
@@ -1443,7 +1423,7 @@
   "decl": "TauCeti.NumberField.QuadraticForm.ideleHilbertCharacter",
   "name": "The idele Hilbert character",
   "what": "definition",
-  "about": "`φ_b(x) = ∏_v (x_v, b)_v` on the idele group, with kernel of index two when `b` is a nonsquare somewhere. This is the character through which the roadmap's pinned proof of sign prescription runs.",
+  "about": "`φ_b(x) = ∏_v (x_v, b)_v`, with a kernel of index two when `b` is a nonsquare somewhere. The kernel contains the idele norms from any field in which `b` is a square. Sign prescription runs through it.",
   "source": {
    "roadmap": "GlobalQuadraticForms",
    "path": "TauCetiRoadmap/GlobalQuadraticForms/STATUS.md"
