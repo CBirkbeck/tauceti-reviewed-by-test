@@ -270,116 +270,6 @@
   }
  },
  {
-  "decl": "TauCeti.primeIdealTheorem",
-  "name": "The prime ideal theorem",
-  "what": "result",
-  "about": "for every number field, `ψ_K(x) ~ x`, `ϑ_K(x) ~ x` and `π_K(x) ~ Li(x)`, with no hypotheses left to supply.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.LSeries.wienerIkehara",
-  "name": "The Wiener–Ikehara theorem",
-  "what": "result",
-  "about": "suppose nonnegative coefficients have a Dirichlet series `F` on `Re s > 1`, and `F(s) - κ/(s-1)` extends continuously to `Re s ≥ 1`. Then `x⁻¹ ∑_{n≤x} a n → κ`. Variants cover natural cutoffs, a positive abscissa, and coefficients in a finite-dimensional ordered vector space.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.primeNumberTheoremTransfer",
-  "name": "Prime-number-theorem transfer",
-  "what": "result",
-  "about": "boundary data with residue `δ` for the von Mangoldt series of a prime set gives `ψ ~ δx`, `ϑ ~ δx` and `π ~ δ Li(x)`.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ne_zero_of_eqOn_dedekindZeta",
-  "name": "Nonvanishing on the line `Re s = 1`",
-  "what": "result",
-  "about": "`ζ_K` has no zeros there away from its pole, by the 3-4-1 argument. The same argument covers the continued L-function of a unitary weight whose pointwise square also has cancellation.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.continuedLFunctionOfWeight_ne_zero_of_hasCancellation_sq",
-  "name": "Nonvanishing on the line `Re s = 1`",
-  "what": "result",
-  "about": "`ζ_K` has no zeros there away from its pole, by the 3-4-1 argument. The same argument covers the continued L-function of a unitary weight whose pointwise square also has cancellation.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.EulerProductData.hasProd_eulerFactor",
-  "name": "The analytic Euler product",
-  "what": "result",
-  "about": "on the half-plane of absolute convergence, the product of the local factors over the height-one primes equals the `LSeries` of the norm coefficients.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.PrimeBoundaryRemainder",
-  "name": "Prime boundary data",
-  "what": "definition",
-  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes lives in an `LFunctions` file.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.LFunctions.primeIdealVonMangoldtBoundary",
-  "name": "Prime boundary data",
-  "what": "definition",
-  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes lives in an `LFunctions` file.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.continuedLFunctionOfWeight",
-  "name": "The continued L-function of a weight",
-  "what": "definition",
-  "about": "it is defined by partial summation and agrees with the `L`-series on `Re s > 1`. When the weight has cancellation it is holomorphic on `Re s > 1 - 1/[K:ℚ]`. This is what lets character-family consumers leave the half-plane of convergence.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.MultiplicativeIdealWeight.instCommMonoid",
-  "name": "Ideal weights as a monoid",
-  "what": "definition",
-  "about": "completely multiplicative ideal weights form a commutative monoid under pointwise product, and a field isomorphism transports them by a multiplicative equivalence. Character-family consumers can therefore form products, powers and conjugates and move them between isomorphic fields without bookkeeping.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.MultiplicativeIdealWeight.mapEquiv",
-  "name": "Ideal weights as a monoid",
-  "what": "definition",
-  "about": "completely multiplicative ideal weights form a commutative monoid under pointwise product, and a field isomorphism transports them by a multiplicative equivalence. Character-family consumers can therefore form products, powers and conjugates and move them between isomorphic fields without bookkeeping.",
-  "source": {
-   "roadmap": "ArithmeticDirichletSeries",
-   "path": "TauCetiRoadmap/ArithmeticDirichletSeries/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.ThricePuncturedSphere.fundamentalGroupMulEquivFreeGroup",
   "name": "Freeness of the fundamental group of the thrice-punctured sphere",
   "what": "result",
@@ -973,7 +863,7 @@
   "decl": "TauCeti.DenseGraphLimits.InfiniteExchangeableGraphLaw.existsUnique_bind_infiniteSampleLawOnSpace",
   "name": "The Diaconis–Janson graphon-mixture representation",
   "what": "result",
-  "about": "every exchangeable law on infinite graphs is a mixture of graphon sampling laws for exactly one mixing measure on graphon space. The bundled form is the equivalence `graphonMixtureLawEquiv`.",
+  "about": "every exchangeable law on infinite graphs is a mixture of graphon sampling laws, for exactly one mixing measure on graphon space.",
   "source": {
    "roadmap": "DenseGraphLimits",
    "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
@@ -1043,7 +933,7 @@
   "decl": "TauCeti.DenseGraphLimits.Graphon.unitIntervalRepr",
   "name": "The unit-interval representative",
   "what": "definition",
-  "about": "unitIntervalRepr gives an isometric embedding of every graphon space into the unit-interval one. This is how total boundedness, compactness, convergence and sampling convergence transfer off the unit interval.",
+  "about": "unitIntervalRepr isometrically embeds every graphon space in the unit-interval one. This is how total boundedness, compactness, convergence and sampling convergence carry over to other carriers.",
   "source": {
    "roadmap": "DenseGraphLimits",
    "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
@@ -1053,7 +943,7 @@
   "decl": "TauCeti.DenseGraphLimits.homDensityCoords",
   "name": "Density coordinates",
   "what": "definition",
-  "about": "homDensityCoords is a closed embedding of unit-interval graphon space into a product of real lines. It makes measurability on graphon space checkable density by density, and the mixture representation rests on it.",
+  "about": "homDensityCoords is a closed embedding of unit-interval graphon space into a product of real lines. It lets measurability on graphon space be checked one density at a time, and the mixture representation rests on it.",
   "source": {
    "roadmap": "DenseGraphLimits",
    "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
@@ -1063,7 +953,7 @@
   "decl": "TauCeti.DenseGraphLimits.isClosedEmbedding_homDensityCoords",
   "name": "Density coordinates",
   "what": "definition",
-  "about": "homDensityCoords is a closed embedding of unit-interval graphon space into a product of real lines. It makes measurability on graphon space checkable density by density, and the mixture representation rests on it.",
+  "about": "homDensityCoords is a closed embedding of unit-interval graphon space into a product of real lines. It lets measurability on graphon space be checked one density at a time, and the mixture representation rests on it.",
   "source": {
    "roadmap": "DenseGraphLimits",
    "path": "TauCetiRoadmap/DenseGraphLimits/STATUS.md"
@@ -1893,17 +1783,7 @@
   "decl": "TauCeti.isLUB_kantorovichDualValue_of_lowerSemicontinuous_bddBelow",
   "name": "Kantorovich duality on Polish spaces",
   "what": "result",
-  "about": "for a lower semicontinuous cost bounded below by `a ⊕ b`, with `a, b` upper semicontinuous and integrable, the optimal cost is the supremum of integrable dual values. Dual attainment is proved only for bounded continuous costs.",
-  "source": {
-   "roadmap": "OptimalTransport",
-   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.isGreatest_kantorovichDualValue_integrable",
-  "name": "Kantorovich duality on Polish spaces",
-  "what": "result",
-  "about": "for a lower semicontinuous cost bounded below by `a ⊕ b`, with `a, b` upper semicontinuous and integrable, the optimal cost is the supremum of integrable dual values. Dual attainment is proved only for bounded continuous costs.",
+  "about": "for a lower semicontinuous cost bounded below by `a ⊕ b`, with `a, b` upper semicontinuous and integrable, the optimal cost is the supremum of the dual values. Dual attainment is proved only for bounded continuous costs.",
   "source": {
    "roadmap": "OptimalTransport",
    "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
@@ -1913,27 +1793,17 @@
   "decl": "TauCeti.wassersteinEDist_one_eq_iSup",
   "name": "Kantorovich–Rubinstein duality",
   "what": "result",
-  "about": "`W_1` is the supremum of `∫ f dμ - ∫ f dν` over 1-Lipschitz `f`, for finite first moments on a Polish metric space. The bounded-Lipschitz variant is also proved.",
+  "about": "`W₁` is the supremum of `∫ f dμ - ∫ f dν` over 1-Lipschitz `f`, for finite first moments on a Polish metric space.",
   "source": {
    "roadmap": "OptimalTransport",
    "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.wassersteinEDist_two_multivariateGaussian_rpow_two",
-  "name": "The Gaussian `W₂` formula",
+  "decl": "Matrix.hilbertProjectiveDist_mulVec_le",
+  "name": "Birkhoff's contraction theorem",
   "what": "result",
-  "about": "from a nondegenerate Gaussian to any Gaussian, `W₂²` is the squared distance of the means plus the Bures covariance term, realised by the positive affine map.",
-  "source": {
-   "roadmap": "OptimalTransport",
-   "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.existsUnique_isCoupling_klDiv_eq_schroedingerValue",
-  "name": "Existence and uniqueness of the Schrödinger minimiser",
-  "what": "result",
-  "about": "against a finite reference measure, a finite static Schrödinger value is attained by exactly one coupling, with no topology on the spaces.",
+  "about": "a matrix with strictly positive entries contracts Hilbert's projective metric between positive vectors by `tanh(Δ(K)/4) < 1`, where `Δ(K)` is its projective diameter.",
   "source": {
    "roadmap": "OptimalTransport",
    "path": "TauCetiRoadmap/OptimalTransport/STATUS.md"
@@ -2897,6 +2767,116 @@
   "source": {
    "roadmap": "AlgebraicCodingTheory",
    "path": "Completed/AlgebraicCodingTheory/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.primeIdealTheorem",
+  "name": "The prime ideal theorem",
+  "what": "result",
+  "about": "for every number field, `ψ_K(x) ~ x`, `ϑ_K(x) ~ x` and `π_K(x) ~ Li(x)`, with no hypotheses left to supply.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.LSeries.wienerIkehara",
+  "name": "The Wiener–Ikehara theorem",
+  "what": "result",
+  "about": "suppose nonnegative coefficients have a Dirichlet series `F` on `Re s > 1`, and `F(s) - κ/(s-1)` extends continuously to `Re s ≥ 1`. Then `x⁻¹ ∑_{n≤x} a n → κ`. Variants cover natural cutoffs, a positive abscissa, and coefficients in a finite-dimensional ordered vector space.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.primeNumberTheoremTransfer",
+  "name": "Prime-number-theorem transfer",
+  "what": "result",
+  "about": "boundary data with residue `δ` for the von Mangoldt series of a prime set gives `ψ ~ δx`, `ϑ ~ δx` and `π ~ δ Li(x)`.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.ne_zero_of_eqOn_dedekindZeta",
+  "name": "Nonvanishing on the line `Re s = 1`",
+  "what": "result",
+  "about": "`ζ_K` has no zeros there away from its pole, by the 3-4-1 argument. The same argument covers the continued L-function of a unitary weight whose pointwise square also has cancellation.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.continuedLFunctionOfWeight_ne_zero_of_hasCancellation_sq",
+  "name": "Nonvanishing on the line `Re s = 1`",
+  "what": "result",
+  "about": "`ζ_K` has no zeros there away from its pole, by the 3-4-1 argument. The same argument covers the continued L-function of a unitary weight whose pointwise square also has cancellation.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.EulerProductData.hasProd_eulerFactor",
+  "name": "The analytic Euler product",
+  "what": "result",
+  "about": "on the half-plane of absolute convergence, the product of the local factors over the height-one primes equals the `LSeries` of the norm coefficients.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.PrimeBoundaryRemainder",
+  "name": "Prime boundary data",
+  "what": "definition",
+  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes lives in an `LFunctions` file.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.LFunctions.primeIdealVonMangoldtBoundary",
+  "name": "Prime boundary data",
+  "what": "definition",
+  "about": "a von Mangoldt series together with a continuous boundary remainder and a residue. Every prime-counting consumer supplies this package, and the transfer theorem consumes it. The instance for all primes lives in an `LFunctions` file.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.continuedLFunctionOfWeight",
+  "name": "The continued L-function of a weight",
+  "what": "definition",
+  "about": "it is defined by partial summation and agrees with the `L`-series on `Re s > 1`. When the weight has cancellation it is holomorphic on `Re s > 1 - 1/[K:ℚ]`. This is what lets character-family consumers leave the half-plane of convergence.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.MultiplicativeIdealWeight.instCommMonoid",
+  "name": "Ideal weights as a monoid",
+  "what": "definition",
+  "about": "completely multiplicative ideal weights form a commutative monoid under pointwise product, and a field isomorphism transports them by a multiplicative equivalence. Character-family consumers can therefore form products, powers and conjugates and move them between isomorphic fields without bookkeeping.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.MultiplicativeIdealWeight.mapEquiv",
+  "name": "Ideal weights as a monoid",
+  "what": "definition",
+  "about": "completely multiplicative ideal weights form a commutative monoid under pointwise product, and a field isomorphism transports them by a multiplicative equivalence. Character-family consumers can therefore form products, powers and conjugates and move them between isomorphic fields without bookkeeping.",
+  "source": {
+   "roadmap": "ArithmeticDirichletSeries",
+   "path": "Completed/ArithmeticDirichletSeries/STATUS.md"
   }
  },
  {
