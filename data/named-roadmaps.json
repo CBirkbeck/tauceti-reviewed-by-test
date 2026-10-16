@@ -343,7 +343,7 @@
   "decl": "TauCeti.ClassificationStatement",
   "name": "The classification statement",
   "what": "result",
-  "about": "every finite simple group is isomorphic to `CFSGIndex.Group i` for some index `i` on the list. This is stated, not proved. Its universe-zero case implies every other universe.",
+  "about": "every finite simple group is isomorphic to `CFSGIndex.Group i` for some index `i` on the list. Stated, not proved. Its universe-zero case implies every other universe.",
   "source": {
    "roadmap": "CFSGStatement",
    "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
@@ -353,7 +353,7 @@
   "decl": "TauCeti.classificationStatement_of_zero",
   "name": "The classification statement",
   "what": "result",
-  "about": "every finite simple group is isomorphic to `CFSGIndex.Group i` for some index `i` on the list. This is stated, not proved. Its universe-zero case implies every other universe.",
+  "about": "every finite simple group is isomorphic to `CFSGIndex.Group i` for some index `i` on the list. Stated, not proved. Its universe-zero case implies every other universe.",
   "source": {
    "roadmap": "CFSGStatement",
    "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
@@ -423,7 +423,17 @@
   "decl": "TauCeti.F4ShortRoot.groupScheme_hom_ext_of_rootSubgroup",
   "name": "Root generation of the short-root F₄ carrier",
   "what": "definition",
-  "about": "over ℤ the carrier is generated as a group scheme by its eight numbered simple root subgroups, so morphisms out of it are determined by their values there. That is the kind of uniqueness statement an F₄, Ree F₄ or Tits carrier agreement would use.",
+  "about": "over ℤ the carrier is generated as a group scheme by its eight numbered simple root subgroups, so morphisms out of it are determined by their values there. Those root subgroups come from the integral exponentials of the signed simple roots, which are Lie algebra automorphisms over any parameter ring. An F₄, Ree F₄ or Tits carrier agreement would rest on these.",
+  "source": {
+   "roadmap": "CFSGStatement",
+   "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.DynkinType.f4RootExponentialLieEquiv",
+  "name": "Root generation of the short-root F₄ carrier",
+  "what": "definition",
+  "about": "over ℤ the carrier is generated as a group scheme by its eight numbered simple root subgroups, so morphisms out of it are determined by their values there. Those root subgroups come from the integral exponentials of the signed simple roots, which are Lie algebra automorphisms over any parameter ring. An F₄, Ree F₄ or Tits carrier agreement would rest on these.",
   "source": {
    "roadmap": "CFSGStatement",
    "path": "TauCetiRoadmap/CFSGStatement/STATUS.md"
@@ -1013,7 +1023,7 @@
   "decl": "TauCeti.ModularGroup.jBiholomorph",
   "name": "X(1) is the Riemann sphere",
   "what": "result",
-  "about": "the normalized modular invariant, descended to the compactified level-one quotient, is a biholomorphism onto P¹ that sends the elliptic orbits of orders two and three to 1728 and 0. The proof goes through degree one.",
+  "about": "the normalized modular invariant, descended to the compactified level-one quotient, is a biholomorphism onto P¹ sending the elliptic orbits of orders two and three to 1728 and 0. The proof goes through degree one.",
   "source": {
    "roadmap": "FuchsianOrbifolds",
    "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
@@ -1040,30 +1050,30 @@
   }
  },
  {
+  "decl": "TauCeti.UpperHalfPlane.ConvexPolygon.compactSpace_compactifiedQuotient",
+  "name": "Compactness from a cuspidal polygon",
+  "what": "result",
+  "about": "if a discrete group has finitely many cusp orbits and a finite-sided convex polygon whose ideal vertices are cusps meets every orbit, its compactified quotient is compact. The core is that the quotient minus any family of cusp horodiscs is compact.",
+  "source": {
+   "roadmap": "FuchsianOrbifolds",
+   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.UpperHalfPlane.ConvexPolygon.isCompact_compl_iUnion_image_horodisc",
+  "name": "Compactness from a cuspidal polygon",
+  "what": "result",
+  "about": "if a discrete group has finitely many cusp orbits and a finite-sided convex polygon whose ideal vertices are cusps meets every orbit, its compactified quotient is compact. The core is that the quotient minus any family of cusp horodiscs is compact.",
+  "source": {
+   "roadmap": "FuchsianOrbifolds",
+   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
+  }
+ },
+ {
   "decl": "TauCeti.UpperHalfPlane.ConvexPolygon.volume_carrier",
   "name": "Gauss–Bonnet for convex polygons with ideal vertices",
   "what": "result",
-  "about": "a convex hyperbolic n-gon with vertices in ℍ ∪ ∂ℍ has area (n − 2)π minus its angle sum, where ideal angles count as zero.",
-  "source": {
-   "roadmap": "FuchsianOrbifolds",
-   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
-  }
- },
- {
-  "decl": "Subgroup.existsUnique_meromorphicAt_quotientMk",
-  "name": "Meromorphic descent with the elliptic order formula",
-  "what": "result",
-  "about": "a Γ-invariant meromorphic function on ℍ descends uniquely to Γ\\ℍ, and pulling back multiplies orders by the stabilizer order. Under exponential growth bounds such a function extends across the cusps.",
-  "source": {
-   "roadmap": "FuchsianOrbifolds",
-   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Fuchsian.exists_meromorphicAt_comp_ofQuotient",
-  "name": "Meromorphic descent with the elliptic order formula",
-  "what": "result",
-  "about": "a Γ-invariant meromorphic function on ℍ descends uniquely to Γ\\ℍ, and pulling back multiplies orders by the stabilizer order. Under exponential growth bounds such a function extends across the cusps.",
+  "about": "a convex hyperbolic n-gon with vertices in ℍ ∪ ∂ℍ has area (n − 2)π minus its angle sum, ideal angles counting as zero.",
   "source": {
    "roadmap": "FuchsianOrbifolds",
    "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
@@ -1073,7 +1083,7 @@
   "decl": "Subgroup.CompactifiedQuotient",
   "name": "The compactification",
   "what": "definition",
-  "about": "Subgroup.CompactifiedQuotient is the explicit sum of Γ\\ℍ and the cusp orbits, with q-coordinate charts from normalized cusp data. compactSpace_of_compact_truncations reduces compactness to compact truncated fundamental sets. Convex polygons truncated at their ideal vertices are already known to be compact.",
+  "about": "Subgroup.CompactifiedQuotient is the explicit sum of Γ\\ℍ and the cusp orbits, with q-coordinate charts from normalized cusp data. Invariant meromorphic functions descend to it and extend across the cusps under growth bounds.",
   "source": {
    "roadmap": "FuchsianOrbifolds",
    "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
@@ -1083,27 +1093,37 @@
   "decl": "Subgroup.CuspDatum",
   "name": "The compactification",
   "what": "definition",
-  "about": "Subgroup.CompactifiedQuotient is the explicit sum of Γ\\ℍ and the cusp orbits, with q-coordinate charts from normalized cusp data. compactSpace_of_compact_truncations reduces compactness to compact truncated fundamental sets. Convex polygons truncated at their ideal vertices are already known to be compact.",
+  "about": "Subgroup.CompactifiedQuotient is the explicit sum of Γ\\ℍ and the cusp orbits, with q-coordinate charts from normalized cusp data. Invariant meromorphic functions descend to it and extend across the cusps under growth bounds.",
   "source": {
    "roadmap": "FuchsianOrbifolds",
    "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
   }
  },
  {
-  "decl": "Subgroup.CompactifiedQuotient.compactSpace_of_compact_truncations",
+  "decl": "Subgroup.existsUnique_meromorphicAt_quotientMk",
   "name": "The compactification",
   "what": "definition",
-  "about": "Subgroup.CompactifiedQuotient is the explicit sum of Γ\\ℍ and the cusp orbits, with q-coordinate charts from normalized cusp data. compactSpace_of_compact_truncations reduces compactness to compact truncated fundamental sets. Convex polygons truncated at their ideal vertices are already known to be compact.",
+  "about": "Subgroup.CompactifiedQuotient is the explicit sum of Γ\\ℍ and the cusp orbits, with q-coordinate charts from normalized cusp data. Invariant meromorphic functions descend to it and extend across the cusps under growth bounds.",
   "source": {
    "roadmap": "FuchsianOrbifolds",
    "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.UpperHalfPlane.ConvexPolygon.isCompact_carrier_diff_iUnion",
-  "name": "The compactification",
+  "decl": "TauCeti.UpperHalfPlane.ConvexPolygon.SidePairing",
+  "name": "Side pairings and the pieces of Poincaré's theorem",
   "what": "definition",
-  "about": "Subgroup.CompactifiedQuotient is the explicit sum of Γ\\ℍ and the cusp orbits, with q-coordinate charts from normalized cusp data. compactSpace_of_compact_truncations reduces compactness to compact truncated fundamental sets. Convex polygons truncated at their ideal vertices are already known to be compact.",
+  "about": "side pairings of polygons with ideal vertices carry cycles, angle sums and side and cycle relators. In the source, locally finite translates of a side-paired polygon cover ℍ, its ideal cycle transformations are parabolic, and the side-pairing maps generate the group of a locally finite fundamental polygon. The local tiling holds at parabolic ideal cycles, and at finite vertices through vertex sectors.",
+  "source": {
+   "roadmap": "FuchsianOrbifolds",
+   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.UpperHalfPlane.ConvexPolygon.vertexSector",
+  "name": "Side pairings and the pieces of Poincaré's theorem",
+  "what": "definition",
+  "about": "side pairings of polygons with ideal vertices carry cycles, angle sums and side and cycle relators. In the source, locally finite translates of a side-paired polygon cover ℍ, its ideal cycle transformations are parabolic, and the side-pairing maps generate the group of a locally finite fundamental polygon. The local tiling holds at parabolic ideal cycles, and at finite vertices through vertex sectors.",
   "source": {
    "roadmap": "FuchsianOrbifolds",
    "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
@@ -1113,47 +1133,7 @@
   "decl": "TauCeti.RiemannSurface.ramificationDivisor",
   "name": "The ramification divisor",
   "what": "definition",
-  "about": "ramificationDivisor gives each point weight e − 1 and satisfies a chain rule. A map with its branch values removed is a covering. This sets up the excision proof of Riemann–Hurwitz.",
-  "source": {
-   "roadmap": "FuchsianOrbifolds",
-   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.RiemannSurface.FiniteHolomorphicMap.isCoveringMap_restrictPreimage_branchValues_compl",
-  "name": "The ramification divisor",
-  "what": "definition",
-  "about": "ramificationDivisor gives each point weight e − 1 and satisfies a chain rule. A map with its branch values removed is a covering. This sets up the excision proof of Riemann–Hurwitz.",
-  "source": {
-   "roadmap": "FuchsianOrbifolds",
-   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.UpperHalfPlane.ConvexPolygon.SidePairing",
-  "name": "Side pairings and Dirichlet domains",
-  "what": "definition",
-  "about": "side pairings of convex polygons with ideal vertices come with vertex cycles, angle sums and cycle transformations. Adjacent tiles across a paired side do not overlap and together cover a neighbourhood of the side. Every discrete group has a Dirichlet fundamental domain. It is geodesically convex, and its boundary is the union of its faces.",
-  "source": {
-   "roadmap": "FuchsianOrbifolds",
-   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
-  }
- },
- {
-  "decl": "Subgroup.exists_isFundamentalDomain_dirichletDomain",
-  "name": "Side pairings and Dirichlet domains",
-  "what": "definition",
-  "about": "side pairings of convex polygons with ideal vertices come with vertex cycles, angle sums and cycle transformations. Adjacent tiles across a paired side do not overlap and together cover a neighbourhood of the side. Every discrete group has a Dirichlet fundamental domain. It is geodesically convex, and its boundary is the union of its faces.",
-  "source": {
-   "roadmap": "FuchsianOrbifolds",
-   "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.UpperHalfPlane.frontier_dirichletDomain_eq_iUnion_dirichletFace",
-  "name": "Side pairings and Dirichlet domains",
-  "what": "definition",
-  "about": "side pairings of convex polygons with ideal vertices come with vertex cycles, angle sums and cycle transformations. Adjacent tiles across a paired side do not overlap and together cover a neighbourhood of the side. Every discrete group has a Dirichlet fundamental domain. It is geodesically convex, and its boundary is the union of its faces.",
+  "about": "ramificationDivisor gives each point weight e − 1, and a map with its branch values removed is a covering. This sets up the excision proof of Riemann–Hurwitz.",
   "source": {
    "roadmap": "FuchsianOrbifolds",
    "path": "TauCetiRoadmap/FuchsianOrbifolds/STATUS.md"
@@ -2337,6 +2317,26 @@
   "source": {
    "roadmap": "ProfiniteProPGroups",
    "path": "TauCetiRoadmap/ProfiniteProPGroups/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.brauerCohomologyEquiv",
+  "name": "The comparison isomorphism `Br(K) ≅ H²(G_K, (Kˢ)ˣ)`",
+  "what": "result",
+  "about": "on 2-torsion it carries `[(a,b)]` to `(a) ∪ (b)`. It yields the cup-norm theorem: `(a) ∪ (b) = 0` exactly when `b = x² − a y²` is solvable.",
+  "source": {
+   "roadmap": "QuadraticFormInvariants",
+   "path": "TauCetiRoadmap/QuadraticFormInvariants/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.cup_kummerClass_eq_zero_iff",
+  "name": "The comparison isomorphism `Br(K) ≅ H²(G_K, (Kˢ)ˣ)`",
+  "what": "result",
+  "about": "on 2-torsion it carries `[(a,b)]` to `(a) ∪ (b)`. It yields the cup-norm theorem: `(a) ∪ (b) = 0` exactly when `b = x² − a y²` is solvable.",
+  "source": {
+   "roadmap": "QuadraticFormInvariants",
+   "path": "TauCetiRoadmap/QuadraticFormInvariants/STATUS.md"
   }
  },
  {
