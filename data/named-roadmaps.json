@@ -1323,7 +1323,7 @@
   "decl": "TauCeti.gradedCartanEquiv",
   "name": "The graded Cartan isomorphism",
   "what": "result",
-  "about": "if every finite graded module has a finite resolution by finite graded projectives, the graded Cartan map is an isomorphism of `ℤ[q,q⁻¹]`-modules, inverse to the alternating class of a resolution.",
+  "about": "if every finite graded module has a finite resolution by finite graded projectives, the graded Cartan map is an isomorphism of `ℤ[q,q⁻¹]`-modules, and its inverse is the alternating class of a resolution.",
   "source": {
    "roadmap": "GrothendieckEulerForms",
    "path": "TauCetiRoadmap/GrothendieckEulerForms/STATUS.md"
@@ -1340,10 +1340,10 @@
   }
  },
  {
-  "decl": "TauCeti.gradedExtEulerSesquilinear",
-  "name": "The sesquilinear q-Euler form",
+  "decl": "TauCeti.PathAlgebra.coeff_gradedCartanMap_gradedVertexProjectiveClass",
+  "name": "Graded Cartan columns count paths",
   "what": "result",
-  "about": "`χ_q` descends to graded K₀ as a Laurent module, q-antilinear in the first argument and q-linear in the second.",
+  "about": "for `kQ` with the path-length grading, the `qⁿ` coefficient of the `eᵢ`-coordinate of `[kQ eⱼ]` is the number of length-`n` paths from `j` to `i`.",
   "source": {
    "roadmap": "GrothendieckEulerForms",
    "path": "TauCetiRoadmap/GrothendieckEulerForms/STATUS.md"
@@ -1410,10 +1410,10 @@
   }
  },
  {
-  "decl": "TauCeti.IntegralLattice.typeE₈IsometryD8Plus",
-  "name": "The `D₈⁺ ≅ E₈` isometry",
+  "decl": "TauCeti.IntegralLattice.IsPosDef.minimum_le_rpow_mul_determinant_rpow",
+  "name": "Hermite's inequality",
   "what": "result",
-  "about": "the spinor glue enlargement of `D₈` is isometric to the `E₈` root lattice, which also identifies the coordinate and Cartan models of `E₈`.",
+  "about": "a positive definite lattice of rank `n` has `min L ≤ (4/3)^{(n−1)/2} (det L)^{1/n}`, with equality for `A₂`. Minkowski's convex-body bound and his second theorem on successive minima are also proved.",
   "source": {
    "roadmap": "IntegralLattices",
    "path": "TauCetiRoadmap/IntegralLattices/STATUS.md"
@@ -1423,47 +1423,7 @@
   "decl": "TauCeti.IntegralLattice.evenIntermediateCarrierOrderIsoIsotropicSubgroup",
   "name": "Nikulin's even-overlattice correspondence",
   "what": "result",
-  "about": "even overlattices `L ≤ M ≤ L^⋆` of an even nondegenerate lattice correspond to quadratic-isotropic subgroups `H` of `A_L`, and the discriminant form of `M` is `H⊥/H`.",
-  "source": {
-   "roadmap": "IntegralLattices",
-   "path": "TauCetiRoadmap/IntegralLattices/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.FiniteQuadraticModule.exists_isometry_pi_oddCyclic",
-  "name": "Nikulin's generator decomposition",
-  "what": "result",
-  "about": "every nondegenerate finite quadratic form is an orthogonal sum of the odd cyclic forms `q_θ^{(p)}(p^k)`, the dyadic cyclic forms and the rank-two forms `u` and `v`. The source states this as `TauCeti.FiniteQuadraticModule.exists_isometry_prod_pi_generators`, built on the odd-order case and the rank-two dyadic classification.",
-  "source": {
-   "roadmap": "IntegralLattices",
-   "path": "TauCetiRoadmap/IntegralLattices/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.FiniteQuadraticModule.nonempty_isometry_dyadicU_or_dyadicV_restrict_zmultiples_sup",
-  "name": "Nikulin's generator decomposition",
-  "what": "result",
-  "about": "every nondegenerate finite quadratic form is an orthogonal sum of the odd cyclic forms `q_θ^{(p)}(p^k)`, the dyadic cyclic forms and the rank-two forms `u` and `v`. The source states this as `TauCeti.FiniteQuadraticModule.exists_isometry_prod_pi_generators`, built on the odd-order case and the rank-two dyadic classification.",
-  "source": {
-   "roadmap": "IntegralLattices",
-   "path": "TauCetiRoadmap/IntegralLattices/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.FiniteQuadraticModule.gaussSign_prod",
-  "name": "Additivity of the Gauss-sum invariant",
-  "what": "result",
-  "about": "the class `sign q ∈ ℤ/8` defined by `G(q) = √#A · e^{2πi·sign q/8}` is additive over orthogonal sums. It vanishes on metabolic modules and takes Nikulin's values on the dyadic generators.",
-  "source": {
-   "roadmap": "IntegralLattices",
-   "path": "TauCetiRoadmap/IntegralLattices/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.IntegralLattice.covolume_range_sq_eq_determinant",
-  "name": "The covolume identity",
-  "what": "result",
-  "about": "a nondegenerate integral lattice realised in Euclidean space has `covolume² = det L`.",
+  "about": "even overlattices of an even nondegenerate lattice correspond to isotropic subgroups `H` of `A_L`, and the overlattice has discriminant form `H⊥/H`.",
   "source": {
    "roadmap": "IntegralLattices",
    "path": "TauCetiRoadmap/IntegralLattices/STATUS.md"
@@ -1683,7 +1643,7 @@
   "decl": "HeckeRing.GL2.Newform.exists_normalizedFrickeOperatorCusp_eq_smul_conj",
   "name": "The Fricke involution on a newform of any nebentypus",
   "what": "result",
-  "about": "`𝒲_N f = λ_N(f)·f_ρ`, a multiple of the conjugate newform (Miyake 4.6.15(2)). The pseudo-eigenvalue `λ_N(f)` has modulus one.",
+  "about": "`𝒲_N f = λ_N(f)·f_ρ` is a multiple of the conjugate newform (Miyake 4.6.15(2)), and the pseudo-eigenvalue `λ_N(f)` has modulus one.",
   "source": {
    "roadmap": "ModularForms",
    "path": "TauCetiRoadmap/ModularForms/STATUS.md"
@@ -2637,6 +2597,46 @@
   "source": {
    "roadmap": "StandardDistributions",
    "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.finiteDimensional_preprojectiveAlgebra_of_isSimplyLaced",
+  "name": "The finite/infinite dichotomy for preprojective algebras",
+  "what": "result",
+  "about": "for every orientation, `Π(Q)` is finite-dimensional over every field when the graph is simply-laced Dynkin and infinite-dimensional when it is connected and non-Dynkin. In the finite case it is also left and right self-injective, by a general theorem for finite-dimensional preprojective algebras (`TauCeti.moduleInjective_preprojectiveAlgebra_of_isSimplyLaced`).",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.not_module_finite_preprojectiveAlgebra_orientedQuiver_of_not_exists_dynkinType_iso",
+  "name": "The finite/infinite dichotomy for preprojective algebras",
+  "what": "result",
+  "about": "for every orientation, `Π(Q)` is finite-dimensional over every field when the graph is simply-laced Dynkin and infinite-dimensional when it is connected and non-Dynkin. In the finite case it is also left and right self-injective, by a general theorem for finite-dimensional preprojective algebras (`TauCeti.moduleInjective_preprojectiveAlgebra_of_isSimplyLaced`).",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.forall_preprojectiveMk_ofArrow_reverse_mul_eq_zero_iff",
+  "name": "Koszul resolutions for preprojective algebras off trees",
+  "what": "result",
+  "about": "if every vertex of `Q` is the tail of an arrow, then the Koszul complex `0 → e_vΠ → ⨁_b e_iΠ → e_vΠ → S_v → 0` is exact over any commutative ring. By orientation independence the same holds for every orientation of a connected graph containing a cycle, where the resolution is linear and graded and the Hilbert series is `((1 + t²) I − t A)⁻¹` (`TauCeti.preprojectiveHilbertSeries_eq_inv_of_not_isAcyclic`).",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
+  }
+ },
+ {
+  "decl": "TauCeti.SkewZigzagParameter.cohomologyClass_eq_iff_exists_vertexFixing_algEquiv",
+  "name": "Couture's classification of skew-zigzag algebras",
+  "what": "result",
+  "about": "two skew parameters have the same class in `H¹(G, kˣ)` exactly when their algebras are isomorphic fixing the vertex idempotents.",
+  "source": {
+   "roadmap": "ZigzagPreprojective",
+   "path": "TauCetiRoadmap/ZigzagPreprojective/STATUS.md"
   }
  },
  {
