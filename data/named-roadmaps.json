@@ -73,17 +73,7 @@
   "decl": "TauCeti.FundamentalGroupoid.isColimitCechCocone",
   "name": "The van Kampen theorem",
   "what": "result",
-  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based pushout theorem follows, and the free product of the fundamental groups of two cover members maps onto `π₁(X)`.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.vanKampenLift_surjective",
-  "name": "The van Kampen theorem",
-  "what": "result",
-  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based pushout theorem follows, and the free product of the fundamental groups of two cover members maps onto `π₁(X)`.",
+  "about": "for any open cover, the fundamental groupoid is the colimit of the fundamental groupoids of the finite intersections. The based and free-product corollaries follow.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
@@ -93,127 +83,27 @@
   "decl": "TopPair.isIso_singularHomologyMap_excisionMap_compl",
   "name": "Excision and Mayer–Vietoris",
   "what": "result",
-  "about": "relative singular homology is unchanged by removing a set whose closure lies in the interior of the subspace. The Mayer–Vietoris sequence starts with the pinned map `(i_U, −i_V)`.",
+  "about": "relative singular homology is unchanged by removing a set whose closure lies in the interior of the subspace. The Mayer–Vietoris sequence is derived from it.",
   "source": {
    "roadmap": "AlgebraicTopology",
    "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
   }
  },
  {
-  "decl": "TopCat.mayerVietorisδ",
-  "name": "Excision and Mayer–Vietoris",
+  "decl": "TauCeti.AlgebraicGeometry.FiniteLocallyFreeSheaf.evalNatIso",
+  "name": "Dualizable means finite locally free",
   "what": "result",
-  "about": "relative singular homology is unchanged by removing a set whose closure lies in the interior of the subspace. The Mayer–Vietoris sequence starts with the pinned map `(i_U, −i_V)`.",
+  "about": "on any scheme, a quasi-coherent sheaf has a dual in `QCoh(X)` exactly when it is finite locally free. Together with rigidity and the double-dual isomorphism, this is L0B's milestone.",
   "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TopCat.eilenbergZilberHomotopyEquiv",
-  "name": "Eilenberg–Zilber and Künneth",
-  "what": "result",
-  "about": "Alexander–Whitney and shuffle maps are inverse chain homotopy equivalences. As a result the cross product is an isomorphism over a field, and over a principal ideal domain it fits into the short exact sequence with a `Tor₁` term.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.eulerChar_eq_finsum_finrank_singularHomology",
-  "name": "Euler–Poincaré for spaces of finite CW type",
-  "what": "result",
-  "about": "the Euler characteristic of such a space is the alternating sum of the dimensions of its homology over any division ring. Hence it is a homotopy invariant, independent of the chosen CW model.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TopCat.singularCup_assoc",
-  "name": "Cup and cap products",
-  "what": "definition",
-  "about": "the cup product is associative and unital and graded commutative. The cap product has the boundary and projection formulas. Poincaré duality will be stated in these terms.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
-  }
- },
- {
-  "decl": "TopCat.singularCap",
-  "name": "Cup and cap products",
-  "what": "definition",
-  "about": "the cup product is associative and unital and graded commutative. The cap product has the boundary and projection formulas. Poincaré duality will be stated in these terms.",
-  "source": {
-   "roadmap": "AlgebraicTopology",
-   "path": "TauCetiRoadmap/AlgebraicTopology/STATUS.md"
+   "roadmap": "AlgebraicVectorBundles",
+   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
   }
  },
  {
   "decl": "TauCeti.SheafOfModules.monoidalClosed",
   "name": "The closed symmetric monoidal category of sheaves of modules",
   "what": "result",
-  "about": "over a sheaf of commutative rings on a small site, and so on `X.Modules`, with tensor product and internal Hom the sheafifications of their presheaf counterparts.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.FiniteLocallyFreeSheaf.rigidCategory",
-  "name": "Finite locally free sheaves are rigid",
-  "what": "result",
-  "about": "both duals of `E` are `Hom(E, 𝒪_X)`, so such a sheaf is dualizable in `QCoh(X)` on any scheme, and the double-dual map is a natural isomorphism.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.FiniteLocallyFreeSheaf.evalNatIso",
-  "name": "Finite locally free sheaves are rigid",
-  "what": "result",
-  "about": "both duals of `E` are `Hom(E, 𝒪_X)`, so such a sheaf is dualizable in `QCoh(X)` on any scheme, and the double-dual map is a natural isomorphism.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.QuasicoherentSheaf.nonempty_hasLeftDual_iff_isFiniteLocallyFree",
-  "name": "Dualizable means finite locally free, on affine schemes",
-  "what": "result",
-  "about": "this is the full L0B milestone when `X` is affine.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.FiniteLocallyFreeSheaf.finiteProjectiveEquiv",
-  "name": "Finite projective modules are vector bundles on `Spec R`",
-  "what": "result",
-  "about": "`M ↦ M~` is a monoidal equivalence from finitely generated projective `R`-modules to finite locally free sheaves on `Spec R`.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.FiniteLocallyFreeSheaf.rank_exteriorPower_apply",
-  "name": "Exterior powers of vector bundles",
-  "what": "result",
-  "about": "the `n`-th exterior power of a finite locally free sheaf of rank `r` at `x` is finite locally free of rank `r choose n` there. This rests on the computation of exterior powers of finite free sheaves.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "SheafOfModules.exteriorPowerFreeIso",
-  "name": "Exterior powers of vector bundles",
-  "what": "result",
-  "about": "the `n`-th exterior power of a finite locally free sheaf of rank `r` at `x` is finite locally free of rank `r choose n` there. This rests on the computation of exterior powers of finite free sheaves.",
+  "about": "tensor product and internal Hom are the sheafifications of their presheaf counterparts. Pullback of quasi-coherent sheaves is strong symmetric monoidal along every morphism, with monoidal identity and composition isomorphisms.",
   "source": {
    "roadmap": "AlgebraicVectorBundles",
    "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
@@ -223,77 +113,27 @@
   "decl": "TauCeti.AlgebraicGeometry.FiniteLocallyFreeSheaf",
   "name": "Finite locally free sheaves with rank",
   "what": "definition",
-  "about": "an additive, symmetric monoidal, pullback-stable category whose rank is locally constant with clopen loci. Its fixed-rank subcategories are where the determinant functor will live, and in rank one they recover `InvertibleSheaf X`.",
+  "about": "an additive, rigid, pullback-stable category with locally constant rank and fixed-rank subcategories. Duals now commute with pullback, and so does internal Hom out of a finite locally free sheaf.",
   "source": {
    "roadmap": "AlgebraicVectorBundles",
    "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.FiniteLocallyFreeSheaf.FixedRank",
-  "name": "Finite locally free sheaves with rank",
-  "what": "definition",
-  "about": "an additive, symmetric monoidal, pullback-stable category whose rank is locally constant with clopen loci. Its fixed-rank subcategories are where the determinant functor will live, and in rank one they recover `InvertibleSheaf X`.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.relativeSpec",
-  "name": "Relative Spec and its coordinate algebra",
-  "what": "definition",
-  "about": "`Spec_X(A)` is glued from affine charts and packaged as a contravariant functor to affine `X`-schemes. In the other direction, affineFunctions sends `p : V → X` to the actual `p_* 𝒪_V`. Over an affine base the first is naturally `Spec` of global sections. Together these are the two named functors that L1B needs.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.AlgebraicGeometry.affineFunctions",
-  "name": "Relative Spec and its coordinate algebra",
-  "what": "definition",
-  "about": "`Spec_X(A)` is glued from affine charts and packaged as a contravariant functor to affine `X`-schemes. In the other direction, affineFunctions sends `p : V → X` to the actual `p_* 𝒪_V`. Over an affine base the first is naturally `Spec` of global sections. Together these are the two named functors that L1B needs.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "AlgebraicGeometry.Scheme.Modules.pullbackFromAffineBraided",
-  "name": "Pullback from an affine base is symmetric monoidal",
-  "what": "definition",
-  "about": "on quasi-coherent sheaves. This is the affine-local case of L0A's monoidal pullback.",
-  "source": {
-   "roadmap": "AlgebraicVectorBundles",
-   "path": "TauCetiRoadmap/AlgebraicVectorBundles/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ThricePuncturedSphere.fundamentalGroupMulEquivFreeGroup",
-  "name": "Freeness of the fundamental group of the thrice-punctured sphere",
-  "what": "result",
-  "about": "`π₁(ℂ ∖ {0, 1}, 1/2)` is free of rank two, with the peripheral loops around `0` and `1` as basis.",
-  "source": {
-   "roadmap": "BelyiMaps",
-   "path": "TauCetiRoadmap/BelyiMaps/STATUS.md"
   }
  },
  {
   "decl": "TauCeti.ConnectedCoverClass.isoClassEquiv",
   "name": "Covers are classified by their triples",
   "what": "result",
-  "about": "connected degree-`n` covers of `ℂ ∖ {0, 1}` up to isomorphism correspond bijectively to isomorphism classes of connected degree-`n` triples, and the same holds for numbered and pointed covers. Deck groups are the automorphism groups of triples.",
+  "about": "connected degree-`n` covers of `ℂ ∖ {0, 1}` up to isomorphism correspond bijectively to isomorphism classes of connected degree-`n` triples, and likewise for numbered and pointed covers. It rests on the freeness of `π₁(ℂ ∖ {0, 1})` on the peripheral loops around `0` and `1`.",
   "source": {
    "roadmap": "BelyiMaps",
    "path": "TauCetiRoadmap/BelyiMaps/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.ConnectedFiberNumberedCover.deckMulEquiv",
+  "decl": "TauCeti.ThricePuncturedSphere.fundamentalGroupMulEquivFreeGroup",
   "name": "Covers are classified by their triples",
   "what": "result",
-  "about": "connected degree-`n` covers of `ℂ ∖ {0, 1}` up to isomorphism correspond bijectively to isomorphism classes of connected degree-`n` triples, and the same holds for numbered and pointed covers. Deck groups are the automorphism groups of triples.",
+  "about": "connected degree-`n` covers of `ℂ ∖ {0, 1}` up to isomorphism correspond bijectively to isomorphism classes of connected degree-`n` triples, and likewise for numbered and pointed covers. It rests on the freeness of `π₁(ℂ ∖ {0, 1})` on the peripheral loops around `0` and `1`.",
   "source": {
    "roadmap": "BelyiMaps",
    "path": "TauCetiRoadmap/BelyiMaps/STATUS.md"
@@ -303,17 +143,7 @@
   "decl": "TauCeti.TriangleGroup.finite_iff_isSphericalParameterSignature",
   "name": "The finite triangle groups",
   "what": "result",
-  "about": "`Δ(a, b, c)` with sorted signature is finite exactly when the signature is `(1, m, m)`, `(2, 2, m)`, `(2, 3, 3)`, `(2, 3, 4)` or `(2, 3, 5)`; the last three are `A₄`, `S₄` and `A₅`.",
-  "source": {
-   "roadmap": "BelyiMaps",
-   "path": "TauCetiRoadmap/BelyiMaps/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.BipartiteRibbonGraph.isoClassEquiv",
-  "name": "Dessins and triples classify each other",
-  "what": "result",
-  "about": "isomorphism classes of bipartite ribbon graphs with `n` edges correspond to those of degree-`n` triples, with matching automorphism groups.",
+  "about": "`Δ(a, b, c)` with sorted signature is finite exactly when the signature is `(1, m, m)`, `(2, 2, m)`, `(2, 3, 3)`, `(2, 3, 4)` or `(2, 3, 5)`.",
   "source": {
    "roadmap": "BelyiMaps",
    "path": "TauCetiRoadmap/BelyiMaps/STATUS.md"
@@ -323,17 +153,7 @@
   "decl": "TauCeti.ConnectedIsoClass.card_four",
   "name": "The complete table through degree four",
   "what": "result",
-  "about": "there are 1, 3, 7 and 26 connected classes in degrees one to four, and every ordered passport in these degrees has at most one class. The first passport with several classes, of size three for `C₅` in degree five, is also proved.",
-  "source": {
-   "roadmap": "BelyiMaps",
-   "path": "TauCetiRoadmap/BelyiMaps/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.PassportSpec.passportSize_le_one_of_degree_le_four",
-  "name": "The complete table through degree four",
-  "what": "result",
-  "about": "there are 1, 3, 7 and 26 connected classes in degrees one to four, and every ordered passport in these degrees has at most one class. The first passport with several classes, of size three for `C₅` in degree five, is also proved.",
+  "about": "there are 1, 3, 7 and 26 connected classes in degrees one to four. The thirteen frozen LMFDB records of these degrees are pairwise distinct, and their unordered cycle data are exactly the branch-point orbits of the table.",
   "source": {
    "roadmap": "BelyiMaps",
    "path": "TauCetiRoadmap/BelyiMaps/STATUS.md"
@@ -753,7 +573,7 @@
   "decl": "TauCeti.exists_homeomorph_closedBall_closure_of_isJordanCurve_frontier",
   "name": "Carathéodory's boundary correspondence",
   "what": "result",
-  "about": "a Riemann map of a bounded Jordan domain extends to a homeomorphism between the closed disc and the closure of the domain.",
+  "about": "a Riemann map of a bounded Jordan domain extends to a homeomorphism from the closed disc onto the closure of the domain. The continuity half holds exactly when the boundary is locally connected.",
   "source": {
    "roadmap": "ConformalMapping",
    "path": "TauCetiRoadmap/ConformalMapping/STATUS.md"
@@ -763,7 +583,7 @@
   "decl": "TauCeti.exists_bijOn_const_mul_schwarzChristoffelPrimitive_add_of_isJordanCurve_frontier",
   "name": "The Schwarz–Christoffel theorem",
   "what": "result",
-  "about": "a bounded simply connected domain bounded by a polygonal Jordan curve, possibly with reentrant corners, is the image of the upper half-plane under an affine image of the Schwarz–Christoffel primitive. The prevertices go to the vertices, and they are unique once three are fixed.",
+  "about": "a bounded domain whose boundary is a polygonal Jordan curve, reentrant corners allowed, is the image of the upper half-plane under an affine image of the Schwarz–Christoffel primitive. Three fixed prevertices make it unique.",
   "source": {
    "roadmap": "ConformalMapping",
    "path": "TauCetiRoadmap/ConformalMapping/STATUS.md"
@@ -773,17 +593,7 @@
   "decl": "TauCeti.exists_bijOn_const_mul_schwarzChristoffelPrimitive_add_of_isJordanCurve_insert_infty",
   "name": "Schwarz–Christoffel with a vertex at infinity",
   "what": "result",
-  "about": "the same conclusion holds for an unbounded polygonal domain whose frontier is a Jordan curve through infinity on the Riemann sphere, if far out the domain is either a sector of opening `βπ` with `0 < β < 2` or a half-strip. The finite exponents then sum to `β − 1` or to `−1`, respectively.",
-  "source": {
-   "roadmap": "ConformalMapping",
-   "path": "TauCetiRoadmap/ConformalMapping/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.exists_bijOn_const_mul_schwarzChristoffelPrimitive_add_of_isJordanCurve_of_halfStrip",
-  "name": "Schwarz–Christoffel with a vertex at infinity",
-  "what": "result",
-  "about": "the same conclusion holds for an unbounded polygonal domain whose frontier is a Jordan curve through infinity on the Riemann sphere, if far out the domain is either a sector of opening `βπ` with `0 < β < 2` or a half-strip. The finite exponents then sum to `β − 1` or to `−1`, respectively.",
+  "about": "the same holds for an unbounded polygonal domain whose boundary is a Jordan curve through infinity. Far out the domain may be a sector of opening below 2π, a half-strip, or the exterior of a half-strip. In this setting two prevertices determine the map.",
   "source": {
    "roadmap": "ConformalMapping",
    "path": "TauCetiRoadmap/ConformalMapping/STATUS.md"
@@ -793,7 +603,7 @@
   "decl": "TauCeti.differentiableOn_schwarzReflection_of_symmetric",
   "name": "The Schwarz reflection principle",
   "what": "result",
-  "about": "a holomorphic function that is real on a symmetric piece of the real axis continues by conjugation. There are also line, analytic-arc and circle variants.",
+  "about": "a holomorphic function that is real on a symmetric piece of the real axis continues by conjugation. There are line, analytic-arc and circle variants.",
   "source": {
    "roadmap": "ConformalMapping",
    "path": "TauCetiRoadmap/ConformalMapping/STATUS.md"
@@ -1360,20 +1170,10 @@
   }
  },
  {
-  "decl": "TauCeti.Manifold.exists_isGeodesicCurveOn_Icc_pathELength_eq_edist",
-  "name": "The Hopf–Rinow theorem",
-  "what": "result",
-  "about": "fix a point `p` of a Riemannian manifold whose metric is the Riemannian distance. Then five conditions are equivalent: `exp_p` is defined on all of `T_p M`, the manifold is proper, it is complete, every geodesic runs for all time, and it has a compact exhaustion along which distance from `p` diverges. An everywhere-defined `exp_p` also joins `p` to each point by a minimizing geodesic.",
-  "source": {
-   "roadmap": "HopfRinow",
-   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.Manifold.isGeodesicallyCompleteAt_of_compactSpace",
   "name": "Compact manifolds are geodesically complete",
   "what": "result",
-  "about": "this is do Carmo's Corollary 2.9. The proof goes through the extended metric, so it needs no connectedness hypothesis.",
+  "about": "do Carmo's Corollary 2.9, proved through the extended metric, so with no connectedness hypothesis.",
   "source": {
    "roadmap": "HopfRinow",
    "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
@@ -1394,16 +1194,6 @@
   "name": "The Gauss lemma",
   "what": "result",
   "about": "the differential of `exp_p` preserves inner products with the radial direction everywhere on its domain. From it, a minimizer inside a normal neighbourhood is the radial geodesic up to monotone reparametrization.",
-  "source": {
-   "roadmap": "HopfRinow",
-   "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Manifold.riemannianEDist_eq_iInf_pathELength_piecewise",
-  "name": "Do Carmo's distance is Mathlib's distance",
-  "what": "result",
-  "about": "the infimum of lengths over piecewise-`C¹` paths equals `Manifold.riemannianEDist`, which corner smoothing proves.",
   "source": {
    "roadmap": "HopfRinow",
    "path": "TauCetiRoadmap/HopfRinow/STATUS.md"
@@ -1493,47 +1283,7 @@
   "decl": "TauCeti.isDemushkin_absoluteGaloisGroupProP_of_mu",
   "name": "Demushkin's theorem",
   "what": "result",
-  "about": "if `μ_p ⊆ K`, then `G_K(p)` is a Demushkin group, read off from `G_K` through inflation, which is an isomorphism in degrees one and two: isDemushkin_absoluteGaloisGroupProP_of_mu. Over `ℚ_p` its rank is `[K:ℚ_p] + 2`.",
-  "source": {
-   "roadmap": "LocalGaloisGroups",
-   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.demushkinRank_absoluteGaloisGroupProP",
-  "name": "Demushkin's theorem",
-  "what": "result",
-  "about": "if `μ_p ⊆ K`, then `G_K(p)` is a Demushkin group, read off from `G_K` through inflation, which is an isomorphism in degrees one and two: isDemushkin_absoluteGaloisGroupProP_of_mu. Over `ℚ_p` its rank is `[K:ℚ_p] + 2`.",
-  "source": {
-   "roadmap": "LocalGaloisGroups",
-   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.absoluteGaloisGroupProP_cyclotomic_prime_ratPadic_marked",
-  "name": "The marked presentation of `G_{ℚ_p(μ_p)}(p)`",
-  "what": "result",
-  "about": "for odd `p` it is `⟨x₁, …, x_{p+1} ∣ x₁^p (x₁,x₂)⋯(x_p,x_{p+1})⟩`, with the cyclotomic orientation equal to `(1-p)⁻¹` on `x₂` and trivial elsewhere: absoluteGaloisGroupProP_cyclotomic_prime_ratPadic_marked. It is the general `q ≠ 2` marked theorem `absoluteGaloisGroupProP_marked_of_q_ne_two` specialized; the odd-degree dyadic theorem and both even-degree ones are also proved, each even one taking the cyclotomic image as a hypothesis.",
-  "source": {
-   "roadmap": "LocalGaloisGroups",
-   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.cyclotomicOrientation_hasPrescriptionProperty",
-  "name": "The prescription property of the cyclotomic orientation",
-  "what": "result",
-  "about": "every reduction `H¹(G_K(p), I(χ)/pⁱ) → H¹(G_K(p), I(χ)/p)` is onto, which identifies Labute's canonical character with the cyclotomic one: cyclotomicOrientation_hasPrescriptionProperty.",
-  "source": {
-   "roadmap": "LocalGaloisGroups",
-   "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.nonempty_linearEquiv_tameFrameModule_prod",
-  "name": "The integral decomposition `(∗∗)` of NSW (7.4.1)",
-  "what": "result",
-  "about": "any extension `Y` of `I_G` by `A(L)` of projective dimension at most one satisfies `Y ≃ M₀ ⊕ ℤ_p[G]^N`, so it has `N+2` generators: nonempty_linearEquiv_tameFrameModule_prod.",
+  "about": "if `μ_p ⊆ K`, then `G_K(p)` is a Demushkin group, read off from `G_K` through inflation in degrees one and two: isDemushkin_absoluteGaloisGroupProP_of_mu. Shafarevich's companion, that `G_K(p)` is free on `[K:ℚ_p] + 1` generators when `μ_p ⊄ K`, is `nonempty_continuousMulEquiv_freeProP_of_not_mu`.",
   "source": {
    "roadmap": "LocalGaloisGroups",
    "path": "TauCetiRoadmap/LocalGaloisGroups/STATUS.md"
@@ -1817,56 +1567,6 @@
   "source": {
    "roadmap": "OrthogonalSpinGroups",
    "path": "TauCetiRoadmap/OrthogonalSpinGroups/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.PDE.existsUnique_isWeakSolutionDirichlet",
-  "name": "Existence and uniqueness for the Dirichlet problem",
-  "what": "result",
-  "about": "if the energy form of a divergence-form `L` is bounded and coercive on `H¹₀(Ω)`, then `L u = f` has exactly one weak solution there.",
-  "source": {
-   "roadmap": "PDE",
-   "path": "TauCetiRoadmap/PDE/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.PDE.exists_hilbertBasis_forall_isDirichletEigenvalue",
-  "name": "The Dirichlet eigenfunction basis",
-  "what": "result",
-  "about": "on a bounded domain with a symmetric energy form, `L²(Ω)` has an orthonormal basis of Dirichlet eigenfunctions with positive eigenvalues.",
-  "source": {
-   "roadmap": "PDE",
-   "path": "TauCetiRoadmap/PDE/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.PDE.exists_holderOnWith_preciseRepresentative",
-  "name": "De Giorgi's theorem",
-  "what": "result",
-  "about": "a weak solution of `-div(a∇u) = 0` with merely measurable, uniformly elliptic `a` has a precise representative that is locally Hölder continuous, with exponent depending only on `λ`, `Λ` and the dimension, now for every `n ≥ 1`. Moser's weak Harnack and Harnack inequalities for nonnegative supersolutions and solutions sit beside it.",
-  "source": {
-   "roadmap": "PDE",
-   "path": "TauCetiRoadmap/PDE/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.harmonicOnNhd_perronSolution",
-  "name": "Perron's theorem",
-  "what": "result",
-  "about": "on any bounded open set, the supremum of the subharmonic functions lying below bounded boundary data is harmonic, and it attains continuous data at every boundary point with a barrier, which the Newtonian kernel supplies under an exterior sphere condition.",
-  "source": {
-   "roadmap": "PDE",
-   "path": "TauCetiRoadmap/PDE/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.le_of_deriv_le_laplacian_add_fderiv_le_parabolicBoundary",
-  "name": "The parabolic maximum principle",
-  "what": "result",
-  "about": "a subsolution of `∂ₜu ≤ Δu + b·∇u` on a cylinder over a compact set is bounded by its supremum on the parabolic boundary, with no bound on the drift.",
-  "source": {
-   "roadmap": "PDE",
-   "path": "TauCetiRoadmap/PDE/STATUS.md"
   }
  },
  {
@@ -2300,86 +2000,6 @@
   }
  },
  {
-  "decl": "TauCeti.exists_isCAD_signInvariant",
-  "name": "Existence of adapted CADs",
-  "what": "result",
-  "about": "every finite family of real polynomials in `n` variables has a cylindrical algebraic decomposition of `ℝⁿ` on whose cells each member is sign-invariant, with no well-orientedness assumption: exists_isCAD_signInvariant.",
-  "source": {
-   "roadmap": "RealAlgebraicGeometry",
-   "path": "TauCetiRoadmap/RealAlgebraicGeometry/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.IsSemialgebraic.image_tail",
-  "name": "The Tarski–Seidenberg theorem",
-  "what": "result",
-  "about": "forgetting a coordinate maps semialgebraic subsets of `ℝⁿ⁺¹` to semialgebraic subsets of `ℝⁿ`: IsSemialgebraic.image_tail.",
-  "source": {
-   "roadmap": "RealAlgebraicGeometry",
-   "path": "TauCetiRoadmap/RealAlgebraicGeometry/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.nonempty_delineation_of_signInvariant_collinsProjection",
-  "name": "Collins delineability",
-  "what": "result",
-  "about": "if the Collins projection of a finite family is sign-invariant on a preconnected `S ⊆ ℝⁿ`, the fibres have a common stack of continuous ordered roots over `S`, with constant multiplicities and signs: nonempty_delineation_of_signInvariant_collinsProjection.",
-  "source": {
-   "roadmap": "RealAlgebraicGeometry",
-   "path": "TauCetiRoadmap/RealAlgebraicGeometry/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Sturm.sum_sign_Ioo",
-  "name": "The Sturm–Tarski theorem",
-  "what": "result",
-  "about": "over any real closed field, the variation drop of a signed remainder chain is the sum of `sign q` over the distinct roots of `p`, without squarefreeness: Sturm.sum_sign_Ioo.",
-  "source": {
-   "roadmap": "RealAlgebraicGeometry",
-   "path": "TauCetiRoadmap/RealAlgebraicGeometry/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Polynomial.exists_analyticOnNhd_nonmonic_laurent",
-  "name": "Nonmonic Puiseux with parameters",
-  "what": "result",
-  "about": "a family whose discriminant is nonzero off `y = 0`, and whose leading and constant coefficients are powers of `y` times units, splits completely after `y = t^{d!}`, with roots of Laurent form `t^e·w` near the hyperplane: exists_analyticOnNhd_nonmonic_laurent.",
-  "source": {
-   "roadmap": "RealAlgebraicGeometry",
-   "path": "TauCetiRoadmap/RealAlgebraicGeometry/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.isFiniteRepType_iff_card_hom_add_card_hom_le_one_and_exists_dynkinType_iso",
-  "name": "[Gabriel's theorem](https://taucetiproject.github.io/TauCeti/docs/TauCeti/RepresentationTheory/Quiver/FiniteRepType/Gabriel.html#TauCeti.isFiniteRepType_iff_titsForm_posDef)",
-  "what": "result",
-  "about": "a finite connected quiver has finite representation type over any field exactly when its Tits form is positive definite, that is, exactly when it is an oriented simply-laced Dynkin diagram.",
-  "source": {
-   "roadmap": "RepresentationTheory",
-   "path": "TauCetiRoadmap/RepresentationTheory/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.hcProjection_mem_dotInvariants",
-  "name": "The [Harish-Chandra projection](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Algebra/Lie/HighestWeight/CentralCharacter/HarishChandra.html#TauCeti.hcProjection)",
-  "what": "definition",
-  "about": "it reads the centre of `U(L)` as polynomial functions on weights, and it lands in the dot-invariants. That is the inclusion half of the Harish-Chandra isomorphism.",
-  "source": {
-   "roadmap": "RepresentationTheory",
-   "path": "TauCetiRoadmap/RepresentationTheory/STATUS.md"
-  }
- },
- {
-  "decl": "LinearMap.auslanderReitenTranslateEquivKerNakayama",
-  "name": "The [Auslander–Reiten translate](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Algebra/Module/AuslanderReiten/Isomorphism.html#TauCeti.FiniteProjectivePresentation.nonempty_linearEquiv_auslanderReitenTranslate_iff)",
-  "what": "definition",
-  "about": "computed from minimal projective presentations, it detects isomorphism among non-projective indecomposables. It is also the kernel of the Nakayama map `ν(f)`.",
-  "source": {
-   "roadmap": "RepresentationTheory",
-   "path": "TauCetiRoadmap/RepresentationTheory/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.ExactStructure.IsFrobenius.stableIsTriangulated",
   "name": "Happel's theorem",
   "what": "result",
@@ -2480,100 +2100,20 @@
   }
  },
  {
-  "decl": "TauCeti.Probability.hasLaw_wishartGram_gaussian_nonsingularWishartMeasure",
-  "name": "The Gaussian-Gram form of the Wishart law",
-  "what": "result",
-  "about": "when the covariance is positive definite and there are at least as many vectors as the dimension, the Gram sum of independent centred Gaussian vectors has the nonsingular Wishart density law. So the two Wishart constructions agree wherever both are defined.",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.Probability.map_choleskyLowerCoordinates_comap_nonsingularWishartMeasure",
   "name": "The Bartlett decomposition",
   "what": "result",
-  "about": "the Cholesky factor of a standard Wishart matrix of degree `n` has independent entries. Those below the diagonal are standard Gaussian, and diagonal entry `i` (counting from zero) is chi with `n - i` degrees of freedom.",
+  "about": "the Cholesky factor of a standard Wishart matrix of degree `n` has independent entries: those below the diagonal are standard Gaussian, and diagonal entry `i` (counting from zero) is chi with `n - i` degrees of freedom.",
   "source": {
    "roadmap": "StandardDistributions",
    "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
   }
  },
  {
-  "decl": "TauCeti.Probability.integral_id_nonsingularWishartMeasure",
-  "name": "The Wishart mean and covariance",
+  "decl": "TauCeti.Probability.hasLaw_wishartGram_gaussian_nonsingularWishartMeasure",
+  "name": "The Gaussian-Gram form of the Wishart law",
   "what": "result",
-  "about": "for real degree `n > p - 1` and positive-definite scale `S`, the mean is `n • S`, and entries `(i, j)` and `(k, l)` have covariance `n (S i k * S j l + S i l * S j k)` (TauCeti.Probability.integral_id_nonsingularWishartMeasure, TauCeti.Probability.covariance_coe_apply_nonsingularWishartMeasure).",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Probability.covariance_coe_apply_nonsingularWishartMeasure",
-  "name": "The Wishart mean and covariance",
-  "what": "result",
-  "about": "for real degree `n > p - 1` and positive-definite scale `S`, the mean is `n • S`, and entries `(i, j)` and `(k, l)` have covariance `n (S i k * S j l + S i l * S j k)` (TauCeti.Probability.integral_id_nonsingularWishartMeasure, TauCeti.Probability.covariance_coe_apply_nonsingularWishartMeasure).",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Probability.map_symmetricCongruenceLinearMap_nonsingularWishartMeasure",
-  "name": "Wishart marginals",
-  "what": "result",
-  "about": "congruence by a matrix `M` of full row rank carries the Wishart law of scale `S` to that of scale `M * S * Mᵀ`. In particular every principal submatrix of a Wishart matrix is Wishart.",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "EuclideanSpace.gaussianCondKernel",
-  "name": "The conditional Gaussian law",
-  "what": "result",
-  "about": "conditioning one block of a jointly Gaussian vector on the other gives the Gaussian with affine mean and Schur-complement covariance, provided the observed block's covariance is positive definite.",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Probability.wishartGramMeasure",
-  "name": "Two Wishart families",
-  "what": "definition",
-  "about": "TauCeti.Probability.wishartGramMeasure is the Gram law at every scale, so it keeps singular laws instead of sending them to zero. TauCeti.Probability.nonsingularWishartMeasure is the real-degree density family. Both have the same trace moment-generating function, so one argument gives the moments of each.",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Probability.nonsingularWishartMeasure",
-  "name": "Two Wishart families",
-  "what": "definition",
-  "about": "TauCeti.Probability.wishartGramMeasure is the Gram law at every scale, so it keeps singular laws instead of sending them to zero. TauCeti.Probability.nonsingularWishartMeasure is the real-degree density family. Both have the same trace moment-generating function, so one argument gives the moments of each.",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.symmetricLebesgue",
-  "name": "Integration over the positive-definite cone",
-  "what": "definition",
-  "about": "TauCeti.symmetricLebesgue fixes the normalization of Lebesgue measure on symmetric matrices. The Cholesky change of variables then turns cone integrals into integrals over triangular coordinates, where the integrand factorizes into one-dimensional Gamma and Gaussian integrals. The result is the multivariate Gamma integral that normalizes the Wishart density.",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.integral_lowerTriangle_det_rpow_mul_exp_neg_trace",
-  "name": "Integration over the positive-definite cone",
-  "what": "definition",
-  "about": "TauCeti.symmetricLebesgue fixes the normalization of Lebesgue measure on symmetric matrices. The Cholesky change of variables then turns cone integrals into integrals over triangular coordinates, where the integrand factorizes into one-dimensional Gamma and Gaussian integrals. The result is the multivariate Gamma integral that normalizes the Wishart density.",
+  "about": "at positive-definite covariance and at least as many vectors as the dimension, the Gram sum of independent centred Gaussian vectors has the nonsingular Wishart density law, so the two Wishart constructions agree wherever both are defined.",
   "source": {
    "roadmap": "StandardDistributions",
    "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
@@ -2583,17 +2123,7 @@
   "decl": "TauCeti.integral_posDef_multivariateGamma",
   "name": "Integration over the positive-definite cone",
   "what": "definition",
-  "about": "TauCeti.symmetricLebesgue fixes the normalization of Lebesgue measure on symmetric matrices. The Cholesky change of variables then turns cone integrals into integrals over triangular coordinates, where the integrand factorizes into one-dimensional Gamma and Gaussian integrals. The result is the multivariate Gamma integral that normalizes the Wishart density.",
-  "source": {
-   "roadmap": "StandardDistributions",
-   "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Real.erf",
-  "name": "Incomplete special functions",
-  "what": "definition",
-  "about": "the error function TauCeti.Real.erf and the regularized incomplete gamma and beta functions express the cdfs that have no elementary form. These run from the Gaussian and gamma cdfs to the Student t and F cdfs and the binomial, negative-binomial and Poisson tails.",
+  "about": "symmetric Lebesgue measure and the Cholesky change of variables reduce cone integrals to one-dimensional Gamma and Gaussian integrals. This gives the multivariate Gamma integral that normalizes every Wishart density.",
   "source": {
    "roadmap": "StandardDistributions",
    "path": "TauCetiRoadmap/StandardDistributions/STATUS.md"
