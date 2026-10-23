@@ -1,0 +1,77 @@
+name: Pages
+
+# Builds the site from the pinned dataset (data/settings.json), the evidence store and the stores it
+# imports, checks it, and publishes it. Intake, follow.yml and voyager.yml run it after they record
+# something, and a push that changes the site or the store does too. Only main publishes: on another
+# branch the site is built and checked, not deployed.
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', 'scripts/**', 'evidence/**', 'data/settings.json', 'requirements*.txt', '.github/workflows/pages.yml']
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Publish the site (from main)
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      deploy:
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: The pinned tools, and Chromium for the browser check
+        run: |
+          pip install -q -r requirements.txt -r requirements-test.txt
+          python -m playwright install --with-deps chromium
+      - name: Unit tests
+        run: python -m unittest discover -s tests
+      - name: The browser check, on the fixture's site
+        run: python tests/validate_site.py
+      - name: The pinned dataset, Tau Ceti's sources at it, and the stores this one imports
+        run: |
+          commit=$(python3 -c "import json; print(json.load(open('data/settings.json'))['tauceti'])")
+          evidence-store dataset --store evidence --commit "$commit" --out "$RUNNER_TEMP/dataset" > /dev/null
+          git init -q "$RUNNER_TEMP/TauCeti"
+          git -C "$RUNNER_TEMP/TauCeti" fetch -q --depth 1 https://github.com/TauCetiProject/TauCeti "$commit"
+          git -C "$RUNNER_TEMP/TauCeti" checkout -q FETCH_HEAD
+          evidence-store fetch-imports --store evidence --out "$RUNNER_TEMP/imports"
+      - name: Build
+        run: python scripts/build_site.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti" --imports "$RUNNER_TEMP/imports" --out _site
+      - name: The browser check, on the build
+        run: python tests/validate_site.py --site _site --smoke
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && inputs.deploy != false
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

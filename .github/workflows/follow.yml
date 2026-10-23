@@ -72,3 +72,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 scripts/prune.py
+  site:
+    needs: [pin, dataset, named]
+    if: always() && needs.pin.result == 'success' && needs.dataset.result != 'failure' && (needs.pin.outputs.moved == 'true' || needs.named.outputs.recorded == 'true')
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

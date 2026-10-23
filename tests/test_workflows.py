@@ -73,5 +73,26 @@ class VoyagerWorkflowTests(unittest.TestCase):
         self.assertEqual(named["secrets"], "inherit")
 
 
+class PagesWorkflowTests(unittest.TestCase):
+    def test_builds_checks_and_publishes_from_main_only(self):
+        wf = load("pages.yml")
+        for trigger in ("push", "workflow_dispatch", "workflow_call"):
+            self.assertIn(trigger, wf["on"])
+        text = runs(wf["jobs"]["build"])
+        for command in ("python -m unittest discover -s tests", "python tests/validate_site.py",
+                        "python scripts/build_site.py", "python tests/validate_site.py --site _site --smoke"):
+            self.assertIn(command, text)
+        self.assertEqual(wf["jobs"]["deploy"]["if"], "github.ref == 'refs/heads/main' && inputs.deploy != false")
+
+    def test_follow_and_voyager_rebuild_the_site(self):
+        self.assertEqual(load("follow.yml")["jobs"]["site"]["uses"], "./.github/workflows/pages.yml")
+        self.assertEqual(load("voyager.yml")["jobs"]["site"]["uses"], "./.github/workflows/pages.yml")
+
+    def test_intake_rebuilds_the_site(self):
+        intake = load("evidence-intake.yml")["jobs"]["intake"]
+        self.assertEqual(next(s for s in steps(intake) if "evidence-store/intake" in s.get("uses", ""))["with"]["pages-workflow"],
+                         "pages.yml")
+
+
 if __name__ == "__main__":
     unittest.main()
