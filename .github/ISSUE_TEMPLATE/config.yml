@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
-  - name: All declarations and their marks
+  - name: Tau Ceti Review
     url: https://cbirkbeck.github.io/tauceti-reviewed-by-test/
-    about: Open the page and use "Review this" under a declaration, which fills in this form for you.
+    about: Open a declaration on the site and use its buttons, which fill these forms in for you.

@@ -1,0 +1,22 @@
+{
+ "spec": "ltb-evidence-store/1",
+ "name": "Tau Ceti",
+ "library": {
+  "repo": "TauCetiProject/TauCeti",
+  "root": "TauCeti"
+ },
+ "datasets": {
+  "repo": "CBirkbeck/tauceti-reviewed-by-test",
+  "tag": "dataset-{commit12}",
+  "asset": "dataset.tar.gz"
+ },
+ "claims": [],
+ "maintainers": [
+  "CBirkbeck"
+ ],
+ "imports": [
+  {
+   "repo": "LeanTrustBuilders/mathlib-probability-evidence"
+  }
+ ]
+}

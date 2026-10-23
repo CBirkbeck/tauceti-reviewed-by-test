@@ -1,5 +1,28 @@
 {
  "repo": "CBirkbeck/tauceti-reviewed-by-test",
  "bulk_issue": 1,
- "tauceti": "ffc1a6d017e53a726f30b158e7c2e1c0d1fef10f"
+ "tauceti": "d9068003cb02ec808e548ee70982ffef9379db00",
+ "library": {
+  "name": "Tau Ceti",
+  "repo": "TauCetiProject/TauCeti",
+  "root": "TauCeti",
+  "docs": "https://taucetiproject.org/docs"
+ },
+ "extractor": {
+  "repo": "LeanTrustBuilders/extractor",
+  "series": "0.13"
+ },
+ "datasets": {
+  "keep_days": 30
+ },
+ "voyager": {
+  "site": "https://leanprover.zulipchat.com",
+  "channel": "Tau Ceti",
+  "topic": "new results",
+  "sender": "Voyager-bot@leanprover.zulipchat.com"
+ },
+ "site": {
+  "title": "Tau Ceti Review",
+  "url": "https://cbirkbeck.github.io/tauceti-reviewed-by-test/"
+ }
 }

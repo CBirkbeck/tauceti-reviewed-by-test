@@ -1,3 +1,7 @@
-site/
 __pycache__/
+.venv/
+.cache/
+_site/
+_site_fixture/
+site/
 data/declarations.json
