@@ -1,0 +1,12 @@
+Files vendored here, unchanged:
+
+- elk-0.9.3.bundled.js, elk-LICENSE.md: elkjs 0.9.3, the Eclipse Layout Kernel (EPL-2.0), as
+  LeanTrustBuilders/referee-site vendors it (v0.12.0, referee_site/static/vendor/).
+- katex.v0.16.28.min.js, KaTeX-LICENSE.txt: KaTeX 0.16.28 (MIT), as the Tau Ceti Atlas vendors it
+  (CBirkbeck/tauceti-explorer at 701724066b7e, vendor/).
+- markdown.js: the Tau Ceti Atlas's Markdown renderer (CBirkbeck/tauceti-explorer at 701724066b7e,
+  src/markdown.js, Apache-2.0): source HTML stays text, links are filtered, and mathematics becomes
+  vetted MathML through KaTeX.
+
+web/map.js adapts referee-site's layered graphs (referee_site/static/core.js: layout,
+transitiveReduction, placeWithElk, placeInRows, pan and zoom; Apache-2.0).
