@@ -73,6 +73,16 @@ class VoyagerWorkflowTests(unittest.TestCase):
         self.assertEqual(named["secrets"], "inherit")
 
 
+class ConditionTests(unittest.TestCase):
+    def test_no_input_is_compared_with_false(self):
+        # GitHub compares loosely: an input a trigger does not give is null, and null == false (both
+        # become 0), so `inputs.x != false` is false on a push or a schedule. Compare strings instead.
+        for f in sorted(WORKFLOWS.glob("*.yml")):
+            for name, job in load(f.name)["jobs"].items():
+                cond = str(job.get("if", ""))
+                self.assertNotRegex(cond, r"inputs\.\w+\s*[!=]=\s*false", f"{f.name}: {name}")
+
+
 class PagesWorkflowTests(unittest.TestCase):
     def test_builds_checks_and_publishes_from_main_only(self):
         wf = load("pages.yml")
@@ -82,7 +92,7 @@ class PagesWorkflowTests(unittest.TestCase):
         for command in ("python -m unittest discover -s tests", "python tests/validate_site.py",
                         "python scripts/build_site.py", "python tests/validate_site.py --site _site --smoke"):
             self.assertIn(command, text)
-        self.assertEqual(wf["jobs"]["deploy"]["if"], "github.ref == 'refs/heads/main' && inputs.deploy != false")
+        self.assertEqual(wf["jobs"]["deploy"]["if"], "github.ref == 'refs/heads/main' && format('{0}', inputs.deploy) != 'false'")
 
     def test_follow_and_voyager_rebuild_the_site(self):
         self.assertEqual(load("follow.yml")["jobs"]["site"]["uses"], "./.github/workflows/pages.yml")

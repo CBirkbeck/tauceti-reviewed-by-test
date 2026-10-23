@@ -4175,7 +4175,7 @@ class PagesWorkflowTests(unittest.TestCase):
         for command in ("python -m unittest discover -s tests", "python tests/validate_site.py",
                         "python scripts/build_site.py", "python tests/validate_site.py --site _site --smoke"):
             self.assertIn(command, text)
-        self.assertEqual(wf["jobs"]["deploy"]["if"], "github.ref == 'refs/heads/main' && inputs.deploy != false")
+        self.assertEqual(wf["jobs"]["deploy"]["if"], "github.ref == 'refs/heads/main' && format('{0}', inputs.deploy) != 'false'")
 
     def test_follow_and_voyager_rebuild_the_site(self):
         self.assertEqual(load("follow.yml")["jobs"]["site"]["uses"], "./.github/workflows/pages.yml")
@@ -4266,7 +4266,7 @@ jobs:
           path: _site
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' && inputs.deploy != false
+    if: github.ref == 'refs/heads/main' && format('{0}', inputs.deploy) != 'false'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -4294,7 +4294,7 @@ Add to `voyager.yml`, after the job `named`:
 ```yaml
   site:
     needs: named
-    if: needs.named.outputs.recorded == 'true' && inputs.site != false
+    if: needs.named.outputs.recorded == 'true' && format('{0}', inputs.site) != 'false'
     uses: ./.github/workflows/pages.yml
     permissions:
       contents: read

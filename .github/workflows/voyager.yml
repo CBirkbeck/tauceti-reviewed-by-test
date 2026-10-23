@@ -74,7 +74,7 @@ jobs:
           echo "::error::could not push the named results"; exit 1
   site:
     needs: named
-    if: needs.named.outputs.recorded == 'true' && inputs.site != false
+    if: needs.named.outputs.recorded == 'true' && format('{0}', inputs.site) != 'false'
     uses: ./.github/workflows/pages.yml
     permissions:
       contents: read

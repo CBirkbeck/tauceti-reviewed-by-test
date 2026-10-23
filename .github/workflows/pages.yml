@@ -67,7 +67,7 @@ jobs:
           path: _site
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' && inputs.deploy != false
+    if: github.ref == 'refs/heads/main' && format('{0}', inputs.deploy) != 'false'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
