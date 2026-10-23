@@ -1,25 +1,5 @@
 [
  {
-  "decl": "TauCeti.Huber.isSheafyRing_of_isStronglyNoetherian",
-  "name": "Sheafiness of strongly noetherian Tate rings",
-  "what": "result",
-  "about": "Wedhorn's Theorem 8.28(b): a complete Hausdorff strongly noetherian Tate ring is sheafy, and at pair level no completeness is needed. Corollary 8.35 (stable sheafiness) and the Buzzard–Verberkmoes theorem for stably uniform rings are also in the library.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.ValuationSpectrum.isSheafFor_ofArrows_spaRationalOpens_of_iSup_eq_topCommRingCat",
-  "name": "Tate acyclicity",
-  "what": "result",
-  "about": "over a strongly noetherian Tate pair, the augmented Čech complex of the structure presheaf is exact in every degree for every rational cover of a rational subset, which is Wedhorn's Lemma 8.34. The degree-zero case is the sheaf condition for rational covers. The standard Laurent cover of the closed disc is recorded as an example.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.ValuationSpectrum.instSpectralSpaceElemSpaOfIsHuberRing",
   "name": "Spectrality of the adic spectrum",
   "what": "result",
@@ -30,40 +10,10 @@
   }
  },
  {
-  "decl": "TauCeti.FarguesFontaine.spaX",
-  "name": "The Fargues–Fontaine orbit space",
-  "what": "result",
-  "about": "the Frobenius windows cover `𝒴`, they are wandering, and the quotient 𝒳 = 𝒴 / φ^ℤ is quasi-compact. Each window is identified with `Spa(B^I, B^{I,+})`, and `𝒳` is an adic space once `𝒪_𝒴` is shown to be a sheaf.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.FarguesFontaine.compactSpace_spaX",
-  "name": "The Fargues–Fontaine orbit space",
-  "what": "result",
-  "about": "the Frobenius windows cover `𝒴`, they are wandering, and the quotient 𝒳 = 𝒴 / φ^ℤ is quasi-compact. Each window is identified with `Spa(B^I, B^{I,+})`, and `𝒳` is an adic space once `𝒪_𝒴` is shown to be a sheaf.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
   "decl": "TauCeti.PreAdicSpace.isAdic",
   "name": "Adic spaces",
   "what": "definition",
-  "about": "Wedhorn's Definition 8.22, together with open and closed immersions, morphisms locally of finite type and gluing. Combined with sheafiness, this gives `Spa(K,K°)`, closed polydiscs and the open unit disc as adic spaces. The open unit disc is not affinoid because it is not quasi-compact.",
-  "source": {
-   "roadmap": "AdicSpaces",
-   "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
-  }
- },
- {
-  "decl": "TauCeti.Huber.restrictedOptionEquiv",
-  "name": "Iterated Tate algebras",
-  "what": "definition",
-  "about": "A⟨X₁,…,Xₙ,Y⟩ ≅ A⟨X₁,…,Xₙ⟩⟨Y⟩, isometric for the Gauss norms. It lets one-variable arguments be run one variable at a time.",
+  "about": "Wedhorn's Definition 8.22, with open and closed immersions, morphisms locally of finite type, and gluing of both spaces and morphisms. Closed immersions are [monomorphisms](https://taucetiproject.org/docs/TauCeti/AlgebraicGeometry/AdicSpace/PreAdicSpace/ClosedImmersion/Mono.html#TauCeti.AdicSpace.mono_of_isClosedImmersion), and rational opens are affinoid pre-adic spaces.",
   "source": {
    "roadmap": "AdicSpaces",
    "path": "TauCetiRoadmap/AdicSpaces/STATUS.md"
