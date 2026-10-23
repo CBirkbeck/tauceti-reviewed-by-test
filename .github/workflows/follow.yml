@@ -1,0 +1,63 @@
+name: Follow Tau Ceti
+
+# Daily: pins Tau Ceti's newest main commit the extractor can read (scripts/pin.py), extracts its
+# dataset, and deletes the datasets nobody needs any more (scripts/prune.py). Reviews keep the meaning
+# hashes they were made on: a declaration whose meaning changed shows them greyed until reviewed again.
+on:
+  schedule:
+    - cron: '40 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: follow-tauceti
+  cancel-in-progress: false
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    outputs:
+      moved: ${{ steps.pin.outputs.moved }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: pin
+        run: |
+          python3 scripts/pin.py | tee -a "$GITHUB_OUTPUT"
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sha=$(python3 -c "import json; print(json.load(open('data/settings.json'))['tauceti'][:7])")
+          git commit -q -am "Follow Tau Ceti to $sha"
+          for attempt in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep $((attempt * 5)); done
+  dataset:
+    needs: pin
+    if: needs.pin.outputs.moved == 'true'
+    uses: ./.github/workflows/dataset.yml
+    permissions:
+      contents: write
+  prune:
+    needs: [pin, dataset]
+    if: always() && needs.dataset.result == 'success'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/prune.py

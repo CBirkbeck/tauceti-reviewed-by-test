@@ -1,0 +1,110 @@
+name: Dataset
+
+# Extracts the dataset (S2) of one Tau Ceti commit with the newest extractor release of the series in
+# data/settings.json, and publishes it as the release dataset-<commit12> of this repository: what the
+# site, intake and the Voyager reader key records in.
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: The Tau Ceti commit (default the pinned one)
+        required: false
+  workflow_call:
+    inputs:
+      commit:
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dataset-${{ inputs.commit || 'pinned' }}
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Which commit
+        run: |
+          commit="${{ inputs.commit }}"
+          [ -n "$commit" ] || commit=$(python3 -c "import json; print(json.load(open('data/settings.json'))['tauceti'])")
+          echo "COMMIT=$commit" >> "$GITHUB_ENV"
+          echo "TAG=dataset-${commit:0:12}" >> "$GITHUB_ENV"
+      - name: Already published?
+        id: published
+        run: |
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "$TAG is already published"; echo "done=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "done=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Room on the runner
+        if: steps.published.outputs.done != 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+      - name: Tau Ceti at the commit
+        if: steps.published.outputs.done != 'true'
+        run: |
+          git clone -q --filter=blob:none https://github.com/TauCetiProject/TauCeti "$RUNNER_TEMP/TauCeti"
+          git -C "$RUNNER_TEMP/TauCeti" checkout -q "$COMMIT"
+          cat "$RUNNER_TEMP/TauCeti/lean-toolchain"
+      - name: Lean
+        if: steps.published.outputs.done != 'true'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: uv, which Tau Ceti's lake-cache-get.sh runs
+        if: steps.published.outputs.done != 'true'
+        uses: astral-sh/setup-uv@v6
+      - name: Tau Ceti and Mathlib from their caches
+        if: steps.published.outputs.done != 'true'
+        working-directory: ${{ runner.temp }}/TauCeti
+        run: |
+          lake exe cache get
+          bash scripts/lake-cache-get.sh .
+          if ! lake build --no-build > /dev/null 2>&1; then
+            echo "::notice::Not every module is in the cache; building the rest"
+            lake build 2>&1 | tail -5 || true
+          fi
+          { lake build --no-build 2>&1 || true; } | sed -n '/logged failures/,$s/^- //p' > "$RUNNER_TEMP/unbuilt.txt"
+          if [ -s "$RUNNER_TEMP/unbuilt.txt" ]; then
+            echo "::warning::$(wc -l < "$RUNNER_TEMP/unbuilt.txt") modules do not build at $COMMIT and are left out"
+          fi
+      - name: The extractor, of the pinned series
+        if: steps.published.outputs.done != 'true'
+        run: |
+          tag=$(python3 scripts/extractor.py install "$RUNNER_TEMP/TauCeti/lean-toolchain" "$RUNNER_TEMP/extractor")
+          bin=$(find "$RUNNER_TEMP/extractor" -type f -name trust-extract | head -1)
+          [ -x "$bin" ] || { echo "::error::no trust-extract in release $tag"; exit 1; }
+          echo "EXTRACTOR_TAG=$tag" >> "$GITHUB_ENV"
+          echo "EXTRACTOR_BIN=$bin" >> "$GITHUB_ENV"
+      - name: Extract
+        if: steps.published.outputs.done != 'true'
+        working-directory: ${{ runner.temp }}/TauCeti
+        run: |
+          sudo sysctl -q -w vm.max_map_count=262144 || true
+          lake env "$EXTRACTOR_BIN" extract --root TauCeti --repo TauCetiProject/TauCeti --out "$RUNNER_TEMP/dataset" \
+            --parts 8 --jobs 1 --skip-modules-file "$RUNNER_TEMP/unbuilt.txt" \
+            --no-statements --no-signatures --no-upstream-docs
+          attributes=$(find "$RUNNER_TEMP/extractor" -type f -name attributes.py | head -1)
+          if [ -n "$attributes" ]; then python3 "$attributes" --dataset "$RUNNER_TEMP/dataset" --source .; fi
+          du -sh "$RUNNER_TEMP/dataset"
+      - name: Publish
+        if: steps.published.outputs.done != 'true'
+        run: |
+          tar -czf "$RUNNER_TEMP/dataset.tar.gz" -C "$RUNNER_TEMP/dataset" .
+          gh release create "$TAG" "$RUNNER_TEMP/dataset.tar.gz" -R "$GITHUB_REPOSITORY" --latest=false \
+            --title "Dataset for Tau Ceti $COMMIT" \
+            --notes "The dataset (S2) of TauCetiProject/TauCeti at $COMMIT, by trust-extract $EXTRACTOR_TAG (LeanTrustBuilders/extractor)."
