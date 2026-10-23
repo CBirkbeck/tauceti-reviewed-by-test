@@ -150,6 +150,24 @@
     return box;
   }
 
+  /* A signature as the docs show it: the keyword, then each name a link to its declaration. Positions
+     are code points (S2), hence Array.from. */
+  function signature(kw, text, refs, names) {
+    const pre = el('pre'), cps = Array.from(text);
+    if (kw) pre.append(el('span', 'kw', kw + ' '));
+    let at = 0;
+    [...refs].sort((a, b) => a[0] - b[0]).forEach(([a, b, k]) => {
+      if (a < at || !names[k]) return;
+      if (a > at) pre.append(cps.slice(at, a).join(''));
+      const l = link(URLS.decl(names[k]), cps.slice(a, b).join(''), 'ref');
+      l.title = names[k];
+      pre.append(l);
+      at = b;
+    });
+    if (at < cps.length) pre.append(cps.slice(at).join(''));
+    return pre;
+  }
+
   /* --- pages ---------------------------------------------------------------------------------------- */
   const VIEWS = {};
 
@@ -287,15 +305,18 @@
     if (row && row.text) main.append(md(row.text, 'doc announce'));
     // The docstring, unless all it says is the title above.
     if (e.doc && (row || e.doc.trim() !== (n.title || '').trim())) main.append(md(e.doc, 'doc'));
-    if (e.stmt) {
-      const lean = el('div', 'lean'), pre = el('pre');
-      const theorem = n.kind === 'theorem';
-      pre.textContent = theorem ? e.stmt : e.stmt + (e.rest ? '\n' + e.rest : '');
-      lean.append(pre);
-      if (theorem && e.rest) {
-        const det = el('details'), sum = el('summary', null, 'Proof'), proof = el('pre');
-        proof.textContent = e.rest;
-        det.append(sum, proof);
+    if (e.sig || e.stmt) {
+      // What the docs show: the signature Lean prints, section variables included, its names linked; a
+      // definition's value folded (the docs' Equations), a structure's fields; never a proof.
+      const lean = el('div', 'lean');
+      if (e.sig) lean.append(signature(e.kw, e.sig, e.sigRefs || [], e.sigNames || []));
+      else { const pre = el('pre'); pre.textContent = e.stmt; lean.append(pre); }
+      if (e.rest) {
+        const what = n.kind === 'inductive' ? 'Constructors' : (n.kind === 'structure' || n.kind === 'class') ? 'Fields' : 'Definition';
+        const det = el('details'), body = el('pre');
+        det.open = what !== 'Definition';
+        body.textContent = e.rest;
+        det.append(el('summary', null, what), body);
         lean.append(det);
       }
       if (e.cut && d.module) { const c = el('div', 'cut'); c.append('The text goes on: ', ext(URLS.source(meta, d.module.path, e.line), 'read it in the source')); lean.append(c); }
@@ -344,6 +365,7 @@
     stateLine.append(words);
     panel.append(stateLine);
     if (project) {
+      panel.append(ext(URLS.docs(meta, name, modName), 'Read it in the API docs ↗', 'btn docs-btn'));
       const actions = el('div', 'actions');
       FORMS.forEach(([text, template, prefix, cls]) => actions.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
       panel.append(actions, el('p', 'faint small', 'Each opens a form on GitHub, filled in. Recorded under your account within minutes.'));

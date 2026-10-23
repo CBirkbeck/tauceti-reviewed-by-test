@@ -171,19 +171,22 @@
       }
       const project = !!(n.flags & FLAG.PROJECT), state = n.state[ai ? 1 : 0];
       const canOpen = project && n.role !== 'center';
-      s += `<g class="node ${n.role}${project ? '' : ' upstream'}" data-name="${esc(n.name)}" tabindex="0" role="link" transform="translate(${c.x},${c.y})">` +
+      // Every node but the centre is a link to its page: a click, a middle click, Enter all follow it.
+      const tag = n.role === 'center' ? 'g' : 'a', href = tag === 'a' ? ` href="${esc(TauRender.URLS.decl(n.name))}"` : '';
+      s += `<${tag} class="node ${n.role}${project ? '' : ' upstream'}" data-name="${esc(n.name)}"${href} transform="translate(${c.x},${c.y})">` +
         `<rect width="${n.w}" height="${H}" rx="${H / 2}"/>` +
         `<g transform="translate(16,${H / 2})">${glyphMarkup(n.kind, state, {r: 4.6, named: !!(n.flags & FLAG.NAMED), upstream: !project})}</g>` +
         `<text x="32" y="19">${esc(n.label)}</text>` +
         (canOpen ? `<g class="open" data-open="${n.id}" transform="translate(${n.w - 13},${H / 2})"><circle r="8"/><text y="4" text-anchor="middle">${n.role === 'up' ? '↑' : '↓'}</text><title>Show what ${n.role === 'up' ? 'it rests on' : 'rests on it'}</title></g>` : '') +
-        `<title>${esc(n.name + (n.title && plain(n.title) !== n.label ? ' — ' + plain(n.title) : ''))}</title></g>`;
+        `<title>${esc(n.name + (n.title && plain(n.title) !== n.label ? ' — ' + plain(n.title) : ''))}</title></${tag}>`;
     }
     return s + '</g>';
   }
 
-  /* Pan, zoom and pinch; a press that does not move is a click. */
-  function interact(canvas, svg, vp, size, centerAt, onClick) {
-    let tx = 0, ty = 0, sc = 1;
+  /* Pan, zoom and pinch. A node is a link the browser follows; `onAction` takes a click on an arrow or a
+     "+ N more" (and returns true); the click that ends a drag is no click. */
+  function interact(canvas, svg, vp, size, centerAt, onAction) {
+    let tx = 0, ty = 0, sc = 1, dragged = false;
     const apply = () => vp.setAttribute('transform', `translate(${tx},${ty}) scale(${sc})`);
     const fit = () => {
       const b = canvas.getBoundingClientRect();
@@ -201,6 +204,7 @@
     const pointers = new Map();
     let press = null, pinch = null;
     canvas.addEventListener('pointerdown', e => {
+      dragged = false;
       if (e.button !== 0) return;
       pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
       if (pointers.size === 2) {
@@ -226,13 +230,16 @@
     const end = e => {
       pointers.delete(e.pointerId);
       if (pointers.size < 2) pinch = null;
-      const p = press;
+      if (press && press.drag) dragged = true;
       press = null;
       canvas.classList.remove('dragging');
-      if (p && !p.drag && e.type === 'pointerup') onClick(p.target);
     };
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointercancel', end);
+    canvas.addEventListener('click', e => {
+      if (dragged || onAction(e.target)) { e.preventDefault(); e.stopPropagation(); }
+      dragged = false;
+    }, true);
     return {fit, zoom: f => { const b = canvas.getBoundingClientRect(); zoomAt(b.width / 2, b.height / 2, f); }};
   }
 
@@ -280,13 +287,12 @@
       canvas.replaceChildren(svg);
       const vp = svg.querySelector('.vp'), at = P.coords.get(String(center.id));
       view = interact(canvas, svg, vp, P, at && {x: at.x + labelOf(center).length * 3.2 + 25, y: at.y + H / 2}, target => {
-        const open = target.closest('[data-open]'), moreNode = target.closest('[data-more]'), node = target.closest('[data-name]');
-        if (open) { o.opened.add(+open.dataset.open); render(); }
-        else if (moreNode) { const m = g.nodes.find(n => n.key === moreNode.dataset.more); if (m && m.open) { o.all.add(m.owner + m.dir); render(); } }
-        else if (node && node.dataset.name !== center.name) location.hash = TauRender.URLS.decl(node.dataset.name);
+        const open = target.closest('[data-open]'), moreNode = target.closest('[data-more]');
+        if (open) { o.opened.add(+open.dataset.open); render(); return true; }
+        if (moreNode) { const m = g.nodes.find(n => n.key === moreNode.dataset.more); if (m && m.open) { o.all.add(m.owner + m.dir); render(); } return true; }
+        return false;
       });
       svg.querySelectorAll('.node[data-name]').forEach(n => {
-        n.addEventListener('keydown', e => { if (e.key === 'Enter') location.hash = TauRender.URLS.decl(n.dataset.name); });
         n.addEventListener('mouseenter', () => svg.querySelectorAll('.edge').forEach(p => {
           const k = n.dataset.name, keyOf = g.nodes.find(x => x.name === k)?.key;
           p.classList.toggle('hot', p.dataset.a === keyOf || p.dataset.b === keyOf);

@@ -33,6 +33,9 @@ POLICIES = (Policy(agents=False), Policy(agents=True))
 STATES = ("unreviewed", "covered", "uncounted", "stale", "problem", "disputed")
 KIND_CODE = {"theorem": "t", "definition": "d", "structure": "s", "class": "c", "inductive": "n",
              "instance": "i", "axiom": "a", "opaque": "o"}
+#: The kinds whose text past the statement is shown, as the docs show it: a definition's value (the docs'
+#: Equations), a structure's or inductive type's fields. A theorem's proof and an instance's value are not.
+VALUE_KINDS = frozenset({"definition", "opaque", "structure", "class", "inductive"})
 PROJECT, NAMED, BASIC, ROUTINE, DOCUMENTED, AUX, SORRY = 1, 2, 4, 8, 16, 32, 64
 
 
@@ -204,13 +207,20 @@ class Site:
     def entry(self, d: Decl) -> dict:
         i, name = d.id, d.name
         e: dict = {"id": i, "name": name, "k": KIND_CODE.get(d.kind, "o"), "doc": self.docstrings.get(name, "")}
+        sig = self.ds.facet_row("signature", name)
+        if sig:
+            e["sig"] = sig.get("text", "")
+            e["sigRefs"], e["sigNames"] = self.links(sig.get("refs") or [])
         src = self.ds.facet_row("source", name)
         if src:
             e["kw"], e["line"] = src.get("keyword", ""), [src["start"][0], src["end"][0]]
             span = self.inp.sources.span(src, doc_comment=False)
             if span:
                 stmt, rest = split_statement(span[2])
-                e["stmt"], e["rest"] = stmt[:TEXT_CAP], rest[:TEXT_CAP]
+                rest = rest if d.kind in VALUE_KINDS else ""
+                e["stmt"] = stmt[:TEXT_CAP]
+                if rest:
+                    e["rest"] = rest[:TEXT_CAP]
                 if len(stmt) > TEXT_CAP or len(rest) > TEXT_CAP:
                     e["cut"] = True
         for key, ids in (("builtOn", self.rev.built_on[i]), ("facts", self.rev.facts[i]),
@@ -226,6 +236,21 @@ class Site:
             if tests:
                 e["tests"] = tests
         return e
+
+    def links(self, refs: list) -> tuple[list[list], list[str]]:
+        """A signature's names, each the declaration it stands for: a node, or for a field of a structure
+        or class (`LT.lt`), the structure. ([[start, stop, k]], the names k indexes), positions in code
+        points."""
+        names: list[str] = []
+        out = []
+        for start, stop, const in refs:
+            target = const if const in self.ds.by_name else (const.rsplit(".", 1)[0] if "." in const else "")
+            if target not in self.ds.by_name:
+                continue
+            if target not in names:
+                names.append(target)
+            out.append([start, stop, names.index(target)])
+        return out, names
 
     @staticmethod
     def test_view(t: dict) -> dict:

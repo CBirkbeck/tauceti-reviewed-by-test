@@ -86,7 +86,21 @@ class EntryTests(unittest.TestCase):
         e = entry("Fixture.triple")
         self.assertEqual((e["kw"], e["line"]), ("def", [15, 16]))
         self.assertTrue(e["stmt"].startswith("def triple (n : Nat) : Nat"))
-        self.assertTrue(e["rest"].startswith(":= n + n + n"))
+        self.assertTrue(e["rest"].startswith(":= n + n + n"))  # a definition's value, as the docs' Equations
+
+    def test_what_the_docs_show(self):
+        # The signature as Lean prints it (section variables included), each name its declaration.
+        e = entry("Fixture.triple_pos")
+        self.assertEqual(e["sig"], "Fixture.triple_pos (n : Nat) (h : 0 < n) : 0 < Fixture.triple n")
+        linked = {e["sig"][a:b]: e["sigNames"][k] for a, b, k in e["sigRefs"]}
+        self.assertEqual(linked["Fixture.triple"], "Fixture.triple")
+        self.assertEqual(linked["Nat"], "Nat")
+        self.assertEqual(linked["<"], "LT")  # a class's field stands for its class
+
+    def test_no_proofs(self):
+        self.assertNotIn("rest", entry("Fixture.triple_pos"))        # a theorem's proof
+        self.assertNotIn("rest", entry("Fixture.instInhabitedPos"))  # an instance's value
+        self.assertIn("val : Nat", entry("Fixture.Pos")["rest"])     # a structure's fields stay
 
     def test_what_rests_on_it(self):
         e = entry("Fixture.triple")

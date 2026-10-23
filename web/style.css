@@ -164,6 +164,10 @@ code{font:12px var(--mono);background:var(--raised);padding:1px 4px;border-radiu
 .lean summary{padding:8px 15px;color:var(--muted);font-size:12px;cursor:pointer}
 .lean details pre{color:var(--ink-soft);border-top:1px solid var(--line-soft)}
 .lean .cut{padding:8px 15px;border-top:1px solid var(--line-soft);color:var(--faint);font-size:12px}
+.lean .kw{color:var(--accent)}
+.lean a.ref{color:var(--ink);text-decoration:none;border-bottom:1px dotted #46525e}
+.lean a.ref:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.docs-btn{display:flex;justify-content:center;margin:0 0 10px}
 .coverage{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 10px;color:var(--ink-soft);font-size:12.5px}
 .lists .block h2{margin-top:22px}
 

@@ -98,13 +98,17 @@ def search(browser, url, errors):
 def declaration(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     expect(page.locator("h1").inner_text() == "A definition that version B leaves alone.", "titled by its docstring")
-    expect("def triple (n : Nat) : Nat" in page.locator(".lean pre").first.inner_text(), "its source")
+    expect(page.locator(".lean pre").first.inner_text() == "def Fixture.triple (n : Nat) : Nat", "its signature, as the docs show it")
+    expect(page.locator(".lean details:not([open]) summary", has_text="Definition").count() == 1, "its value, folded as in the docs")
     hrefs = page.eval_on_selector_all(".links a", "as => as.map(a => a.href)")
     expect("https://example.org/docs/Fixture/Basic.html#Fixture.triple" in hrefs, "the API docs")
     expect("https://github.com/test/fixture/blob/B/Fixture/Basic.lean#L15-L16" in hrefs, "the source at the pin")
     expect(page.locator("h2", has_text="Results about it").count() == 1, "what rests on it, as a list")
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors)
-    expect(page.locator("details summary", has_text="Proof").count() == 1, "a theorem's proof is folded")
+    expect(page.locator(".lean pre").first.inner_text() == "theorem Fixture.triple_pos (n : Nat) (h : 0 < n) : 0 < Fixture.triple n",
+           "a theorem's signature, section variables and all")
+    expect(page.locator(".lean a.ref", has_text="Fixture.triple").get_attribute("href") == "#/d/Fixture.triple", "its names link")
+    expect(page.locator(".lean details").count() == 0 and "omega" not in page.inner_text("main"), "no proof")
 
 
 @check
@@ -115,6 +119,8 @@ def review(browser, url, errors):
     expect(href.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in href
            and "decl=Fixture.triple" in href and "commit=B" in href, "Review this opens the form, filled in")
     expect(page.locator(".actions a").count() == 5, "five forms")
+    expect(page.locator(".panel a", has_text="Read it in the API docs").get_attribute("href")
+           == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review panel links to the docs")
     expect(page.locator(".tests .result.passes").count() == 1, "the listed test passes")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
     expect("Something it rests on has changed since." in page.locator(".panel").inner_text(), "stale underneath, said")
@@ -133,6 +139,18 @@ def dependency_map(browser, url, errors):
     map_drawn(page)
     names = page.evaluate("TauReview.mapNodes()")
     expect("Fixture.triple" in names and "Nat" not in names, "what it rests on in the library, Mathlib hidden")
+    page.click(".map .node[data-name='Fixture.triple'] .open")
+    page.wait_for_timeout(800)
+    expect(page.evaluate("TauReview.route()") == "decl:Fixture.triple_pos", "an arrow unfolds, and does not open the page")
+    node = page.locator(".map .node[data-name='Fixture.triple'] rect")
+    node.scroll_into_view_if_needed()
+    box = node.bounding_box()
+    page.mouse.move(box["x"] + 10, box["y"] + 10)
+    page.mouse.down()
+    page.mouse.move(box["x"] + 70, box["y"] + 50, steps=5)
+    page.mouse.up()
+    page.wait_for_timeout(800)
+    expect(page.evaluate("TauReview.route()") == "decl:Fixture.triple_pos", "a drag that starts on a node does not open it")
     page.click(".map-tools button:has-text('Mathlib')")
     page.wait_for_function("TauReview.mapNodes().includes('Nat')")
     page.click(".map .node[data-name='Fixture.triple'] rect")
