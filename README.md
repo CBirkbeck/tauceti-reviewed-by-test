@@ -1,190 +1,109 @@
-# Reviewed-by for Tau Ceti — a test
+# Tau Ceti Review
 
-A test of **review marks** on Tau Ceti declarations: who has checked which
-definition, what they checked, and on which version; and of the **tests** each
-declaration passes. It is modelled on the
-Linux kernel's `Reviewed-by:` trailers, and every mark is left from a browser,
-without a pull request. A declaration that is wrong gets a **problem report**
-instead: what is wrong and why, in an issue that stays open until it is fixed. Nothing here changes Tau Ceti: the page reads every
-declaration of Tau Ceti's main branch, read-only, at a pinned commit that
-follows main once a day.
+**Site:** https://cbirkbeck.github.io/tauceti-reviewed-by-test/
 
-**Page:** https://cbirkbeck.github.io/tauceti-reviewed-by-test/
+Every declaration of [Tau Ceti](https://github.com/TauCetiProject/TauCeti), reviewed by people and by
+AI agents, from the browser and without pull requests: what each declaration is, what it rests on and
+what rests on it, who has checked it and on which version, the problems reported, the tests it passes
+and the tests people would like. It leads with the named results and notable definitions Voyager has
+announced on the Lean Zulip, the declarations people are likely to care about.
 
-## Finding a declaration
+Nothing here changes Tau Ceti. Every record is kept in this repository's evidence store, pinned to the
+declaration's meaning hash: when the declaration, or anything it rests on, changes, the record stays
+and says so.
 
-Search every definition, structure, class, instance, theorem and lemma by
-name, part of a name, or words from its docstring; filter definitions from
-theorems and lemmas, by area (`NumberTheory`, `AlgebraicGeometry`, …) and by
-whether it has been reviewed. Open one to read its docstring and source, see
-its marks and the rest of its module, and review it. Every search and every
-declaration has its own link (`#q=…`, `#d=<full name>`); `/` jumps to the
-search box.
+It is built with the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) tools: Tau Ceti's
+dataset (spec S2) from the extractor, records (spec S3) in an evidence store filled by evidence-store's
+forms, and evidence-core for everything computed from them. The design:
+[docs/superpowers/specs/2026-10-23-tauceti-review-site-design.md](docs/superpowers/specs/2026-10-23-tauceti-review-site-design.md).
 
-## Named results and definitions
+## Reviewing
 
-Most of a library is API, glue and steps of proofs, so the page marks out the
-declarations worth looking at first and gives them a tab of their own,
-**Named**. Two sources name them, and both are read again every day:
+Open a declaration on the site and use its buttons. Each opens one of the store's forms on GitHub,
+filled in with the declaration and the commit the site shows:
 
-- **the roadmaps** — each roadmap's generated `STATUS.md` lists its *Named
-  results* and *Notable definitions and infrastructure*, each a name, a sentence
-  and the declarations it links. `scripts/named.py roadmaps` reads them into
-  `data/named-roadmaps.json`;
-- **Voyager**, the bot that announces what is new in Tau Ceti on the Lean Zulip.
-  Its past announcements were read into [`reviews/named.jsonl`](reviews/named.jsonl)
-  with `scripts/named.py voyager`, and from now on each run adds its own with a
-  line `Named: <declaration> — <name> — <a sentence>` in a comment on
-  [issue #1](../../issues/1); anyone may add one the same way, and a declaration
-  already named is left alone.
-
-A named declaration shows its name beside it in every list, and its page says
-what it is and who named it, with links to the roadmap's status file and to the
-pull requests Voyager cited.
-
-## Marks
-
-| Mark | Meaning |
+| button | records |
 |---|---|
-| `Reviewed-by` | it is the intended mathematical notion |
+| **Review this** | an acceptance: it is the intended mathematical notion, or states the intended result. Saying why is optional for a person; an AI agent must |
+| **Report a problem** | what is wrong and why. It stays open, and the declaration is flagged, until it is marked fixed, intended or invalid |
+| **Suggest a test** | a property the declaration should have, in words and if possible in Lean. It stays open until a declaration of Tau Ceti proves it |
+| **List a test** | a declaration of Tau Ceti that already pins it down, and what it checks |
+| **Ask a question** | a question about it |
 
-What a declaration is tested by is not a mark but a list of tests it passes
-(below).
+Intake turns the issue into a record under the account that opened it, answers on the issue, and
+rebuilds the site within minutes. On a record's issue, a comment whose first line is a command changes
+its state: `/withdraw`, `/fixed [commit]`, `/intended`, `/invalid`, `/met <declaration>`, `/failed`,
+`/declined`, `/answered`, `/reopen`.
 
-A mark is pinned to a hash of the declaration's source (a definition whole, a
-theorem by its statement). When the declaration changes, the mark stays but is
-greyed: it applies to the earlier version until someone reviews the new one.
-Marks by AI agents name the agent, model and session and are shown apart from
-people's. A person need not say why a declaration is right; an AI agent must
-give its evidence.
+**Many at once:** comment lines on [issue #1](../../issues/1), one record each:
 
-However many marks a declaration collects, the page shows one line per kind of
-mark, counting people apart from AI agents ("Reviewed-by · 12 people · 5 AI");
-**Who** opens the full list, with each mark's date, version and evidence.
+```
+Reviewed-by: TauCeti.Foo.bar — what you checked
+Test: TauCeti.Foo.bar — TauCeti.Foo.bar_zero — what it checks
+Challenge: TauCeti.Foo.bar — a property it should have
+Named: TauCeti.Foo.bar — The bar theorem — a sentence
+```
 
-## Leaving a mark, from a browser
+**AI agents** name themselves in their comment, and the site shows their records apart from people's:
+`<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->`.
 
-1. **Review this**, on any declaration the page opens, opens the
-   [Review a definition](.github/ISSUE_TEMPLATE/reviewed-by.yml) form with the
-   declaration and its version filled in. Submit it to say the declaration is
-   the intended mathematical notion. Saying what you checked is optional for a
-   person and required of an AI agent.
-2. The [Record review marks](.github/workflows/record.yml) workflow checks the
-   declaration exists, appends the mark to
-   [`reviews/records.jsonl`](reviews/records.jsonl) (committed directly: no pull
-   request), answers on the issue, closes it and rebuilds the page.
-3. To mark many at once, comment lines such as
-   `Reviewed-by: TauCeti.IdealArithmeticFunction.vonMangoldt — what you checked`
-   on [issue #1](../../issues/1). An AI agent adds
-   `<!--reviewed-by:v1 {"agent": "<agent, model, session>"}-->` to its comment.
+## What the site shows
 
-GitHub authenticates who submitted each mark.
+- **Named**: Voyager's announcements, each with its review state and how much of what it rests on in
+  Tau Ceti has been reviewed. Voyager is the only source of names.
+- **A declaration**: its docstring and Lean source, links to the API docs, the source and Voyager's
+  post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
+  uses and Mathlib's declarations on request), with the same neighbours as lists; and its review
+  panel: every review, problem, question and suggested test as a thread, and the tests it passes.
+- **Browse**, **Search** (names and docstring titles), **Activity** (open problems, open suggested
+  tests, what to review next, reviewers) and **How to review**.
 
-## Tests
+Colour on a declaration means its review state: an open ring for not reviewed, white for reviewed,
+salmon for reviewed by AI agents only or on an earlier version, red for an open problem. A switch in
+the side bar says whether AI agents' reviews count.
 
-What gives confidence that a definition or result is right is the tests it
-passes, so the page lists them under **Tests**, counted
-("Tested by · 7 unit tests · 2 key results · 1 suggested"), with **Which**
-showing each test's statement and whether it passes. There are three kinds:
+## How it is built
 
-- **Unit tests**, found automatically: the `example`s in Tau Ceti whose
-  statement names the declaration, resolved as Lean resolves names (through
-  the namespaces around the example and those its file opens).
-  `scripts/fetch_declarations.py` reads them with the declarations.
-- **Key results**, mostly listed by AI agents: lemmas of Tau Ceti that pin the
-  declaration down (a value, a degenerate case, agreement with a Mathlib
-  notion), each with what it checks. List them with lines such as
-  `Test: TauCeti.IdealArithmeticFunction.vonMangoldt — TauCeti.IdealArithmeticFunction.vonMangoldt_one — the unit ideal gets 0`
-  in a comment on [issue #1](../../issues/1), where an AI agent adds its marker
-  as for marks and must say what the test checks. They are recorded in
-  [`reviews/tests.jsonl`](reviews/tests.jsonl).
-- **Suggested tests**, from anyone: **Suggest a test** opens the
-  [Suggest a test](.github/ISSUE_TEMPLATE/test.yml) form, whose issue stays
-  open until the test is written in Tau Ceti (close it as completed then, or as
-  not planned). Suggestions are recorded in
-  [`reviews/suggestions.jsonl`](reviews/suggestions.jsonl).
+| workflow | when | what |
+|---|---|---|
+| [Follow Tau Ceti](.github/workflows/follow.yml) | daily | pins Tau Ceti's newest commit that the extractor's 0.13 series can read and its cache has built (`scripts/pin.py`); extracts its dataset as the release `dataset-<commit12>` ([Dataset](.github/workflows/dataset.yml)); records Voyager's announcements; deletes datasets nobody needs (`scripts/prune.py`); rebuilds the site |
+| [Voyager](.github/workflows/voyager.yml) | 04:15 and 16:15 UTC | reads Voyager's topic on the Lean Zulip (secrets `ZULIP_SITE`, `ZULIP_EMAIL`, `ZULIP_API_KEY`; read only) into `data/voyager.jsonl`, and records a `named` record for each announcement whose declaration the pinned dataset has (`scripts/voyager.py`) |
+| [Evidence intake](.github/workflows/evidence-intake.yml), [Evidence check](.github/workflows/evidence-check.yml) | on every issue event; on every change to `evidence/` | evidence-store's: records from forms, comments and the bulk issue; the check that the store only grows, and that a push adds only its author's records |
+| [Pages](.github/workflows/pages.yml) | after any of these | runs the tests, builds the site (`scripts/build_site.py`), checks it in a browser, and publishes it from `main` |
 
-A test passes while it is in Tau Ceti at the pinned commit without `sorry`;
-since the page follows Tau Ceti's main branch daily, a test that is removed or
-renamed shows as no longer found. Tests do not go stale as marks do: Lean
-checks them again at every commit. The unit tests and API planned for the
-atlas's roadmaps arrive the same way: once a planned definition is in Tau Ceti
-with the `example`s of its suggested Lean file, those are its unit tests here.
-
-## Reporting a problem
-
-1. **Report a problem**, next to Review this, opens the
-   [Report a problem](.github/ISSUE_TEMPLATE/problem.yml) form with the
-   declaration and its version filled in. Say what is wrong (wrong: false as
-   stated or not the intended notion; a misleading name or docstring; something
-   else) and why: a counterexample, the source it disagrees with, or the step
-   that fails. The why is required, since it is what a fix starts from; a
-   suggested fix is optional.
-2. The same workflow records the report in
-   [`reviews/problems.jsonl`](reviews/problems.jsonl) and answers, but leaves
-   the issue **open**: the report is the issue for getting the declaration
-   fixed. The page flags the declaration (`!`), lists it under Open problems and
-   the Reported problems filter, and shows the report with a link to its issue.
-3. Close the issue as **completed** once the declaration is fixed, or as **not
-   planned** if it is right after all; the bot records which, and the page shows
-   the report as fixed or closed. Reopening it flags the declaration again, and
-   editing it updates the report. A report about a version that has since
-   changed says so, as a prompt to check whether the change fixed it.
-
-In Tau Ceti itself the report would be an issue on Tau Ceti, for its workers to
-pick up, and the fix's commit would carry `Reported-by:` and `Closes:` trailers,
-as the kernel's do. This test keeps the reports in its own repository.
-
-## In the code: the fork
-
-The same lines live in Lean, in a **fork** of Tau Ceti,
-[CBirkbeck/TauCeti](https://github.com/CBirkbeck/TauCeti), so the trial can be
-read in real code rather than a mock-up; Tau Ceti itself is untouched.
-`scripts/apply.py` writes them into a checkout:
-
-- one line under each module docstring's title, linking to that file's page;
-- the counts at the end of each reviewed declaration's docstring, and a
-  docstring holding them for a reviewed declaration that has none (8% of them,
-  mostly API lemmas);
-- nothing else: rerunning it after more reviews rewrites only what changed, and
-  a declaration whose marks have gone loses its lines again.
-
-The commit ends in one git trailer per mark, as the kernel's `b4 trailers -u`
-collects Reviewed-by replies. The fork's own workflow
-(`.github/workflows/review-lines.yml`, added by the pull request) takes the fork
-up to Tau Ceti's main each morning, rewrites the lines from the site's
-`reviews.json`, and updates its pull request, so the fork's CI keeps checking
-that the lines build and lint.
-
-## For other readers
-
-The marks and problem reports as data, for the Tau Ceti atlas or Tau Ceti's own documentation:
-[`reviews.json`](https://cbirkbeck.github.io/tauceti-reviewed-by-test/reviews.json).
-
-## Following Tau Ceti
-
-`data/settings.json` pins the Tau Ceti commit the page shows. The
-[Follow Tau Ceti](.github/workflows/refresh.yml) workflow moves the pin to
-main once a day, reads the roadmaps' named results again, and rebuilds the
-page; marks keep the versions they were made on, so a declaration that changed
-shows its marks greyed. So the page keeps up with the library by itself: new
-declarations arrive with the pin, new named results with the roadmaps and with
-Voyager's announcements, and tests are recomputed against the new commit. What
-needs a person is only the judgement: reviewing, listing key results as tests,
-answering suggestions and reports, and merging the fork's pull request.
+The tools are pinned: evidence-core `v0.16.1`, evidence-store `v0.7.2` (`requirements.txt`), the
+extractor's 0.13 series (`data/settings.json`). The store imports the
+[Mathlib probability store](https://github.com/LeanTrustBuilders/mathlib-probability-evidence): its
+reviews of the Mathlib declarations Tau Ceti rests on show here.
 
 ## Files
 
-- `scripts/fetch_declarations.py` reads every module of a Tau Ceti checkout
-  into `data/declarations.json` (generated, not committed; the workflows check
-  out the pinned commit with `.github/actions/declarations`).
-- `scripts/reviews.py` records marks from forms and comments, and problem
-  reports and what becomes of their issues.
-- `scripts/apply.py` writes the lines into a fork of Tau Ceti;
-  `scripts/named.py` reads the named results.
-- `scripts/build_site.py` builds the page: `index.html`, the search index
-  `data/search.json` and docstring summaries `data/docs.json` it loads first,
-  one file per module in `data/m/` read when a declaration is opened, and
-  `reviews.json`.
-- `python3 -m unittest discover -s tests` runs the tests;
-  `python3 tests/validate_site.py` checks the built page in a browser.
+- `evidence/`: the store (`store.json`, `records/*.jsonl`).
+- `data/settings.json`: the pin, the library, the extractor series, dataset retention, Voyager's topic.
+- `data/voyager.jsonl`: every announcement Voyager has made.
+- `scripts/`: `pin.py`, `extractor.py`, `prune.py`, `voyager.py`; `site_data.py` (everything a page
+  shows, from evidence-core) and `build_site.py` (writes `_site/`).
+- `web/`: the front end (`index.html`, `style.css`, `data.js`, `render.js`, `map.js`, `app.js`) and
+  `vendor/` (elkjs, KaTeX, the Atlas's `markdown.js`; see `web/vendor/NOTICE`).
+- `tests/`: unit tests, the suite's fixture (`tests/fixtures`, see its NOTICE), `fixture_site.py`, and
+  the browser check `validate_site.py`.
+
+## Working on it
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-test.txt
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m unittest discover -s tests       # unit tests
+.venv/bin/python tests/validate_site.py              # the browser check, on the fixture's site
+.venv/bin/python scripts/build_site.py --dataset DIR --source TAUCETI_CHECKOUT --imports DIR --out _site
+.venv/bin/python tests/validate_site.py --site _site --smoke
+```
+
+`evidence-store dataset --store evidence --commit <pin> --out DIR` fetches the pinned dataset, and
+`evidence-store fetch-imports --store evidence --out DIR` the imported stores.
+
+## History
+
+Until October 2026 this repository was a test of Reviewed-by marks, with its own scripts, ledgers in
+`reviews/`, and lines written into a fork of Tau Ceti by pull request. Its four reviews and eleven
+tests were migrated to the store (`evidence-core migrate reviewed-by`); the rest is in the history.
