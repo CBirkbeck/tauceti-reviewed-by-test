@@ -130,7 +130,11 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
 
 - **Forms and intake** are evidence-store's, set up by `evidence-store init`: review a declaration,
   report a problem, propose a test (a challenge), list a test, ask a question, name a result, and a
-  change of state. Intake turns an issue into a record keyed in the dataset of the commit the form
+  change of state. The four a person reaches from the review box (review, problem, challenge,
+  question) are cut to what a person needs: the declaration and the commit, which the site fills in,
+  and the one answer the form is for. A review needs nothing else, so it is one press of Create. The
+  labels left are evidence-store's, which intake reads (a unit test holds them to
+  `evidence_store/forms.py`); AI agents give the whole form with `evidence-store submit`. Intake turns an issue into a record keyed in the dataset of the commit the form
   names, answers on the issue, and starts `pages.yml`. A comment whose first line is a command
   changes a record's state (`/withdraw`, `/fixed [commit]`, `/intended`, `/invalid`,
   `/met <declaration>`, `/failed`, `/declined`, `/answered`, `/reopen`); so does closing or reopening
@@ -140,6 +144,12 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   `Challenge: <declaration> — <property>`, `Named: <declaration> — <name> — <sentence>`. An AI agent
   adds `<!-- agent: tool=…; model=…; session=… -->` to its comment, and its records are shown apart
   from people's.
+- **AI agents review from the command line,** never from the page: `AI-REVIEWS.md` says how. An agent
+  reads the declaration against its source; runs the Checks its roadmap gives it (in TauCetiRoadmap a
+  target's unit tests, each an `example` in `TauCeti/Examples/` carrying its tag once formalised, which
+  the dataset cannot see, so the review is where they are recorded); and files its verdict with
+  `evidence-store submit`, its reasons listing each Check and whether it passes. Without the right to
+  label issues it comments on the bulk issue instead.
 - **Imports:** the Mathlib probability store. Its records about declarations of this dataset (the
   Mathlib declarations Tau Ceti rests on) show here, marked with that store's name, without actions.
 
@@ -286,14 +296,17 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
   3. **In Lean,** what the docs show of it: the signature Lean prints (the dataset's `signature`
      facet: section variables included, every name a link, and on hover what it is), a definition's
      value folded (the docs' Equations), a structure's fields, and never a proof;
-  4. the **Review** card: the state and the counts ("Reviewed-by · 2 people · 1 AI"); the "Count AI
-     reviews" switch; "Read it in the API docs" and the buttons Review this, Report a problem, Suggest
-     a test, List a test, Ask a question; every thread: verdict, who (a person's account, or "AI ·
-     tool · model"), when, the axes checked, the reference, the text, its replies and changes of
-     state, and the changes of state it allows, as links to its issue with the command to type. A
-     review that does not apply now is greyed, saying "the declaration changed since" or "something
-     it rests on changed since"; an imported one says "from the Mathlib probability store" and has
-     no actions. Then the tests;
+  4. beside the statement (below it on a phone), the **review box**: the state and the counts
+     ("2 people · 1 AI"); people's records in full (verdict, account, when, the text, replies and
+     changes of state, and the commands their issue takes); AI agents' records folded to their
+     verdict, tool and model, their reasons (what they checked, what they compared it with, the
+     roadmap's Checks) a click away; the tests, folded to how many pass. A record that does not apply
+     now is greyed, saying "the declaration changed since" or "something it rests on changed since";
+     an imported one says "from the Mathlib probability store" and has no actions. Last, **one
+     button**, Review it, which opens the choice: Yes, it's right · Something's wrong · Suggest a
+     test · Ask a question · Read it in the docs. Each opens its form filled in, so a review is that
+     button, Yes, and GitHub's Create. There is no button for AI agents (they review from the command
+     line), and none outside Tau Ceti;
   5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
      dependency map (6.5), shown;
   6. the same neighbours as lists, in two columns, each ranked with its first dozen shown: built from
@@ -315,9 +328,11 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
 - **Activity:** the open problems, questions and suggested tests, what to review next for the named
   results (the unreviewed declarations they rest on, those most of them share first), the newest
   records, and the reviewers.
-- **How to review:** the forms, the bulk issue's lines, the AI marker, and what each status means.
+- **How to review:** the button and its four choices; how AI agents review, and what to tell one
+  ("Review `TauCeti.Foo.bar` for the Tau Ceti review site, following …/AI-REVIEWS.md"); and what each
+  status means.
 
-Each button opens `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
+Each choice opens `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
 with the form's `decl` and `commit` fields filled in (the declaration and the pinned commit).
 
 ### 6.5 The dependency map
@@ -332,14 +347,19 @@ with the form's `decl` and `commit` fields filled in (the declaration and the pi
   - **Mathlib** shows or hides Mathlib's (and Lean's) declarations; hidden at first, so that the map
     shows Tau Ceti's own structure, which is what can be reviewed here (the lists below the map include
     Mathlib's). They are leaves (the dataset follows no dependencies inside Mathlib).
-  - Only the first level up ends in a "+ N more" node; the second level up shows four per node, and a
-    node's arrow opens its whole level.
+  - Only the first level up ends in a "+ N more" node; the second level up shows four per node.
+  - **Arrows:** a node of Tau Ceti has ↑ (or ↓) while unfolding it would draw something the map leaves
+    out, at any depth: what it rests on above, what rests on it below. Each node row says how many of
+    the declarations it rests on are Tau Ceti's and how many rest on it, so the arrows are exact for
+    statements; with proofs they are a guess. An unfolded node shows −, which folds it again. An arrow
+    that finds nothing says so in a note on the map, and goes.
 - **Nodes:** a box bordered in its kind's colour (gold when named, dashed when from Mathlib), a dot
   for its review state, and a short name. Hovering shows its name, title and statement; clicking goes
   to the declaration and the map re-centres; a node's expand control adds its own level in place.
   A level with more than 12 nodes shows the 12 most important and a "+ N more" node that shows the
   rest, up to the 60 the data keeps; beyond those the node and the lists give only the total.
-- **Controls:** proof uses, Mathlib, fit, full screen; pan and zoom by pointer, wheel and pinch.
+- **Controls:** proof uses, Mathlib, fit, full screen; pan and zoom by pointer, wheel and pinch. In
+  full screen the button reads "✕ Leave full screen", and Esc leaves it too.
 - **For a named declaration,** a line above the map gives its coverage: of the Tau Ceti declarations
   in its meaning closure (what its statement mentions, and a definition's value, proofs left out),
   how many people have reviewed, how many only AI agents, and how many nobody.
