@@ -17,7 +17,8 @@ at the same address. It must:
    declarations they stand for;
 4. lead with the **named results and notable definitions Voyager has announced** on the Lean Zulip:
    the declarations people are likely to care about, rather than API and steps of proofs;
-5. **look like the Tau Ceti Atlas** (<https://cbirkbeck.github.io/tauceti-explorer/#view=all>).
+5. **look like Mathlib Explorer** (<https://leantrustbuilders.github.io/mathlib-explorer/>), in the
+   colours of the Tau Ceti Atlas (<https://cbirkbeck.github.io/tauceti-explorer/#view=all>).
 
 ## 2. Decisions, and why
 
@@ -30,7 +31,7 @@ at the same address. It must:
 | A workflow reads Voyager's topic with a Zulip key kept as an Actions secret. | The list keeps up with Voyager without anyone running anything. |
 | The front end computes nothing. | The suite's rule: statuses, threads, coverage and the graph summaries come from evidence-core; the page lays them out. |
 | The suite's tools are pinned to release tags. | So an upstream change cannot break the daily build unannounced; they are moved on deliberately. |
-| One dark palette. | The Atlas has one. |
+| Mathlib Explorer's layout and type, dark by default in the Atlas's palette, with a light palette to switch to. | Asked for on 2026-10-23, after the first version (the Atlas's shell, rail and planets) went live: the page reads like the suite's other reader, and keeps Tau Ceti's colours. |
 
 ## 3. What exists, and what is reused
 
@@ -49,8 +50,10 @@ at the same address. It must:
     `uv`); its pinning rule; and its parser of Voyager's bullets, extended to today's docs addresses.
   - Not reused: its page (this repository's old one), its roadmap reader, `apply.py`, and its
     records, which are keyed under the hasher the suite dropped on 2026-09-28 (7.1).
-- **The Atlas** (`CBirkbeck/tauceti-explorer`): its palette, type, shell and planet glyphs, its
-  `markdown.js` and its copy of KaTeX.
+- **Mathlib Explorer's page** (`LeanTrustBuilders/mathlib-explorer`, `static/`, Apache-2.0): its
+  layout and type, its lists, and its words for Lean's basic notions.
+- **The Atlas** (`CBirkbeck/tauceti-explorer`): its dark palette, its `markdown.js` and its copy of
+  KaTeX.
 
 ## 4. The repository after the change
 
@@ -209,95 +212,109 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
 ## 6. The front end (`web/`)
 
 Static HTML, CSS and JavaScript, without a framework or a build step, as the Atlas is. Vendored:
-elkjs 0.9.3 (EPL-2.0, the copy referee-site vendors, loaded the first time a map is drawn), and the
+elkjs 0.9.3 (EPL-2.0, the copy referee-site vendors, loaded the first time a map is drawn); the
 Atlas's `markdown.js` with its KaTeX 0.16.28 (MIT): Markdown in which source HTML stays text, links
-are filtered, and `$…$` becomes vetted MathML. Record texts come from anyone's issues, so every
+are filtered, and `$…$` becomes vetted MathML; and Mathlib Explorer's three faces, Source Serif 4,
+Inter and JetBrains Mono (OFL-1.1, the latin, latin-ext and greek subsets), so that the page fetches
+nothing from elsewhere. Record texts come from anyone's issues, so every
 docstring and record text goes through it, never into the page as HTML. Pan and zoom are pointer
 events (referee-site's code, Apache-2.0, with pinch added): no D3.
 
 ### 6.1 Look
 
-The Atlas's tokens:
+Mathlib Explorer's page: one centred column at most 1120 px wide under a sticky top bar; serif
+headings and prose (Source Serif 4, else Georgia), a sans-serif for everything else (Inter), Lean in
+JetBrains Mono. Dark by default, in the Atlas's tokens; the ◐ button switches to a light palette and
+the browser remembers it.
 
 ```
---bg #0b1016   --panel #0e141b   --raised #131a22   --hover #182029
---line #222c37   --line-soft #1a222b
---ink #e2e6eb   --ink-soft #b9c2cc   --muted #8391a0   --faint #5b6875
---accent #dfc186 (gold)   --done #f7f3e9   --active #e89678   --started #8f2e26
---sans: the system UI stack   --mono: the ui-monospace stack
-header 48px · context bar 40px · footer 30px
+dark   --bg #0b1016  --surface #0e141b  --raised #131a22  --line #222c37
+       --ink #e2e6eb  --muted #8391a0  --faint #5b6875  --accent #dfc186 (gold)
+       kinds: notion #7fa9d6  result #9cc59a  instance #b9a0dd
+       states: covered #f7f3e9  uncounted, stale #e89678  problem #e0705c
+light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
+       kinds: notion #2c5f8a  result #2f7a55  instance #7a5b9a
+       states: covered #2f7a55  uncounted, stale #b4562f  problem #b0392a
 ```
 
-- **Glyphs** are the Atlas's planets: a definition, structure, class or inductive type is an Earth
-  (blue disc, green land); a theorem is a Saturn (sand disc, tilted ring), drawn larger when named; an
-  instance is a small grey moon. A named declaration has a gold ring. A Mathlib declaration is drawn
-  dimmer, with a small sun mark.
-- **Colour means review state**, under the policy the reader chose (AI reviews counted or not), as a
-  ring around the glyph on the map and a dot in lists:
+- **A kind is a colour**, as in Mathlib Explorer: a pill over a declaration's title (Definition,
+  Theorem, Instance…), the left edge of each item in a list, the border of its box on the map. A named
+  declaration has a gold badge, and a gold border on the map.
+- **A review state is a badge,** under the policy the reader chose (AI reviews counted or not): a dot
+  in the state's colour and a word.
 
-  | evidence-core's state | mark |
+  | evidence-core's state | badge |
   |---|---|
-  | unreviewed | open ring |
-  | covered | white (`--done`) |
-  | uncounted: accepted only by reviewers the policy does not count | salmon (`--active`) |
-  | stale: reviewed, but no acceptance the policy counts applies to the current version | dashed salmon ring |
-  | problem: an open problem in force | red |
-  | disputed: an acceptance and an open problem in force | red with a white ring |
+  | unreviewed | open ring, "Not reviewed yet" (left off in lists) |
+  | covered | filled dot, "Reviewed" |
+  | uncounted: accepted only by reviewers the policy does not count | salmon dot, "AI only" |
+  | stale: reviewed, but no acceptance the policy counts applies to the current version | salmon ring, "Earlier version" |
+  | problem: an open problem in force | red dot, "Problem" |
+  | disputed: an acceptance and an open problem in force | red dot ringed, "Disputed" |
 
-- Flat fills and thin strokes, no gradients or glows; small, letter-spaced capitals for section
-  labels; transitions of at most 200 ms, and none under `prefers-reduced-motion`.
+- Flat fills and thin strokes; no transitions under `prefers-reduced-motion`.
 
 ### 6.2 Shell
 
-- **Header:** "Tau Ceti Review"; links Named, Browse, Activity, How to review, and the store on
-  GitHub; the pinned commit and its date.
-- **Rail** (260 px): the search box (`⌘K` or `/`), then Named results, Notable definitions, Areas
-  (Tau Ceti's top-level folders, with counts), Open problems, Suggested tests, Recently reviewed;
-  the "Count AI reviews" switch, remembered in the browser; and the dataset's commit and build time.
-- **Context bar:** breadcrumbs (area, module, declaration) and Copy link.
-- **Phone width:** the rail becomes a Browse sheet and the page one column, the review panel under
-  the statement.
+- **Top bar:** "Tau Ceti Review"; the search box (`⌘K` or `/`, results as you type); Named, Browse,
+  Activity, How to review; the theme button.
+- **Footer:** the pinned commit and its date, when the site was built, the store, How to review.
+- **Phone width:** the sections wrap under the search box, and the page is one column.
 
 ### 6.3 Addresses
 
-`#/` (Named), `#/d/<name>`, `#/m/<module>`, `#/area/<Area>`, `#/search/<query>`, `#/activity`,
-`#/help`. The old site's addresses, query-style hashes, still work: `#d=<name>` opens `#/d/<name>`,
-`#m=<module>` opens `#/m/<module>`, `#area=<Area>` opens `#/area/<Area>`, and `#q=<query>` opens
-`#/search/<query>`.
+`#/` (home), `#/named`, `#/d/<name>`, `#/m/<module>`, `#/area/<Area>`, `#/search/<query>`,
+`#/browse`, `#/activity`, `#/help`. The old site's addresses, query-style hashes, still work:
+`#d=<name>` opens `#/d/<name>`, `#m=<module>` opens `#/m/<module>`, `#area=<Area>` opens
+`#/area/<Area>`, and `#q=<query>` opens `#/search/<query>`.
 
 ### 6.4 Pages
 
-- **Named** (the home page): Voyager's announcements, each with its glyph, Voyager's name and
-  sentence, the Lean name, area and date; its review counts ("2 people · 1 AI", or "not reviewed
-  yet"); and a coverage bar: how much of what it rests on in Tau Ceti has been reviewed. Filters:
-  results or definitions, area, review state. Sorted by newest, by name, or by how much rests on it.
-- **Declaration,** in two columns:
-  - main: the kind and glyph; the title (Voyager's name, else the docstring's first sentence, else the
-    Lean name); the Lean name, with copy; links to Tau Ceti's API docs
-    (`taucetiproject.org/docs/<Module path>.html#<name>`), to the source at the pinned commit, and to
-    the Voyager post; the docstring, its maths rendered; what the docs show of it: the signature Lean
-    prints (the dataset's `signature` facet: section variables included, every name a link), a
-    definition's value folded (the docs' Equations), a structure's fields, and never a proof;
-    the dependency map (6.5); and the same neighbours as lists, each ranked with its first dozen shown:
-    built from, about, proof uses (routine steps counted, not listed), built on it, results about it,
-    examples, used to prove;
-  - review panel: "Read it in the API docs"; the counts ("Reviewed-by · 2 people · 1 AI"); the buttons Review this, Report a
-    problem, Suggest a test, List a test, Ask a question; every thread: verdict, who (a person's
-    account, or "AI · tool · model"), when, the axes checked, the reference, the text, its replies and
-    changes of state, and the changes of state it allows, as links to its issue with the command to
-    type. A review that does not apply now is greyed, saying "the declaration changed since" or
-    "something it rests on changed since"; an imported one says "from the Mathlib probability store"
-    and has no actions. Then the tests and the open suggested tests.
+- **Home:** what the site is; the counts (declarations, named, reviews by people and by AI agents,
+  open problems); tiles for Named, Browse, Activity and How to review; the eight latest named; the
+  areas.
+- **Named:** Voyager's announcements grouped by area, each with Voyager's name and sentence, the Lean
+  name, its review state, a coverage bar (how much of what it rests on in Tau Ceti has been reviewed)
+  and the date. Filters: results or definitions, area, review state, words; sorted by newest, by
+  name, or by how much rests on it; the "Count AI reviews" switch.
+- **Declaration,** one column:
+  1. the breadcrumbs; the kind's pill, "Named by Voyager" and the review state; the title (Voyager's
+     name, else the docstring's first sentence, else the Lean name); the Lean name, with copy; links
+     to Tau Ceti's API docs (`taucetiproject.org/docs/<Module path>.html#<name>`), to the source at
+     the pinned commit, to the Voyager post and its pull requests;
+  2. Voyager's sentence, and the docstring, its maths rendered;
+  3. **In Lean,** what the docs show of it: the signature Lean prints (the dataset's `signature`
+     facet: section variables included, every name a link, and on hover what it is), a definition's
+     value folded (the docs' Equations), a structure's fields, and never a proof;
+  4. the **Review** card: the state and the counts ("Reviewed-by · 2 people · 1 AI"); the "Count AI
+     reviews" switch; "Read it in the API docs" and the buttons Review this, Report a problem, Suggest
+     a test, List a test, Ask a question; every thread: verdict, who (a person's account, or "AI ·
+     tool · model"), when, the axes checked, the reference, the text, its replies and changes of
+     state, and the changes of state it allows, as links to its issue with the command to type. A
+     review that does not apply now is greyed, saying "the declaration changed since" or "something
+     it rests on changed since"; an imported one says "from the Mathlib probability store" and has
+     no actions. Then the tests;
+  5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
+     dependency map (6.5), shown;
+  6. the same neighbours as lists, in two columns, each ranked with its first dozen shown: built from
+     or about (what comes from Mathlib and Lean as a line of chips, named as Mathlib Explorer names
+     Lean's basic notions), proof uses (routine steps counted, not listed), results about it, built on
+     it, examples, used to prove. Each item: its title, what it states (its signature without its
+     name, its implicit arguments and the arguments that only introduce a type, names by their last
+     component, at most 140 characters: `[CommRing R] [IsRegularRing R] [IsDomain R] :
+     IsIntegrallyClosed R`), its Lean name, and its review state when reviewed.
 - **A declaration outside Tau Ceti** (a Mathlib declaration reached from a map or a list): its kind,
   links to Mathlib's docs and to Mathlib Explorer, the records about it from the imported stores (no
   forms: they are its store's), and what in Tau Ceti rests on it; no map, since the dataset does not
   follow what it rests on.
-- **Module:** its docstring and its declarations, named ones first.
-- **Area:** its modules and its named declarations.
-- **Search:** names and titles of every declaration, named ones first.
-- **Activity:** the newest records, open problems, open suggested tests, the reviewers, and what to
-  review next for the named results (the unreviewed declarations they rest on, those most of them
-  share first).
+- **Module:** its docstring; its notions and its results in two columns, named ones first; its
+  instances folded.
+- **Browse:** a tile for each area. **Area:** its named declarations and its modules.
+- **Search:** names and titles of every declaration, notions and results in two columns, named ones
+  first.
+- **Activity:** the open problems, questions and suggested tests, what to review next for the named
+  results (the unreviewed declarations they rest on, those most of them share first), the newest
+  records, and the reviewers.
 - **How to review:** the forms, the bulk issue's lines, the AI marker, and what each status means.
 
 Each button opens `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
@@ -317,8 +334,9 @@ with the form's `decl` and `commit` fields filled in (the declaration and the pi
     Mathlib's). They are leaves (the dataset follows no dependencies inside Mathlib).
   - Only the first level up ends in a "+ N more" node; the second level up shows four per node, and a
     node's arrow opens its whole level.
-- **Nodes:** a glyph, a short name and the review ring. Hovering shows the title and state; clicking
-  goes to the declaration and the map re-centres; a node's expand control adds its own level in place.
+- **Nodes:** a box bordered in its kind's colour (gold when named, dashed when from Mathlib), a dot
+  for its review state, and a short name. Hovering shows its name, title and statement; clicking goes
+  to the declaration and the map re-centres; a node's expand control adds its own level in place.
   A level with more than 12 nodes shows the 12 most important and a "+ N more" node that shows the
   rest, up to the 60 the data keeps; beyond those the node and the lists give only the total.
 - **Controls:** proof uses, Mathlib, fit, full screen; pan and zoom by pointer, wheel and pinch.
@@ -358,10 +376,12 @@ with the form's `decl` and `commit` fields filled in (the declaration and the pi
   - `scripts/prune.py`: keeps the newest dataset, those under 30 days old and those an open issue
     names.
 - **Browser check** (`tests/validate_site.py`, Playwright with Chromium), on the fixture's build in
-  CI and on the real build before the switch: the Named page lists announcements; search finds a
-  declaration by name and by title; a declaration shows its statement, reviews and map; clicking a
-  node opens it; Proof uses adds edges; every button's address carries the declaration and the
-  commit; old `#d=` addresses resolve; no errors in the console; the same at phone width.
+  CI and on the real build before the switch: the page is dark, light at a click, and stays light;
+  the home page; the Named page lists announcements by area; search finds a declaration by name and
+  by title; a declaration shows its signature (and no proof), what its names are on hover, reviews,
+  map, and lists with statements; clicking a node opens it; Proof uses adds edges; every button's
+  address carries the declaration and the commit; old `#d=` addresses resolve; no errors in the
+  console; the same at phone width.
 - **End to end,** after the switch and with the owner's go-ahead: one real review through a form,
   recorded by intake and shown by the page.
 
