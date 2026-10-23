@@ -294,8 +294,11 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(c["maintainers"], ["CBirkbeck"])
 
     def test_the_migrated_records(self):
-        reviews = [r for r in self.store.records if r["kind"] == "review"]
-        tests = [r for r in self.store.records if r["kind"] == "test"]
+        # Only the migrated ones: the store grows with every review, and CI runs this test.
+        migrated = [r for r in self.store.records
+                    if (r.get("migration") or {}).get("from") in ("reviewed-by/v1", "tests/v1")]
+        reviews = [r for r in migrated if r["kind"] == "review"]
+        tests = [r for r in migrated if r["kind"] == "test"]
         self.assertEqual((len(reviews), len(tests)), (4, 11))
         for r in reviews + tests:
             self.assertEqual(r["by"]["identity"]["id"], "CBirkbeck")
