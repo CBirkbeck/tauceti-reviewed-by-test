@@ -1,6 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import extractor  # noqa: E402
@@ -36,6 +37,27 @@ class PinTests(unittest.TestCase):
 
     def test_nothing_when_nothing_fits(self):
         self.assertIsNone(pin.choose(self.COMMITS, {"4.35.0"}, lambda sha, text: True))
+
+    def test_the_cache_is_asked_with_a_user_agent(self):
+        # The cache's server refuses Python's default User-Agent: 403 for every commit.
+        seen = []
+
+        class Answer:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def fake(req, timeout):
+            seen.append(req)
+            return Answer()
+        with mock.patch.object(pin.urllib.request, "urlopen", fake):
+            self.assertTrue(pin.cached_in("TauCetiProject/TauCeti")("abc", "leanprover/lean4:v4.36.0-rc1\n"))
+        self.assertEqual(seen[0].get_method(), "HEAD")
+        self.assertTrue(seen[0].get_header("User-agent", "").startswith("tauceti-review"))
 
     def test_the_cache_address(self):
         self.assertEqual(pin.cache_url("TauCetiProject/TauCeti", "abc", "leanprover/lean4:v4.36.0-rc1\n"),

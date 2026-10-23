@@ -20,6 +20,8 @@ from common import load_settings, save_settings  # noqa: E402
 from extractor import release_tags, supported, toolchain_of  # noqa: E402
 
 CACHE = "https://cache.taucetiproject.org/revisions/{repo}/tc/{scope}/{sha}.jsonl"
+#: The cache's server refuses Python's default User-Agent (403 for every commit): say who asks.
+USER_AGENT = "tauceti-review (+https://github.com/CBirkbeck/tauceti-reviewed-by-test)"
 
 
 def choose(commits: list[tuple[str, str]], toolchains: set[str], cached) -> str | None:
@@ -50,9 +52,9 @@ def recent_commits(repo: str, n: int = 30) -> list[tuple[str, str]]:
 
 def cached_in(repo: str):
     def check(sha: str, text: str) -> bool:
+        req = urllib.request.Request(cache_url(repo, sha, text), method="HEAD", headers={"User-Agent": USER_AGENT})
         try:
-            with urllib.request.urlopen(urllib.request.Request(cache_url(repo, sha, text), method="HEAD"),
-                                        timeout=30) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return r.status == 200
         except Exception:
             return False
