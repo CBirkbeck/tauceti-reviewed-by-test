@@ -11,6 +11,7 @@ sys.path.insert(0, str(HERE.parent / "scripts"))
 import build_site  # noqa: E402
 import common  # noqa: E402
 import fixture_site  # noqa: E402
+import site_data  # noqa: E402
 
 OUT: Path
 RESULT: dict
@@ -39,9 +40,12 @@ def node(name: str, root: Path | None = None) -> list:
     return data(f"nodes/{i // 2048}.json", root)[i % 2048]
 
 
+def module_of(name: str, root: Path | None = None) -> dict:
+    return data(f"m/{node(name, root)[3]}.json", root)
+
+
 def entry(name: str, root: Path | None = None) -> dict:
-    module = node(name, root)[3]
-    return next(e for e in data(f"m/{module}.json", root)["decls"] if e["name"] == name)
+    return next(e for e in module_of(name, root)["decls"] if e["name"] == name)
 
 
 class MetaTests(unittest.TestCase):
@@ -80,22 +84,70 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(node("Fixture.double_zero")[5], 3)   # stale underneath, which people-only does not count
         self.assertEqual(node("Fixture.IsDouble")[5], 0)
 
+    def test_what_it_states(self):
+        self.assertEqual(node("Fixture.triple_pos")[11], "(n : Nat) (h : 0 < n) : 0 < triple n")
+        self.assertEqual(node("Fixture.triple")[11], "(n : Nat) : Nat")
+        self.assertEqual(node("Fixture.triple_two")[11], "triple 2 = 6")
+
+
+def sig(text: str, *names: str) -> dict:
+    """A signature facet row whose refs are `names`, each where it first occurs in `text`."""
+    return {"text": text, "refs": [[text.index(n), text.index(n) + len(n), n] for n in names]}
+
+
+class BriefTests(unittest.TestCase):
+    brief = staticmethod(site_data.brief)
+
+    def test_implicit_arguments_and_the_name_go(self):
+        self.assertEqual(self.brief("Foo.bar", sig("Foo.bar {R : Type u_1} [CommRing R] ⦃x : R⦄ (h : x ≠ 0) : Foo.baz x = x", "Foo.baz")),
+                         "[CommRing R] (h : x ≠ 0) : baz x = x")
+        self.assertEqual(self.brief("Foo.bar", sig("Foo.bar.{u} {α : Type u} (a : α) : a = a")), "(a : α) : a = a")
+
+    def test_types_and_universes_go(self):
+        self.assertEqual(self.brief("T.r", sig("T.r (R : Type u_1) [CommRing R] [T.IsRegularRing R] : T.IsClosed R", "T.IsRegularRing", "T.IsClosed")),
+                         "[CommRing R] [IsRegularRing R] : IsClosed R")
+        text = "T.c (C D : Type u₁) (S : Sort*) [CategoryTheory.Category.{v, u} C] (F : C ⥤ D) : F = F"
+        at = text.index("CategoryTheory")  # the extractor's reference covers the universes too
+        self.assertEqual(self.brief("T.c", {"text": text, "refs": [[at, at + 30, "CategoryTheory.Category"]]}),
+                         "[Category C] (F : C ⥤ D) : F = F")
+        self.assertEqual(self.brief("T.f", sig("T.f (F : Type u → Type v) : Prop")), "(F : Type u → Type v) : Prop")
+
+    def test_brackets_inside_an_argument(self):
+        self.assertEqual(self.brief("Foo.f", sig("Foo.f (g : (ℕ → ℕ) → ℕ) [Fact (0 < {n | n = 1}.ncard)] : Prop")),
+                         "(g : (ℕ → ℕ) → ℕ) [Fact (0 < {n | n = 1}.ncard)] : Prop")
+
+    def test_one_line(self):
+        self.assertEqual(self.brief("Foo.c", sig("Foo.c (x : ℕ)\n    (y : ℕ) : x + y =\n  y + x")), "(x : ℕ) (y : ℕ) : x + y = y + x")
+
+    def test_too_long(self):
+        long = "Foo.d [A " + "a" * 90 + "] (h : " + "b" * 50 + ") : c = c"
+        self.assertEqual(self.brief("Foo.d", sig(long)), "… (h : " + "b" * 50 + ") : c = c")
+        self.assertEqual(self.brief("Foo.d", sig("Foo.d (h : " + "b" * 150 + ") : c = c")), "… c = c")
+        cut = self.brief("Foo.e", sig("Foo.e : " + "x + " * 60 + "x = x"))
+        self.assertEqual((len(cut), cut[-1]), (site_data.BRIEF_CAP, "…"))
+
+    def test_without_a_signature(self):
+        self.assertEqual(self.brief("Foo.g", None), "")
+
 
 class EntryTests(unittest.TestCase):
     def test_the_source(self):
         e = entry("Fixture.triple")
         self.assertEqual((e["kw"], e["line"]), ("def", [15, 16]))
-        self.assertTrue(e["stmt"].startswith("def triple (n : Nat) : Nat"))
+        self.assertNotIn("stmt", e)  # the signature stands for the statement
         self.assertTrue(e["rest"].startswith(":= n + n + n"))  # a definition's value, as the docs' Equations
 
     def test_what_the_docs_show(self):
-        # The signature as Lean prints it (section variables included), each name its declaration.
-        e = entry("Fixture.triple_pos")
+        # The signature as Lean prints it (section variables included), each name its declaration, from
+        # one table of names for the module.
+        e, names = entry("Fixture.triple_pos"), module_of("Fixture.triple_pos")["names"]
         self.assertEqual(e["sig"], "Fixture.triple_pos (n : Nat) (h : 0 < n) : 0 < Fixture.triple n")
-        linked = {e["sig"][a:b]: e["sigNames"][k] for a, b, k in e["sigRefs"]}
+        linked = {e["sig"][a:b]: names[k] for a, b, k in e["sigRefs"]}
         self.assertEqual(linked["Fixture.triple"], "Fixture.triple")
         self.assertEqual(linked["Nat"], "Nat")
         self.assertEqual(linked["<"], "LT")  # a class's field stands for its class
+        self.assertEqual(len(names), len(set(names)))
+        self.assertIn("Nat", [names[k] for _, _, k in entry("Fixture.triple")["sigRefs"]])  # shared
 
     def test_no_proofs(self):
         self.assertNotIn("rest", entry("Fixture.triple_pos"))        # a theorem's proof

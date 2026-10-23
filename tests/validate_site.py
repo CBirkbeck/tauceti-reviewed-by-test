@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The browser check: serves a built site as GitHub Pages would and checks, in Chromium, what a
-reader does: the shell, the old addresses, the Named page, search, a declaration, its review panel,
-its dependency map, the other pages, and a phone. Without --site it builds the fixture's site first
-(tests/fixture_site.py).
+reader does: the shell and its two themes, the old addresses, the home page, the Named page, search,
+a declaration, its review card, its dependency map, the other pages, and a phone. Without --site it
+builds the fixture's site first (tests/fixture_site.py).
 
   python3 tests/validate_site.py [--site DIR | --url URL] [--only NAME,NAME] [--smoke]
 
@@ -57,9 +57,16 @@ def settle(page, route: str) -> None:
 @check
 def shell(browser, url, errors):
     page = visit(browser, url, "#/", errors)
-    expect(page.locator(".brand").inner_text().strip() == "Tau Ceti Review", "the header names the site")
-    expect(page.locator("#rail-areas .nav-item").count() == 3, "the rail lists the three areas")
-    expect("@ B" in page.locator("#pin").inner_text(), "the header names the pinned commit")
+    expect(page.locator(".brand").inner_text().strip() == "Tau Ceti Review", "the top bar names the site")
+    expect(page.locator(".nav a").all_inner_texts() == ["Named", "Browse", "Activity", "How to review"], "and its sections")
+    expect("Fixture at B" in page.locator("#foot").inner_text(), "the footer names the pinned commit")
+    background = "getComputedStyle(document.body).backgroundColor"
+    expect(page.evaluate(background) == "rgb(11, 16, 22)", "dark at first, in the Atlas's colours")
+    page.click("#theme")
+    expect(page.evaluate(background) == "rgb(251, 250, 247)", "light at a click")
+    page.reload(wait_until="load")
+    page.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
+    expect(page.evaluate(background) == "rgb(251, 250, 247)", "and light it stays")
     expect(page.evaluate("[TauReview.fnv('TauCeti.Place', 64), TauReview.fnv('Fixture.«term𝟚_»', 64), TauReview.fnv('ℝ', 64)]")
            == [47, 38, 8], "the page shards names as scripts/common.py does")
 
@@ -73,14 +80,24 @@ def old_addresses(browser, url, errors):
 
 
 @check
-def named(browser, url, errors):
+def home(browser, url, errors):
     page = visit(browser, url, "#/", errors)
-    expect(page.locator(".card").count() == 2, "both announcements are listed")
+    expect(page.locator("h1").inner_text() == "Review the mathematics in Fixture", "the home page")
+    expect(page.locator(".stat").count() == 5 and page.locator("a.card").count() == 4, "its counts and its tiles")
+    expect(page.locator(".section", has_text="Latest named").locator(".list > li").count() == 2, "the latest named")
+    expect(page.locator(".section", has_text="Areas").locator("a.chip").count() == 3, "the areas")
+
+
+@check
+def named(browser, url, errors):
+    page = visit(browser, url, "#/named", errors)
+    expect(page.locator(".list > li").count() == 2, "both announcements are listed")
+    expect([h.split("\n")[0] for h in page.locator("main h2").all_inner_texts()] == ["Basic", "Uses"], "grouped by area")
     page.click("[data-what=definition]")
-    expect(page.locator(".card").count() == 1 and "Being double" in page.locator(".card").inner_text(), "the definitions filter")
-    page.click(".card .card-title")
+    expect(page.locator(".list > li").count() == 1 and "Being double" in page.locator(".list > li").inner_text(), "the definitions filter")
+    page.click(".list > li a")
     settle(page, "decl:Fixture.IsDouble")
-    expect(page.locator("h1").inner_text() == "Being double", "a card opens its declaration, titled by Voyager")
+    expect(page.locator("h1").inner_text() == "Being double", "an item opens its declaration, titled by Voyager")
 
 
 @check
@@ -88,48 +105,60 @@ def search(browser, url, errors):
     page = visit(browser, url, "#/", errors)
     page.fill("#q", "triple")
     settle(page, "search:triple")
-    expect(page.locator(".nitem .n").first.inner_text().startswith("Fixture.triple"), "a name finds its declarations")
+    expect(page.locator(".list .item-sub").first.inner_text().startswith("Fixture.triple"), "a name finds its declarations")
     page.fill("#q", "leaves alone")
     settle(page, "search:leaves alone")
-    expect("Fixture.triple" in page.locator(".nitem .n").all_inner_texts(), "words from a title find it")
+    expect("Fixture.triple" in page.locator(".list .item-sub").all_inner_texts(), "words from a title find it")
 
 
 @check
 def declaration(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     expect(page.locator("h1").inner_text() == "A definition that version B leaves alone.", "titled by its docstring")
+    expect(page.locator(".kind-row .kind").inner_text().lower() == "definition", "its kind")
     expect(page.locator(".lean pre").first.inner_text() == "def Fixture.triple (n : Nat) : Nat", "its signature, as the docs show it")
     expect(page.locator(".lean details:not([open]) summary", has_text="Definition").count() == 1, "its value, folded as in the docs")
     hrefs = page.eval_on_selector_all(".links a", "as => as.map(a => a.href)")
     expect("https://example.org/docs/Fixture/Basic.html#Fixture.triple" in hrefs, "the API docs")
     expect("https://github.com/test/fixture/blob/B/Fixture/Basic.lean#L15-L16" in hrefs, "the source at the pin")
     expect(page.locator("h2", has_text="Results about it").count() == 1, "what rests on it, as a list")
+    expect(page.locator(".list > li", has_text="triple 2 = 6").count() == 1, "each result in a list with its statement")
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors)
     expect(page.locator(".lean pre").first.inner_text() == "theorem Fixture.triple_pos (n : Nat) (h : 0 < n) : 0 < Fixture.triple n",
            "a theorem's signature, section variables and all")
-    expect(page.locator(".lean a.ref", has_text="Fixture.triple").get_attribute("href") == "#/d/Fixture.triple", "its names link")
+    ref = page.locator(".lean a.ref", has_text="Fixture.triple")
+    expect(ref.get_attribute("href") == "#/d/Fixture.triple", "its names link")
     expect(page.locator(".lean details").count() == 0 and "omega" not in page.inner_text("main"), "no proof")
+    about = page.locator(".section", has=page.locator("h2", has_text="What it is about"))
+    expect(about.locator(".list > li").count() == 1 and "natural numbers ℕ" in about.locator(".basics").inner_text(),
+           "what it rests on in the library listed, what it uses from Mathlib and Lean as chips")
+    ref.hover()
+    page.wait_for_selector("#tip:not([hidden])")
+    expect("Fixture.triple · Definition" in page.locator("#tip").inner_text(), "a name says what it is on hover")
 
 
 @check
 def review(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
-    expect("1 person · 1 AI" in page.locator(".state-line").inner_text(), "people are counted apart from AI agents")
-    href = page.locator(".actions a", has_text="Review this").get_attribute("href")
+    expect("1 person · 1 AI" in page.locator(".review .state-line").inner_text(), "people are counted apart from AI agents")
+    href = page.locator(".review .actions a", has_text="Review this").get_attribute("href")
     expect(href.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in href
            and "decl=Fixture.triple" in href and "commit=B" in href, "Review this opens the form, filled in")
-    expect(page.locator(".actions a").count() == 5, "five forms")
-    expect(page.locator(".panel a", has_text="Read it in the API docs").get_attribute("href")
-           == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review panel links to the docs")
-    expect(page.locator(".tests .result.passes").count() == 1, "the listed test passes")
+    expect(page.locator(".review .actions a").count() == 5, "five forms")
+    expect(page.locator(".review a", has_text="Read it in the API docs").get_attribute("href")
+           == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review card links to the docs")
+    expect(page.locator(".review .tests .result.passes").count() == 1, "the listed test passes")
+    page.check("#ai")
+    page.wait_for_function("TauReview.ready && document.querySelector('#ai') && document.querySelector('#ai').checked")
+    expect(page.evaluate("localStorage.getItem('tauceti-review:ai')") == "1", "counting AI reviews is kept")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
-    expect("Something it rests on has changed since." in page.locator(".panel").inner_text(), "stale underneath, said")
+    expect("Something it rests on has changed since." in page.locator(".review").inner_text(), "stale underneath, said")
     page = visit(browser, url, "#/d/Fixture.double", errors)
-    panel = page.locator(".panel").inner_text()
-    expect("The declaration has changed since." in panel, "stale, said")
-    expect(page.locator(".verdict.challenge").count() == 1 and "Open" in panel, "the open suggested test")
+    card = page.locator(".review").inner_text()
+    expect("The declaration has changed since." in card, "stale, said")
+    expect(page.locator(".verdict.challenge").count() == 1 and "Open" in card, "the open suggested test")
     page = visit(browser, url, "#/d/Int", errors)
-    expect("From the Test imports store" in page.locator(".panel").inner_text(), "an imported review names its store")
+    expect("From the Test imports store" in page.locator(".review").inner_text(), "an imported review names its store")
     expect(page.locator(".actions").count() == 0 and page.locator(".map").count() == 0, "no forms and no map outside the library")
 
 
@@ -139,6 +168,7 @@ def dependency_map(browser, url, errors):
     map_drawn(page)
     names = page.evaluate("TauReview.mapNodes()")
     expect("Fixture.triple" in names and "Nat" not in names, "what it rests on in the library, Mathlib hidden")
+    expect(page.locator(".map .node.k-concept[data-name='Fixture.triple']").count() == 1, "a node in its kind's colour")
     page.click(".map .node[data-name='Fixture.triple'] .open")
     page.wait_for_timeout(800)
     expect(page.evaluate("TauReview.route()") == "decl:Fixture.triple_pos", "an arrow unfolds, and does not open the page")
@@ -166,23 +196,24 @@ def dependency_map(browser, url, errors):
 @check
 def other_pages(browser, url, errors):
     page = visit(browser, url, "#/m/Fixture.Uses", errors)
-    expect(page.locator(".nitem").count() >= 4, "a module lists its declarations")
+    expect(page.locator(".list > li").count() >= 4, "a module lists its declarations")
     page = visit(browser, url, "#/area/Basic", errors)
-    expect(page.locator(".mitem").count() == 1 and page.locator(".card").count() == 1, "an area: its modules and named")
+    expect(page.locator(".list a[href^='#/m/']").count() == 1 and page.locator(".list a[href^='#/d/']").count() == 1,
+           "an area: its files and its named")
+    page = visit(browser, url, "#/browse", errors)
+    expect(page.locator("a.card").count() == 3, "Browse: a tile for each area")
     page = visit(browser, url, "#/activity", errors)
-    expect("double n = n + n" in page.locator(".block", has_text="Suggested tests").inner_text(), "the open suggested test")
+    expect("double n = n + n" in page.locator(".section", has_text="Suggested tests").inner_text(), "the open suggested test")
     page = visit(browser, url, "#/help", errors)
     expect("Reviewed-by: TauCeti.Foo.bar" in page.inner_text("body"), "the bulk issue's lines")
 
 
 @check
 def phone(browser, url, errors):
-    page = visit(browser, url, "#/d/Fixture.triple_pos", errors, viewport={"width": 390, "height": 844},
-                 is_mobile=True, has_touch=True)
-    expect(not page.locator("#rail").is_visible(), "the rail is folded away")
-    page.click("#rail-toggle")
-    expect(page.locator("#rail").is_visible(), "Browse opens it")
-    expect(page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "nothing is wider than the screen")
+    for route in ("#/d/Fixture.triple_pos", "#/named"):
+        page = visit(browser, url, route, errors, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        expect(page.locator("#q").is_visible() and page.locator(".nav a").first.is_visible(), "search and the sections at the top")
+        expect(page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), f"{route}: nothing is wider than the screen")
 
 
 def map_drawn(page) -> None:
@@ -193,19 +224,20 @@ def map_drawn(page) -> None:
 
 def smoke(browser, url, errors):
     """Any build: every kind of page opens, and the first named declarations draw their maps."""
-    for route in ("#/", "#/browse", "#/activity", "#/help", "#/search/theorem"):
+    for route in ("#/", "#/named", "#/browse", "#/activity", "#/help", "#/search/theorem"):
         visit(browser, url, route, errors)
-    page = visit(browser, url, "#/", errors)
+    page = visit(browser, url, "#/named", errors)
     expect(page.locator("h1").inner_text() == "Named results and notable definitions", "the Named page")
-    names = page.eval_on_selector_all(".card .card-title", "as => as.slice(0, 5).map(a => decodeURIComponent(a.hash.slice(4)))")
+    first = "as => as.slice(0, 5).map(a => decodeURIComponent(a.hash.slice(4)))"
+    names = page.eval_on_selector_all(".list > li > a", first)
     if not names:  # Voyager's announcements not recorded yet: declarations found by a search instead
         page = visit(browser, url, "#/search/theorem", errors)
-        names = page.eval_on_selector_all(".nitem", "as => as.slice(0, 5).map(a => decodeURIComponent(a.hash.slice(4)))")
+        names = page.eval_on_selector_all(".list > li > a", first)
     expect(len(names) == 5, "five declarations to open")
     for name in names:
         page = visit(browser, url, "#/d/" + name, errors)
         map_drawn(page)
-        expect(page.locator("h1").count() == 1 and page.locator(".actions a").count() == 5, f"{name}: its page and its forms")
+        expect(page.locator("h1").count() == 1 and page.locator(".review .actions a").count() == 5, f"{name}: its page and its forms")
 
 
 def main(argv: list[str]) -> int:

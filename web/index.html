@@ -6,37 +6,26 @@
 <title>Tau Ceti Review</title>
 <meta name="description" content="Tau Ceti's declarations, reviewed by people and AI agents: the named results Voyager announced, every review, problem and test, and what each declaration rests on.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 16 16'%3E%3Ccircle r='7' fill='%230b1016'/%3E%3Ccircle r='3.2' fill='%23dfc186'/%3E%3C/svg%3E">
+<script>try { var t = localStorage.getItem('tauceti-review:theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="app-header">
-  <button class="quiet rail-toggle" id="rail-toggle" type="button" aria-controls="rail" aria-expanded="false">Browse</button>
-  <a class="brand" href="#/"><svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="6.5" fill="none" stroke="#dfc186" stroke-width="1.2"/><circle r="2.6" fill="#dfc186"/></svg>Tau Ceti Review</a>
-  <nav class="header-nav" aria-label="Sections">
-    <a class="quiet" href="#/" data-nav="named">Named</a>
-    <a class="quiet" href="#/browse" data-nav="browse">Browse</a>
-    <a class="quiet" href="#/activity" data-nav="activity">Activity</a>
-    <a class="quiet keep" href="#/help" data-nav="help">How to review</a>
-    <a class="quiet" id="store-link" href="#" target="_blank" rel="noopener">The store</a>
-  </nav>
-  <span class="pin" id="pin"></span>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="#/"><svg width="18" height="18" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><circle r="2.6" fill="currentColor"/></svg>Tau Ceti Review</a>
+    <form class="search" id="search-form" role="search">
+      <input id="q" type="search" placeholder="Search Tau Ceti: a name, or words from a docstring…" autocomplete="off" spellcheck="false" aria-label="Search Tau Ceti">
+    </form>
+    <nav class="nav" aria-label="Sections">
+      <a href="#/named" data-nav="named">Named</a><a href="#/browse" data-nav="browse">Browse</a><a href="#/activity" data-nav="activity">Activity</a><a href="#/help" data-nav="help">How to review</a>
+    </nav>
+    <button class="theme" id="theme" type="button" aria-label="Switch between dark and light" title="Dark or light">◐</button>
+  </div>
 </header>
-<div class="layout">
-  <aside class="rail" id="rail" aria-label="Browse">
-    <div class="search-wrap">
-      <label class="search-box"><span class="visually-hidden">Search all declarations</span><input id="q" type="search" placeholder="Search all declarations" autocomplete="off" spellcheck="false"><kbd>⌘K</kbd></label>
-    </div>
-    <nav class="rail-nav" id="rail-nav" aria-label="Lists"></nav>
-    <div class="label">Areas</div>
-    <nav class="rail-nav areas-nav" id="rail-areas" aria-label="Areas"></nav>
-    <label class="switch"><input type="checkbox" id="ai"> Count AI reviews</label>
-    <div class="rail-foot" id="rail-foot"></div>
-  </aside>
-  <main>
-    <div class="context" id="context"></div>
-    <div class="page" id="page" tabindex="-1"><p class="faint">Loading…</p></div>
-  </main>
-</div>
+<main id="main" tabindex="-1"><p class="loading">Loading Tau Ceti…</p></main>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<footer class="foot" id="foot"></footer>
 <script src="vendor/katex.v0.16.28.min.js" defer></script>
 <script src="vendor/markdown.js" defer></script>
 <script src="data.js" defer></script>

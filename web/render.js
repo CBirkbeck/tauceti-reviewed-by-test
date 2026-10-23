@@ -1,8 +1,8 @@
 /* Tau Ceti Review: how things look. Elements, Markdown (the Atlas's TauMarkdown: source HTML stays
-   text, mathematics becomes vetted MathML), the Atlas's planets ringed by review state, and links. */
+   text, mathematics becomes vetted MathML), kinds and review states as Mathlib Explorer marks them
+   (a pill for the kind, a badge for the state), and links. */
 (function () {
   'use strict';
-  const SVGNS = 'http://www.w3.org/2000/svg';
 
   function el(tag, cls, text) {
     const e = document.createElement(tag);
@@ -18,53 +18,31 @@
     box.append(window.TauMarkdown.render(text || ''));
     return box;
   }
-  /* One paragraph's content, for a line of text. */
-  function mdInline(text, cls) {
+  /* One paragraph's content, for a line of text. Inside a link (`bare`), its own links become text. */
+  function mdInline(text, cls, bare) {
     const frag = window.TauMarkdown.render(text || ''), span = el('span', 'md' + (cls ? ' ' + cls : ''));
     if (frag.childNodes.length === 1 && frag.firstChild.nodeName === 'P') {
       while (frag.firstChild.firstChild) span.append(frag.firstChild.firstChild);
     } else span.append(frag);
+    if (bare) span.querySelectorAll('a').forEach(a => a.replaceWith(...a.childNodes));
     return span;
   }
 
-  /* The Atlas's planets (tauceti-explorer, src/graph.js): a definition is an Earth, a theorem a Saturn;
-     an instance here is a small grey moon. Colour round them means review state, and nothing else. */
-  const OCEAN = '#6f9fcf', LAND = '#9cc59a', SAND = '#d9c391', RING = '#ece0bf', MOON = '#8a96a3', ACCENT = '#dfc186';
-  const LAND_PATH = 'M-.55,-.35Q-.3,-.75 .05,-.55Q.3,-.4 .1,-.15Q-.1,.05 -.35,-.05Q-.7,0 -.55,-.35Z' +
-    'M.2,.25Q.55,.1 .65,.35Q.6,.65 .3,.7Q.05,.6 .2,.25Z';
-  const ringArc = (r, near) => `M${-1.75 * r},0A${1.75 * r},${.42 * r} 0 0,${near ? 0 : 1} ${1.75 * r},0`;
-  const STATE_RING = {unreviewed: '#5b6875', covered: '#f7f3e9', uncounted: '#e89678', stale: '#e89678',
-                      problem: '#d4604c', disputed: '#d4604c'};
+  /* A kind is a colour: a notion blue, a result green, an instance purple (Mathlib Explorer's). */
+  const KIND_WORD = {theorem: 'Theorem', definition: 'Definition', structure: 'Structure', class: 'Class',
+                     inductive: 'Inductive type', instance: 'Instance', axiom: 'Axiom', opaque: 'Definition'};
+  const kindClass = kind => ({theorem: 'result', axiom: 'result', instance: 'instance'})[kind] || 'concept';
+  const kindPill = (kind, word) => el('span', 'kind ' + kindClass(kind), word || KIND_WORD[kind] || 'Declaration');
+  /* A review state is a badge: a dot in its colour and a word. */
   const STATE_TEXT = {unreviewed: 'Not reviewed yet', covered: 'Reviewed', uncounted: 'Reviewed, by AI agents only',
                       stale: 'Reviewed on an earlier version', problem: 'An open problem', disputed: 'Reviewed, with an open problem'};
-  function planetMarkup(kind, r) {
-    if (kind === 'instance') return `<circle r="${(r * .72).toFixed(2)}" fill="${MOON}"/>`;
-    if (kind === 'theorem' || kind === 'axiom') {
-      const ring = near => `<path d="${ringArc(r, near)}" fill="none" stroke="${RING}" stroke-width="1.1" transform="rotate(-18)"/>`;
-      return ring(false) + `<circle r="${r}" fill="${SAND}"/>` + ring(true);
-    }
-    return `<circle r="${r}" fill="${OCEAN}"/><path d="${LAND_PATH}" fill="${LAND}" transform="scale(${r})"/>`;
-  }
-  /* The planet with its review ring, its gold ring when named, and a sun mark when it is Mathlib's. */
-  function glyphMarkup(kind, state, o) {
-    const r = o.r, R = r * 1.7;
-    let s = '';
-    if (o.named) s += `<circle r="${(R + 3).toFixed(2)}" fill="none" stroke="${ACCENT}" stroke-width="1.2"/>`;
-    s += `<circle r="${R.toFixed(2)}" fill="none" stroke="${STATE_RING[state] || STATE_RING.unreviewed}" ` +
-         `stroke-width="${state === 'unreviewed' ? 1 : 1.7}"${state === 'stale' ? ' stroke-dasharray="2 2"' : ''}/>`;
-    if (state === 'disputed') s += `<circle r="${(R - 2).toFixed(2)}" fill="none" stroke="#f7f3e9" stroke-width="1"/>`;
-    s += `<g${o.upstream ? ' opacity=".55"' : ''}>${planetMarkup(kind, r)}</g>`;
-    if (o.upstream) s += `<circle cx="${(r * 1.25).toFixed(2)}" cy="${(-r * 1.25).toFixed(2)}" r="${Math.max(1.7, r * .34).toFixed(2)}" fill="${ACCENT}"/>`;
+  const STATE_SHORT = {unreviewed: 'Not reviewed', covered: 'Reviewed', uncounted: 'AI only', stale: 'Earlier version',
+                       problem: 'Problem', disputed: 'Disputed'};
+  function stateBadge(state, long) {
+    const s = el('span', 'st st-' + state);
+    s.append(el('i'), (long ? STATE_TEXT : STATE_SHORT)[state] || state);
+    s.title = STATE_TEXT[state] || state;
     return s;
-  }
-  function glyph(kind, state, o = {}) {
-    const size = o.size || 22, svg = document.createElementNS(SVGNS, 'svg');
-    svg.setAttribute('class', 'glyph');
-    svg.setAttribute('width', size); svg.setAttribute('height', size);
-    svg.setAttribute('viewBox', `${-size / 2} ${-size / 2} ${size} ${size}`);
-    svg.setAttribute('aria-hidden', 'true');
-    svg.innerHTML = glyphMarkup(kind, state, {...o, r: size / 2 / (o.named ? 2.6 : 2.15)}); // constants only
-    return svg;
   }
 
   const modulePath = mod => mod.split('.').join('/');
@@ -108,10 +86,10 @@
     else span.append(by.label || 'someone');
     return span;
   }
-  /* A docstring's first sentence as plain text, for a link or a label: its Markdown marks dropped. */
+  /* A docstring's first sentence as plain text, for a label: its Markdown marks dropped. */
   const plain = text => String(text || '').replace(/\*\*|__|`/g, '').replace(/(^|[^\w])[*_]([^*_]+)[*_](?!\w)/g, '$1$2')
     .replace(/\$\$?([^$]+)\$\$?/g, '$1').trim();
-  /* A declaration's last name component, or its title when that is short. */
+  /* A declaration's last name component, or the last two when the last is short. */
   function shortName(name) {
     const parts = name.split('.');
     let k = parts.length - 1;
@@ -119,6 +97,6 @@
     return parts.slice(k).join('.');
   }
 
-  window.TauRender = Object.freeze({el, link, ext, md, mdInline, glyph, glyphMarkup, planetMarkup, STATE_TEXT, STATE_RING,
+  window.TauRender = Object.freeze({el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT,
                                     URLS, FORMS, date, plural, who, shortName, modulePath, plain});
 })();

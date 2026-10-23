@@ -37,6 +37,64 @@ KIND_CODE = {"theorem": "t", "definition": "d", "structure": "s", "class": "c", 
 #: Equations), a structure's or inductive type's fields. A theorem's proof and an instance's value are not.
 VALUE_KINDS = frozenset({"definition", "opaque", "structure", "class", "inductive"})
 PROJECT, NAMED, BASIC, ROUTINE, DOCUMENTED, AUX, SORRY = 1, 2, 4, 8, 16, 32, 64
+#: The longest statement a list shows.
+BRIEF_CAP = 140
+BRACKETS = {"(": ")", "[": "]", "{": "}", "⦃": "⦄"}
+CLOSING = frozenset(BRACKETS.values())
+#: An argument that only introduces a type, `(R : Type u_1)`, which a short statement leaves out as it
+#: leaves out the implicit ones; and a universe annotation, `.{v, u}`.
+TYPE_ARGUMENT = re.compile(r"\([^()\[\]{}:]+ : (?:Type|Sort)(?:\*|\s+[^\s()]+|\s*\([^()]*\))?\)")
+UNIVERSES = re.compile(r"\.\{[\w\s,+()]*\}")
+
+
+def brief(name: str, sig: dict | None, cap: int = BRIEF_CAP) -> str:
+    """What a declaration states, short enough for a list: its signature (the S2 facet) on one line,
+    without its name, its implicit arguments, the arguments that only introduce a type and universe
+    annotations, each name in it by its last component. When that is too long, its instance arguments
+    go first, then its other arguments ("… " says so), then the end of the line."""
+    if not sig or not sig.get("text"):
+        return ""
+    text = sig["text"]
+    # A name printed in full, its universes too (`Foo.Bar.{u}`), by its last component.
+    short = {start: (stop, const.rsplit(".", 1)[1]) for start, stop, const in sig.get("refs") or []
+             if "." in const and text.startswith(const, start) and text[start + len(const):stop][:2] in ("", ".{")}
+
+    def piece(a: int, b: int) -> str:
+        out, i = [], a
+        for start in sorted(s for s in short if a <= s and short[s][0] <= b):
+            if start >= i:
+                out.append(text[i:start] + short[start][1])
+                i = short[start][0]
+        return UNIVERSES.sub("", " ".join(("".join(out) + text[i:b]).split()))
+
+    n, i = len(text), len(name) if text.startswith(name) else max(text.find(" "), 0)
+    if text.startswith(".{", i):  # universe parameters
+        i = text.find("}", i) + 1
+    groups = []  # the arguments: (opening bracket, start, stop)
+    while i < n:
+        if text[i].isspace():
+            i += 1
+            continue
+        if text[i] not in BRACKETS:
+            break
+        depth, j = 0, i
+        while j < n:
+            depth += 1 if text[j] in BRACKETS else -1 if text[j] in CLOSING else 0
+            if depth == 0:
+                break
+            j += 1
+        if j == n:  # unbalanced: the rest is the statement
+            break
+        groups.append((text[i], i, j + 1))
+        i = j + 1
+    stated = piece(i + 1 if text.startswith(":", i) else i, n)
+    kept = [(c, p) for c, p in ((c, piece(a, b)) for c, a, b in groups if c in "([") if not TYPE_ARGUMENT.fullmatch(p)]
+    for keep in ("([", "(", ""):
+        chosen = [p for c, p in kept if c in keep]
+        line = ("… " if len(chosen) < len(kept) else "") + (" ".join(chosen) + " : " + stated if chosen else stated)
+        if len(line) <= cap:
+            return line
+    return line[:cap - 1].rstrip() + "…"
 
 
 @dataclass
@@ -177,7 +235,7 @@ class Site:
         p, np_, _ = self.proof_steps(d)
         sp, sa = self.states.get(d.id, (0, 0))
         return [d.name, KIND_CODE.get(d.kind, "o"), self.flags(d), self.mod_index.get(d.module, -1), self.title(d),
-                sp, sa, m, p, nm, np_]
+                sp, sa, m, p, nm, np_, brief(d.name, self.ds.facet_row("signature", d.name))]
 
     def node_shards(self):
         """(k, rows): `nodes/<k>.json`, the nodes with ids k·NODE_SHARD onwards."""
@@ -201,24 +259,28 @@ class Site:
         name, _, title, path = self.modules[mi]
         md = self.mdocs.get(name)
         start = lambda d: ((self.ds.facet_row("source", d.name) or {}).get("start") or [0])[0]
-        return {"name": name, "title": title, "path": path, "doc": md.text if md else "",
-                "decls": [self.entry(d) for d in sorted(self.by_module.get(name, []), key=start)]}
+        names: dict[str, int] = {}  # what its signatures link to, each once
+        decls = [self.entry(d, names) for d in sorted(self.by_module.get(name, []), key=start)]
+        return {"name": name, "title": title, "path": path, "doc": md.text if md else "", "names": list(names),
+                "decls": decls}
 
-    def entry(self, d: Decl) -> dict:
+    def entry(self, d: Decl, names: dict[str, int]) -> dict:
         i, name = d.id, d.name
         e: dict = {"id": i, "name": name, "k": KIND_CODE.get(d.kind, "o"), "doc": self.docstrings.get(name, "")}
         sig = self.ds.facet_row("signature", name)
         if sig:
             e["sig"] = sig.get("text", "")
-            e["sigRefs"], e["sigNames"] = self.links(sig.get("refs") or [])
+            e["sigRefs"] = self.links(sig.get("refs") or [], names)
         src = self.ds.facet_row("source", name)
         if src:
             e["kw"], e["line"] = src.get("keyword", ""), [src["start"][0], src["end"][0]]
             span = self.inp.sources.span(src, doc_comment=False)
             if span:
                 stmt, rest = split_statement(span[2])
+                stmt = "" if sig else stmt  # the signature stands for it
                 rest = rest if d.kind in VALUE_KINDS else ""
-                e["stmt"] = stmt[:TEXT_CAP]
+                if stmt:
+                    e["stmt"] = stmt[:TEXT_CAP]
                 if rest:
                     e["rest"] = rest[:TEXT_CAP]
                 if len(stmt) > TEXT_CAP or len(rest) > TEXT_CAP:
@@ -237,20 +299,16 @@ class Site:
                 e["tests"] = tests
         return e
 
-    def links(self, refs: list) -> tuple[list[list], list[str]]:
+    def links(self, refs: list, names: dict[str, int]) -> list[list]:
         """A signature's names, each the declaration it stands for: a node, or for a field of a structure
-        or class (`LT.lt`), the structure. ([[start, stop, k]], the names k indexes), positions in code
-        points."""
-        names: list[str] = []
+        or class (`LT.lt`), the structure. [[start, stop, k]], positions in code points and k the name's
+        place in `names`, the module's table, which it joins if new."""
         out = []
         for start, stop, const in refs:
             target = const if const in self.ds.by_name else (const.rsplit(".", 1)[0] if "." in const else "")
-            if target not in self.ds.by_name:
-                continue
-            if target not in names:
-                names.append(target)
-            out.append([start, stop, names.index(target)])
-        return out, names
+            if target in self.ds.by_name:
+                out.append([start, stop, names.setdefault(target, len(names))])
+        return out
 
     @staticmethod
     def test_view(t: dict) -> dict:

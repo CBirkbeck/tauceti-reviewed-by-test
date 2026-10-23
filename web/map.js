@@ -1,11 +1,11 @@
 /* Tau Ceti Review: the dependency map of a declaration. What it rests on is above it and what rests
    on it below, laid out by ELK's layered algorithm; rows by depth when ELK cannot load. The layout,
    the transitive reduction and the pan and zoom follow referee-site's (LeanTrustBuilders, Apache-2.0),
-   with pinch added. Each node is the Atlas's planet, ringed by its review state. */
+   with pinch added. A node's border is its kind's colour (gold when named) and its dot its review state. */
 (function () {
   'use strict';
   const {FLAG} = TauData;
-  const {el, glyphMarkup, shortName, plain} = TauRender;
+  const {el, kindClass, shortName, plain} = TauRender;
   const LEVEL = 12, SECOND = 4, H = 30;
   const ELK_SRC = 'vendor/elk-0.9.3.bundled.js';
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -27,7 +27,14 @@
     const t = (n.flags & FLAG.NAMED) && n.title ? plain(n.title) : shortName(n.name);
     return t.length > 34 ? t.slice(0, 33) + '…' : t;
   };
-  const widthOf = text => Math.round(Math.min(34, text.length) * 6.4 + 50);
+  /* A box as wide as its label in the page's sans-serif (bold at the centre), with room for the dot and
+     the arrow. */
+  let ruler = null;
+  function widthOf(text, bold) {
+    ruler ||= document.createElement('canvas').getContext('2d');
+    ruler.font = `${bold ? 600 : 400} 12px ${getComputedStyle(document.documentElement).getPropertyValue('--sans')}`;
+    return Math.ceil(ruler.measureText(text).width) + 58;
+  }
   const rests = (n, proof) => n.m.concat(proof ? n.p.filter(x => !n.m.includes(x)) : []);
   const restOn = (e, proof) => {
     if (!e) return [];
@@ -79,7 +86,7 @@
       list.push({key, id: key, role: 'more', label: text, owner: m.owner, dir: m.role, open: m.open, flags: 0});
       edges.push(m.role === 'up' ? {a: m.owner, b: key, proof: false} : {a: key, b: m.owner, proof: false});
     }
-    list.forEach(n => { n.w = widthOf(n.label); });
+    list.forEach(n => { n.w = widthOf(n.label, n.role === 'center'); });
     return {nodes: list, edges: reduce(list, edges)};
   }
 
@@ -171,14 +178,16 @@
       }
       const project = !!(n.flags & FLAG.PROJECT), state = n.state[ai ? 1 : 0];
       const canOpen = project && n.role !== 'center';
+      const cls = `node ${n.role} k-${kindClass(n.kind)}${n.flags & FLAG.NAMED ? ' named' : ''}${project ? '' : ' upstream'}`;
+      const tip = [n.name, n.title && plain(n.title) !== n.label ? plain(n.title) : '', n.brief].filter(Boolean).join('\n');
       // Every node but the centre is a link to its page: a click, a middle click, Enter all follow it.
       const tag = n.role === 'center' ? 'g' : 'a', href = tag === 'a' ? ` href="${esc(TauRender.URLS.decl(n.name))}"` : '';
-      s += `<${tag} class="node ${n.role}${project ? '' : ' upstream'}" data-name="${esc(n.name)}"${href} transform="translate(${c.x},${c.y})">` +
+      s += `<${tag} class="${cls}" data-name="${esc(n.name)}"${href} transform="translate(${c.x},${c.y})">` +
         `<rect width="${n.w}" height="${H}" rx="${H / 2}"/>` +
-        `<g transform="translate(16,${H / 2})">${glyphMarkup(n.kind, state, {r: 4.6, named: !!(n.flags & FLAG.NAMED), upstream: !project})}</g>` +
-        `<text x="32" y="19">${esc(n.label)}</text>` +
+        `<circle class="dot st-${state}" cx="15" cy="${H / 2}" r="4.2"/>` +
+        `<text x="27" y="19">${esc(n.label)}</text>` +
         (canOpen ? `<g class="open" data-open="${n.id}" transform="translate(${n.w - 13},${H / 2})"><circle r="8"/><text y="4" text-anchor="middle">${n.role === 'up' ? '↑' : '↓'}</text><title>Show what ${n.role === 'up' ? 'it rests on' : 'rests on it'}</title></g>` : '') +
-        `<title>${esc(n.name + (n.title && plain(n.title) !== n.label ? ' — ' + plain(n.title) : ''))}</title></${tag}>`;
+        `<title>${esc(tip)}</title></${tag}>`;
     }
     return s + '</g>';
   }
@@ -274,7 +283,7 @@
       try { P = await placeWithElk(g); } catch (e) { P = placeInRows(g); }
       if (mine !== gen || !canvas.isConnected) return;
       if (g.nodes.length <= 1) {
-        canvas.style.height = '';
+        canvas.style.height = 'auto';
         canvas.replaceChildren(el('p', 'map-wait', o.mathlib ? 'It rests on nothing drawn here, and nothing here rests on it.'
           : 'Within Tau Ceti it rests on nothing, and nothing rests on it: turn on Mathlib to see what it is built from.'));
         return;
