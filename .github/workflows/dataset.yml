@@ -9,6 +9,10 @@ on:
       commit:
         description: The Tau Ceti commit (default the pinned one)
         required: false
+      replace:
+        description: Extract it again and replace the published dataset
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       commit:
@@ -44,10 +48,13 @@ jobs:
       - name: Already published?
         id: published
         run: |
-          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            echo "$TAG is already published"; echo "done=true" >> "$GITHUB_OUTPUT"
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "done=false" >> "$GITHUB_OUTPUT"; echo "EXISTS=false" >> "$GITHUB_ENV"
+          elif [ "${{ format('{0}', inputs.replace) }}" = "true" ]; then
+            echo "$TAG is published: extracting it again to replace it"
+            echo "done=false" >> "$GITHUB_OUTPUT"; echo "EXISTS=true" >> "$GITHUB_ENV"
           else
-            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "$TAG is already published"; echo "done=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Room on the runner
         if: steps.published.outputs.done != 'true'
@@ -97,7 +104,7 @@ jobs:
           sudo sysctl -q -w vm.max_map_count=262144 || true
           lake env "$EXTRACTOR_BIN" extract --root TauCeti --repo TauCetiProject/TauCeti --out "$RUNNER_TEMP/dataset" \
             --parts 8 --jobs 1 --skip-modules-file "$RUNNER_TEMP/unbuilt.txt" \
-            --no-statements --no-signatures --no-upstream-docs
+            --no-statements --no-upstream-docs
           attributes=$(find "$RUNNER_TEMP/extractor" -type f -name attributes.py | head -1)
           if [ -n "$attributes" ]; then python3 "$attributes" --dataset "$RUNNER_TEMP/dataset" --source .; fi
           du -sh "$RUNNER_TEMP/dataset"
@@ -105,6 +112,11 @@ jobs:
         if: steps.published.outputs.done != 'true'
         run: |
           tar -czf "$RUNNER_TEMP/dataset.tar.gz" -C "$RUNNER_TEMP/dataset" .
-          gh release create "$TAG" "$RUNNER_TEMP/dataset.tar.gz" -R "$GITHUB_REPOSITORY" --latest=false \
-            --title "Dataset for Tau Ceti $COMMIT" \
-            --notes "The dataset (S2) of TauCetiProject/TauCeti at $COMMIT, by trust-extract $EXTRACTOR_TAG (LeanTrustBuilders/extractor)."
+          notes="The dataset (S2) of TauCetiProject/TauCeti at $COMMIT, by trust-extract $EXTRACTOR_TAG (LeanTrustBuilders/extractor)."
+          if [ "$EXISTS" = "true" ]; then
+            gh release upload "$TAG" "$RUNNER_TEMP/dataset.tar.gz" -R "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --notes "$notes"
+          else
+            gh release create "$TAG" "$RUNNER_TEMP/dataset.tar.gz" -R "$GITHUB_REPOSITORY" --latest=false \
+              --title "Dataset for Tau Ceti $COMMIT" --notes "$notes"
+          fi

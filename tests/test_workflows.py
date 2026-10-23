@@ -30,10 +30,13 @@ class DatasetWorkflowTests(unittest.TestCase):
                         "Tau Ceti's lake-cache-get.sh runs uvx")
         text = runs(job)
         self.assertIn("scripts/extractor.py install", text)
-        for arg in ("--parts 8", "--jobs 1", "--skip-modules-file", "--no-statements", "--no-signatures",
-                    "--no-upstream-docs"):
+        for arg in ("--parts 8", "--jobs 1", "--skip-modules-file", "--no-statements", "--no-upstream-docs"):
             self.assertIn(arg, text)
+        # The signature, as the docs show it (section variables included), is what a declaration's page shows.
+        self.assertNotIn("--no-signatures", text)
         self.assertIn('gh release create "$TAG"', text)
+        self.assertIn('gh release upload "$TAG"', text)  # replacing the dataset of a commit
+        self.assertEqual(wf["on"]["workflow_dispatch"]["inputs"]["replace"]["type"], "boolean")
 
     def test_follow_pins_extracts_and_prunes(self):
         wf = load("follow.yml")
