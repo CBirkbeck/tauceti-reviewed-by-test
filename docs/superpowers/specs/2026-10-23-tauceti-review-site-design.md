@@ -275,11 +275,13 @@ header 48px · context bar 40px · footer 30px
   - main: the kind and glyph; the title (Voyager's name, else the docstring's first sentence, else the
     Lean name); the Lean name, with copy; links to Tau Ceti's API docs
     (`taucetiproject.org/docs/<Module path>.html#<name>`), to the source at the pinned commit, and to
-    the Voyager post; the docstring, its maths rendered; the statement in Lean, with the proof folded;
+    the Voyager post; the docstring, its maths rendered; what the docs show of it: the signature Lean
+    prints (the dataset's `signature` facet: section variables included, every name a link), a
+    definition's value folded (the docs' Equations), a structure's fields, and never a proof;
     the dependency map (6.5); and the same neighbours as lists, each ranked with its first dozen shown:
     built from, about, proof uses (routine steps counted, not listed), built on it, results about it,
     examples, used to prove;
-  - review panel: the counts ("Reviewed-by · 2 people · 1 AI"); the buttons Review this, Report a
+  - review panel: "Read it in the API docs"; the counts ("Reviewed-by · 2 people · 1 AI"); the buttons Review this, Report a
     problem, Suggest a test, List a test, Ask a question; every thread: verdict, who (a person's
     account, or "AI · tool · model"), when, the axes checked, the reference, the text, its replies and
     changes of state, and the changes of state it allows, as links to its issue with the command to
