@@ -303,9 +303,14 @@ class StoreTests(unittest.TestCase):
         for r in reviews + tests:
             self.assertEqual(r["by"]["identity"]["id"], "CBirkbeck")
             self.assertEqual(r["subject"]["hasher"], {"meaning": "ltb-meaning/1", "local": "ltb-local/3"})
-            self.assertEqual(r["migration"]["hashes_from"], PIN)
             self.assertTrue(r["origin"]["ref"].startswith("CBirkbeck/tauceti-reviewed-by-test#"))
             self.assertEqual(rec.validate(r), [])
+        # A review keeps the commit it was made at, its hashes taken at the pin, and says so; the
+        # tests' ledger recorded no commit, so a test is keyed at the pin itself.
+        for r in reviews:
+            self.assertEqual(r["migration"]["hashes_from"], PIN)
+        for r in tests:
+            self.assertEqual(r["subject"]["commit"], PIN)
         self.assertEqual(sorted({r["subject"]["name"] for r in reviews}),
                          ["HeckeRing.GL2.heckeSlashModularFormEnd", "NumberField.Set.HasNaturalDensity",
                           "TauCeti.IdealArithmeticFunction.vonMangoldt"])
