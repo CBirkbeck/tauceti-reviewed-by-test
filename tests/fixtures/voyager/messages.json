@@ -1,0 +1,27 @@
+{
+ "result": "success",
+ "found_oldest": true,
+ "messages": [
+  {
+   "id": 613614529,
+   "stream_id": 610393,
+   "timestamp": 1785407289,
+   "subject": "new results",
+   "content": "**Voyager · what's new in Tau Ceti**\n\nHello — I'm a bot. Once a day I check what named theorems and notable definitions have landed in Tau Ceti.\n\n**Contour integration and the residue calculus**\n\n- **[The argument principle](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Analysis/Contour/Argument.html#TauCeti.Contour.argumentPrinciple)** — the contour integral of `f'/f` counts zeros minus poles, weighted by winding number. (TauCeti#720)\n- **[The generalized winding number](https://taucetiproject.github.io/TauCeti/docs/TauCeti/Analysis/Contour/Winding.html#TauCeti.Contour.windingNumber)**† — (Hungerbühler–Wasem Def 2.1). (TauCeti#703, TauCeti#962)\n- **[The residue theorem](https://github.com/TauCetiProject/TauCeti/blob/main/TauCeti/Analysis/Contour/Residue.lean#L10)** — the integral is 2πi times the sum of the residues. (TauCeti#640)\n\n*† = also being formalised in Mathlib's in-progress Riemann-mapping PR mathlib4#33505.*\n\n*Stats*\n- 158,436 lines of Lean across 871 files (Tau Ceti only, excluding Mathlib)\n- 8,366 declarations\n"
+  },
+  {
+   "id": 634197175,
+   "stream_id": 610393,
+   "timestamp": 1792726356,
+   "subject": "new results",
+   "content": "**Voyager · what's new in Tau Ceti** *(AI-generated summary)*\n\n*Named results*\n- **[The Jacobson–Morozov theorem](https://taucetiproject.org/docs/TauCeti/Algebra/Lie/Sl2/JacobsonMorozov.html#TauCeti.exists_isSl2Triple_of_isNilpotent_ad)** — every nonzero ad-nilpotent element is the nilpositive element of an sl₂-triple (Jacobson, *Lie Algebras*, III §11). (TauCeti#19650)\n- **[The 2-Selmer group is finite](https://taucetiproject.org/docs/TauCeti/AlgebraicGeometry/EllipticCurve/MordellWeil/RankBound.html#WeierstrassCurve.Affine.finite_selmerGroup%E2%82%82)** — for an elliptic curve over a number field. (TauCeti#19001)\n\n*Notable definitions*\n- **[Pic⁰ of a curve](https://taucetiproject.org/docs/TauCeti/AlgebraicGeometry/LineBundle/PicZero.html#TauCeti.AlgebraicGeometry.LineBundleClass.picZero)** — the degree-zero line bundles on a proper integral curve (Hartshorne II.6). (TauCeti#7803)\n\n*In progress* — the Perron–Frobenius theorem: positive matrices, eigenvector and spectral radius (TauCeti#19699)\n\n*Stats*\n- 3,733,912 lines of Lean across 17,809 files (Tau Ceti only, excluding Mathlib)\n"
+  },
+  {
+   "id": 634300000,
+   "stream_id": 610393,
+   "timestamp": 1792769000,
+   "subject": "new results",
+   "content": "**Voyager · what's new in Tau Ceti** *(AI-generated summary)*\n\n*Named results*\n- **[The Jacobson–Morozov theorem](https://taucetiproject.org/docs/TauCeti/Algebra/Lie/Sl2/JacobsonMorozov.html#TauCeti.exists_isSl2Triple_of_isNilpotent_ad)** — every nonzero ad-nilpotent element is the nilpositive element of an sl₂-triple. (TauCeti#19650)\n\n*Stats*\n- 3,800,000 lines of Lean\n"
+  }
+ ]
+}

@@ -1,0 +1,5 @@
+dataset-b/ and records.jsonl are the conformance vectors of LeanTrustBuilders/specs (vectors/fixture-b,
+vectors/records.jsonl); source-b/ is the fixture of LeanTrustBuilders/extractor (test/fixture, with
+test/fixture-b/Fixture/Basic.lean laid over it): its version B, which dataset-b describes. Both are
+Apache-2.0 (the LICENSE files of those repositories). voyager/messages.json is three posts in the form
+of Voyager's on the Lean Zulip, shortened.
