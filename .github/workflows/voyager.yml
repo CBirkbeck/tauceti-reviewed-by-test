@@ -1,0 +1,74 @@
+name: Voyager
+
+# Twice a day, after Voyager's usual posts: reads its topic on the Lean Zulip (read only, with the
+# ZULIP_* secrets), keeps every announcement in data/voyager.jsonl, records a `named` record for each
+# whose declaration the pinned dataset has, and rebuilds the site when it recorded any. follow.yml runs
+# it too, after a new dataset, with `site: false`, and rebuilds the site itself.
+on:
+  schedule:
+    - cron: '15 4,16 * * *'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      site:
+        type: boolean
+        default: true
+    outputs:
+      recorded:
+        description: Whether named records were added to the store
+        value: ${{ jobs.named.outputs.recorded }}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: voyager
+  cancel-in-progress: false
+
+jobs:
+  named:
+    runs-on: ubuntu-latest
+    outputs:
+      recorded: ${{ steps.record.outputs.recorded }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q -r requirements.txt
+      - name: The pinned dataset
+        run: |
+          commit=$(python3 -c "import json; print(json.load(open('data/settings.json'))['tauceti'])")
+          evidence-store dataset --store evidence --commit "$commit" --out "$RUNNER_TEMP/dataset" > /dev/null
+      - name: Read the topic, record the announcements
+        id: record
+        env:
+          ZULIP_SITE: ${{ secrets.ZULIP_SITE }}
+          ZULIP_EMAIL: ${{ secrets.ZULIP_EMAIL }}
+          ZULIP_API_KEY: ${{ secrets.ZULIP_API_KEY }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # From the branch's tip: read, record, commit, push; if someone pushed in between, all again
+          # (both steps are idempotent).
+          for attempt in 1 2 3 4 5; do
+            git fetch -q origin "$GITHUB_REF_NAME" && git reset -q --hard "origin/$GITHUB_REF_NAME"
+            python3 scripts/voyager.py fetch
+            python3 scripts/voyager.py record --dataset "$RUNNER_TEMP/dataset"
+            recorded=false
+            [ -z "$(git status --porcelain -- evidence)" ] || recorded=true
+            if [ -z "$(git status --porcelain -- evidence data/voyager.jsonl)" ]; then
+              echo "recorded=false" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            git add evidence data/voyager.jsonl
+            git commit -q -m "Voyager's announcements, as named results"
+            if git push -q origin "HEAD:$GITHUB_REF_NAME"; then echo "recorded=$recorded" >> "$GITHUB_OUTPUT"; exit 0; fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::could not push the named results"; exit 1

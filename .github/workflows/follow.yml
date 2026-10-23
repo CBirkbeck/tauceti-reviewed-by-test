@@ -47,6 +47,17 @@ jobs:
     uses: ./.github/workflows/dataset.yml
     permissions:
       contents: write
+  named:
+    needs: [pin, dataset]
+    if: always() && needs.pin.result == 'success' && needs.dataset.result != 'failure'
+    uses: ./.github/workflows/voyager.yml
+    with:
+      site: false
+    secrets: inherit
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
   prune:
     needs: [pin, dataset]
     if: always() && needs.dataset.result == 'success'

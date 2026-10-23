@@ -53,5 +53,25 @@ class DatasetWorkflowTests(unittest.TestCase):
                         self.assertEqual((s.get("with") or {}).get("ref"), "${{ github.ref }}", f"{f.name}: {name}")
 
 
+class VoyagerWorkflowTests(unittest.TestCase):
+    def test_reads_twice_a_day_and_records(self):
+        wf = load("voyager.yml")
+        self.assertEqual(wf["on"]["schedule"], [{"cron": "15 4,16 * * *"}])
+        self.assertEqual(wf["on"]["workflow_call"]["inputs"]["site"]["default"], True)
+        self.assertEqual(wf["on"]["workflow_call"]["outputs"]["recorded"]["value"], "${{ jobs.named.outputs.recorded }}")
+        job = wf["jobs"]["named"]
+        text = runs(job)
+        self.assertIn("python3 scripts/voyager.py fetch", text)
+        self.assertIn('python3 scripts/voyager.py record --dataset "$RUNNER_TEMP/dataset"', text)
+        env = next(s for s in steps(job) if s.get("id") == "record")["env"]
+        self.assertEqual(env["ZULIP_API_KEY"], "${{ secrets.ZULIP_API_KEY }}")
+
+    def test_follow_records_after_a_new_dataset(self):
+        named = load("follow.yml")["jobs"]["named"]
+        self.assertEqual(named["uses"], "./.github/workflows/voyager.yml")
+        self.assertEqual(named["with"], {"site": False})
+        self.assertEqual(named["secrets"], "inherit")
+
+
 if __name__ == "__main__":
     unittest.main()
