@@ -2607,8 +2607,12 @@ def smoke(browser, url, errors):
     for route in ("#/", "#/browse", "#/activity", "#/help", "#/search/theorem"):
         visit(browser, url, route, errors)
     page = visit(browser, url, "#/", errors)
+    expect(page.locator("h1").inner_text() == "Named results and notable definitions", "the Named page")
     names = page.eval_on_selector_all(".card .card-title", "as => as.slice(0, 5).map(a => decodeURIComponent(a.hash.slice(4)))")
-    expect(len(names) == 5, "the Named page lists announcements")
+    if not names:  # Voyager's announcements not recorded yet: declarations found by a search instead
+        page = visit(browser, url, "#/search/theorem", errors)
+        names = page.eval_on_selector_all(".nitem", "as => as.slice(0, 5).map(a => decodeURIComponent(a.hash.slice(4)))")
+    expect(len(names) == 5, "five declarations to open")
     for name in names:
         page = visit(browser, url, "#/d/" + name, errors)
         map_drawn(page)
@@ -4572,7 +4576,7 @@ sleep 10; run=$(gh run list -R CBirkbeck/tauceti-reviewed-by-test --workflow pag
 gh run watch "$run" -R CBirkbeck/tauceti-reviewed-by-test --exit-status
 ```
 
-Expected: the job `build` succeeds (unit tests, the fixture's browser check, the build, the smoke check, the artifact uploaded); `deploy` is skipped. The log's build line says `"named": 0` (the store has no named records yet) and `"accepts": {"people": 3, "ai": 1}`.
+Expected: the job `build` succeeds (unit tests, the fixture's browser check, the build, the smoke check, the artifact uploaded); `deploy` is skipped. The log's build line says `"named": 0` (the store has no named records yet) and `"accepts": {"people": 3, "ai": 1}`. The smoke check, finding no named results, opens declarations found by a search instead.
 
 ---
 
