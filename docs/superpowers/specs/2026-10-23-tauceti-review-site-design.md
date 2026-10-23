@@ -46,11 +46,11 @@ at the same address. It must:
 - **The pilot**, `LeanTrustBuilders/reviewed-by-pilot`: this repository's page rebuilt on the suite.
   - Reused: its dataset workflow, which has failed since 2026-10-21 because Tau Ceti's
     `scripts/lake-cache-get.sh` now runs `uvx`, which its runner lacks (fixed here by installing
-    `uv`); its pinning rule; its parser of Voyager's bullets, extended to today's docs addresses; and
-    its conversion of this repository's reviews and tests to S3 records.
-  - Not reused: its page (this repository's old one), its roadmap reader, `apply.py`.
-- **The Atlas** (`CBirkbeck/tauceti-explorer`): its palette, type, shell and planet glyphs, and its
-  copy of D3.
+    `uv`); its pinning rule; and its parser of Voyager's bullets, extended to today's docs addresses.
+  - Not reused: its page (this repository's old one), its roadmap reader, `apply.py`, and its
+    records, which are keyed under the hasher the suite dropped on 2026-09-28 (7.1).
+- **The Atlas** (`CBirkbeck/tauceti-explorer`): its palette, type, shell and planet glyphs, its
+  `markdown.js` and its copy of KaTeX.
 
 ## 4. The repository after the change
 
@@ -195,11 +195,13 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   |---|---|
   | `meta.json` | the pinned commit, its date and toolchain; the dataset's tag and extractor version; the store's name and repository, the form addresses, the bulk issue; the imported stores and the commits read; counts; the build time |
   | `named.json` | one row per named declaration: each `named` record not withdrawn whose declaration is still in the dataset (by its name, or by its meaning hash when renamed; one whose statement changed stays named). Id, Lean name, Voyager's name, `what`, the sentence, area, when and where announced (post link, pull requests), review counts (people, AI), state and coverage under both policies |
-  | `search.json` | one row per project declaration: name, kind, title. Loaded at the first search |
+  | `search.json` | one row per project declaration: name and kind, loaded at the first search; `titles.json` has their titles in the same order, loaded next, for searches by words |
   | `nodes/<k>.json` | every node by id, 2,048 per file: name, kind, project or Mathlib, module, title, whether named, state under both policies, and `built_from`, `about`, `proof_uses` (ids, most important first, at most 60 each): what the map draws without opening modules |
   | `names/<k>.json` | name to id, sharded by the FNV-1a hash of the name, as Mathlib Explorer does |
   | `m/<n>.json` | module number `n` (its place in the dataset's modules): its docstring, and for each of its declarations the docstring, the statement in Lean, whether it has a proof, its source range and keyword; `built_on`, `facts`, `examples`, `used_in` (ids, most important first, at most 60 each, with totals); its record threads, tests and open challenges; its announcement |
   | `activity.json` | the newest records, open problems, open challenges, the reviewers (people and agents), and the review queue of the named declarations |
+  | `modules.json` | every module a node belongs to: name, package, title, source path; the project's first, in the dataset's order, then the others |
+  | `upstream.json` | the record threads about declarations outside Tau Ceti (from the imported stores), by name |
 
 - **Budget:** the build fails if `_site` exceeds 800 MB (GitHub Pages allows 1 GB). Sizes are
   measured on a real dataset before CI depends on them.
@@ -207,10 +209,11 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
 ## 6. The front end (`web/`)
 
 Static HTML, CSS and JavaScript, without a framework or a build step, as the Atlas is. Vendored:
-elkjs 0.9.3 (EPL-2.0, the copy referee-site vendors, loaded the first time a map is drawn), D3 (ISC,
-the Atlas's copy, for pan and zoom), KaTeX (MIT, the Atlas's copy, for the `$…$` in docstrings) and a
-Markdown renderer (marked, MIT). Raw HTML in any Markdown is escaped and only `http`/`https` links are kept: record
-texts come from anyone's issues.
+elkjs 0.9.3 (EPL-2.0, the copy referee-site vendors, loaded the first time a map is drawn), and the
+Atlas's `markdown.js` with its KaTeX 0.16.28 (MIT): Markdown in which source HTML stays text, links
+are filtered, and `$…$` becomes vetted MathML. Record texts come from anyone's issues, so every
+docstring and record text goes through it, never into the page as HTML. Pan and zoom are pointer
+events (referee-site's code, Apache-2.0, with pinch added): no D3.
 
 ### 6.1 Look
 
@@ -283,6 +286,10 @@ header 48px · context bar 40px · footer 30px
     type. A review that does not apply now is greyed, saying "the declaration changed since" or
     "something it rests on changed since"; an imported one says "from the Mathlib probability store"
     and has no actions. Then the tests and the open suggested tests.
+- **A declaration outside Tau Ceti** (a Mathlib declaration reached from a map or a list): its kind,
+  links to Mathlib's docs and to Mathlib Explorer, the records about it from the imported stores (no
+  forms: they are its store's), and what in Tau Ceti rests on it; no map, since the dataset does not
+  follow what it rests on.
 - **Module:** its docstring and its declarations, named ones first.
 - **Area:** its modules and its named declarations.
 - **Search:** names and titles of every declaration, named ones first.
@@ -303,9 +310,11 @@ with the form's `decl` and `commit` fields filled in (the declaration and the pi
   a theorem's statement is about) and one level down (built on it, results about it).
   - **Proof uses** adds the results a proof uses (dashed edges) above, and the results whose proofs use
     it below. Routine steps are counted, not drawn.
-  - **Mathlib** shows or hides Mathlib's declarations. They are leaves (the dataset follows no
-    dependencies inside Mathlib), link to Mathlib's docs and to their Mathlib Explorer page, and show
-    any review from the probability store.
+  - **Mathlib** shows or hides Mathlib's (and Lean's) declarations; hidden at first, so that the map
+    shows Tau Ceti's own structure, which is what can be reviewed here (the lists below the map include
+    Mathlib's). They are leaves (the dataset follows no dependencies inside Mathlib).
+  - Only the first level up ends in a "+ N more" node; the second level up shows four per node, and a
+    node's arrow opens its whole level.
 - **Nodes:** a glyph, a short name and the review ring. Hovering shows the title and state; clicking
   goes to the declaration and the map re-centres; a node's expand control adds its own level in place.
   A level with more than 12 nodes shows the 12 most important and a "+ N more" node that shows the
@@ -317,9 +326,15 @@ with the form's `decl` and `commit` fields filled in (the declaration and the pi
 
 ## 7. Moving over
 
-1. **Records:** the pilot's 4 reviews and 11 tests, all made by `CBirkbeck` on this repository's
-   issues (some through an AI agent), copied unchanged into `evidence/records/`: same ids, keys and
-   origins. Their author pushes them, so `evidence-check.yml` accepts them.
+1. **Records:** this repository's own ledgers (`reviews/records.jsonl`, `reviews/tests.jsonl`,
+   `reviews/problems.jsonl`: 4 reviews and 11 tests, all by `CBirkbeck`, some through an AI agent),
+   migrated with `evidence-core migrate reviewed-by` against the first pinned dataset, with their
+   origins on this repository's issues. The pilot's copies cannot be reused: they are keyed under
+   the hasher the suite dropped on 2026-09-28 (`semantic_hash`), so they read as incomparable. The
+   migration takes the hashes from the pinned dataset and says so (`migration.hashes_from`). That is
+   faithful because the four declarations' text has not changed since they were reviewed: the old
+   site still shows every review as current at Tau Ceti `ffc1a6d` (2026-10-23). Their author pushes
+   them, so `evidence-check.yml` accepts them.
 2. **Named results:** Voyager's whole history, read again from Zulip and keyed in the new pinned
    dataset.
 3. **Issue #1:** stays the bulk issue, labelled `evidence:bulk`, with its description replaced by the
@@ -354,10 +369,14 @@ with the form's `decl` and `commit` fields filled in (the declaration and the pi
 2. Locally: the 2026-10-19 dataset of the pilot, the carried-over records and Voyager's history; the
    front end built against them and checked in a browser. The named records made here serve the
    local build only: the store's are written by `voyager.yml` in CI, as the pilot's are.
-3. In CI, still on the branch: `dataset.yml` for Tau Ceti's current `main`; `evidence-store init`;
-   the Zulip secrets and `voyager.yml`; `pages.yml` building without deploying.
-4. The switch: merge to `main` (the site at the same address is replaced); disable "Review lines" on
-   the fork; replace issue #1's description.
+3. In CI, still on the branch: the labels, the Zulip secrets, the first dataset (the pilot's of the
+   pin, published unchanged as this repository's release), and `pages.yml` building without
+   deploying. GitHub runs a workflow by hand only if one of that name is on `main`: `pages.yml` is (the
+   old page's), so it can be tried on the branch; `dataset.yml`, `follow.yml` and `voyager.yml` run
+   for the first time after the switch.
+4. The switch: `main` becomes the branch (the site at the same address is replaced); `voyager.yml`
+   records Voyager's announcements, `follow.yml` moves the pin; disable "Review lines" on the fork;
+   replace issue #1's description.
 
 ## 10. Risks
 
