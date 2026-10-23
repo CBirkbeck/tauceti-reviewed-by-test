@@ -19,21 +19,31 @@ forms, and evidence-core for everything computed from them. The design:
 
 ## Reviewing
 
-Open a declaration on the site and use its buttons. Each opens one of the store's forms on GitHub,
-filled in with the declaration and the commit the site shows:
+**People:** open a declaration on the site. Beside its statement, the review box shows the reviews it
+has had and one button, **Review it**, which opens the choice:
 
-| button | records |
+| choice | records |
 |---|---|
-| **Review this** | an acceptance: it is the intended mathematical notion, or states the intended result. Saying why is optional for a person; an AI agent must |
-| **Report a problem** | what is wrong and why. It stays open, and the declaration is flagged, until it is marked fixed, intended or invalid |
+| **Yes, it's right** | an acceptance: it is the intended mathematical notion, or states the intended result. Nothing else is needed; saying why is optional |
+| **Something's wrong** | what is wrong and why. It stays open, and the declaration is flagged, until it is marked fixed, intended or invalid |
 | **Suggest a test** | a property the declaration should have, in words and if possible in Lean. It stays open until a declaration of Tau Ceti proves it |
-| **List a test** | a declaration of Tau Ceti that already pins it down, and what it checks |
 | **Ask a question** | a question about it |
 
-Intake turns the issue into a record under the account that opened it, answers on the issue, and
-rebuilds the site within minutes. On a record's issue, a comment whose first line is a command changes
-its state: `/withdraw`, `/fixed [commit]`, `/intended`, `/invalid`, `/met <declaration>`, `/failed`,
-`/declined`, `/answered`, `/reopen`.
+Each opens one of the store's forms on GitHub, filled in with the declaration and the commit the site
+shows: press Create. Intake turns the issue into a record under the account that opened it, answers on
+the issue, and rebuilds the site within minutes. On a record's issue, a comment whose first line is a
+command changes its state: `/withdraw`, `/fixed [commit]`, `/intended`, `/invalid`,
+`/met <declaration>`, `/failed`, `/declined`, `/answered`, `/reopen`.
+
+**AI agents** review from the command line, following [AI-REVIEWS.md](AI-REVIEWS.md): they read the
+declaration against its source, run the Checks its roadmap gives it, and file their verdict with
+`evidence-store submit`. The site shows their reviews apart from people's, folded to their verdict,
+with their reasons a click away. To ask for one:
+
+```
+Review TauCeti.Foo.bar for the Tau Ceti review site, following
+https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
+```
 
 **Many at once:** comment lines on [issue #1](../../issues/1), one record each:
 
@@ -44,8 +54,7 @@ Challenge: TauCeti.Foo.bar — a property it should have
 Named: TauCeti.Foo.bar — The bar theorem — a sentence
 ```
 
-**AI agents** name themselves in their comment, and the site shows their records apart from people's:
-`<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->`.
+An AI agent names itself in its comment: `<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->`.
 
 ## What the site shows
 
@@ -53,14 +62,15 @@ Named: TauCeti.Foo.bar — The bar theorem — a sentence
   Tau Ceti has been reviewed. Voyager is the only source of names.
 - **A declaration**: its docstring and Lean source, links to the API docs, the source and Voyager's
   post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
-  uses and Mathlib's declarations on request), with the same neighbours as lists; and its review
-  panel: every review, problem, question and suggested test as a thread, and the tests it passes.
+  uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), with the same
+  neighbours as lists; and beside its statement the review box: people's reviews, problems, questions
+  and suggested tests in full, AI agents' folded, the tests it passes, and the Review it button.
 - **Browse**, **Search** (names and docstring titles), **Activity** (open problems, open suggested
   tests, what to review next, reviewers) and **How to review**.
 
 Colour on a declaration means its review state: an open ring for not reviewed, white for reviewed,
-salmon for reviewed by AI agents only or on an earlier version, red for an open problem. A switch in
-the side bar says whether AI agents' reviews count.
+salmon for reviewed by AI agents only or on an earlier version, red for an open problem. A switch on
+the Named page says whether AI agents' reviews count.
 
 ## How it is built
 

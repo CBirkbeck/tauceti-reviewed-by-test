@@ -4,6 +4,7 @@ from pathlib import Path
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+TEMPLATES = Path(__file__).resolve().parents[1] / ".github" / "ISSUE_TEMPLATE"
 
 
 def load(name: str) -> dict:
@@ -105,6 +106,30 @@ class PagesWorkflowTests(unittest.TestCase):
         intake = load("evidence-intake.yml")["jobs"]["intake"]
         self.assertEqual(next(s for s in steps(intake) if "evidence-store/intake" in s.get("uses", ""))["with"]["pages-workflow"],
                          "pages.yml")
+
+
+class FormTests(unittest.TestCase):
+    """The forms the review box opens are evidence-store's, cut to what a person needs: what is left must
+    still read as intake reads it, by label."""
+
+    def test_each_field_is_one_intake_knows(self):
+        from evidence_store import forms
+        for kind in ("review", "problem", "challenge", "question"):
+            t = yaml.safe_load((TEMPLATES / f"evidence-{kind}.yml").read_text(encoding="utf-8"))
+            self.assertEqual(forms.kind_of(t["labels"]), kind)
+            known = {f["label"]: f for f in forms.forms()[kind]["fields"]}
+            fields = [f for f in t["body"] if f["type"] != "markdown"]
+            for f in fields:
+                self.assertIn(f["attributes"]["label"], known, kind)
+                self.assertEqual(f["id"], known[f["attributes"]["label"]]["id"], kind)
+                if f["type"] == "dropdown":
+                    self.assertEqual(f["attributes"]["options"], [t for _, t in known[f["attributes"]["label"]]["options"]])
+            self.assertEqual([f["id"] for f in fields][:2], ["decl", "commit"], "the two the site fills in")
+
+    def test_a_review_needs_nothing_but_the_declaration(self):
+        t = yaml.safe_load((TEMPLATES / "evidence-review.yml").read_text(encoding="utf-8"))
+        required = [f["id"] for f in t["body"] if f.get("validations", {}).get("required")]
+        self.assertEqual(required, ["decl"])
 
 
 if __name__ == "__main__":

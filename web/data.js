@@ -27,7 +27,7 @@
   function unpack(id, r) {
     return {id, name: r[0], kind: KINDS[r[1]] || 'definition', flags: r[2], mod: r[3], title: r[4],
             state: [STATES[r[5]] || 'unreviewed', STATES[r[6]] || 'unreviewed'], m: r[7], p: r[8], nm: r[9], np: r[10],
-            brief: r[11] || ''};
+            brief: r[11] || '', ml: r[12] || 0, nd: r[13] || 0};
   }
   async function node(id) {
     const m = await meta();

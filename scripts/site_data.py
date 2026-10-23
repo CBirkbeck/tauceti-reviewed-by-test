@@ -210,13 +210,21 @@ class Site:
         ranked = self.rank(ids)
         return ranked[:self.cap], len(ranked)
 
-    def above(self, d: Decl) -> tuple[list[int], int]:
+    def above(self, d: Decl) -> tuple[list[int], int, int]:
         """What it rests on in meaning: what a theorem (or instance) is about, what anything else is
-        built from."""
+        built from. The first of them, how many there are, and how many of those are the library's."""
         if not d.is_project:
-            return [], 0
+            return [], 0, 0
         i = d.id
-        return self.capped(self.g.about(i) if (self.g.result[i] or d.kind == "instance") else self.g.built_from(i))
+        ids = set(self.g.about(i) if (self.g.result[i] or d.kind == "instance") else self.g.built_from(i))
+        m, nm = self.capped(ids)
+        return m, nm, sum(self.ds.decls[x].is_project for x in ids)
+
+    def below(self, d: Decl) -> int:
+        """How many declarations rest on it in meaning: the concepts built on it, the results about it and
+        its instances (what the map unfolds below it)."""
+        i = d.id
+        return sum(len(set(ids)) for ids in (self.rev.built_on[i], self.rev.facts[i], self.rev.examples[i]))
 
     def proof_steps(self, d: Decl) -> tuple[list[int], int, int]:
         """The results its proof, or the proofs in its value, use: (the non-routine ones, ranked and
@@ -231,11 +239,11 @@ class Site:
     # --- the files ---------------------------------------------------------------------------------
 
     def node_row(self, d: Decl) -> list:
-        m, nm = self.above(d)
+        m, nm, ml = self.above(d)
         p, np_, _ = self.proof_steps(d)
         sp, sa = self.states.get(d.id, (0, 0))
         return [d.name, KIND_CODE.get(d.kind, "o"), self.flags(d), self.mod_index.get(d.module, -1), self.title(d),
-                sp, sa, m, p, nm, np_, brief(d.name, self.ds.facet_row("signature", d.name))]
+                sp, sa, m, p, nm, np_, brief(d.name, self.ds.facet_row("signature", d.name)), ml, self.below(d)]
 
     def node_shards(self):
         """(k, rows): `nodes/<k>.json`, the nodes with ids k·NODE_SHARD onwards."""

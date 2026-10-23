@@ -84,6 +84,14 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(node("Fixture.double_zero")[5], 3)   # stale underneath, which people-only does not count
         self.assertEqual(node("Fixture.IsDouble")[5], 0)
 
+    def test_how_much_the_map_can_unfold(self):
+        # Of what it rests on, how many are the library's (the map unfolds those); and how many rest on it.
+        n = node("Fixture.triple_pos")
+        self.assertEqual((n[9], n[12]), (len(n[7]), 1))  # Fixture.triple, then Lean's own
+        e = entry("Fixture.triple")
+        self.assertEqual(node("Fixture.triple")[13], e["nFacts"] + e.get("nBuiltOn", 0) + e.get("nExamples", 0))
+        self.assertEqual(node("Fixture.triple_two")[13], 0)
+
     def test_what_it_states(self):
         self.assertEqual(node("Fixture.triple_pos")[11], "(n : Nat) (h : 0 < n) : 0 < triple n")
         self.assertEqual(node("Fixture.triple")[11], "(n : Nat) : Nat")

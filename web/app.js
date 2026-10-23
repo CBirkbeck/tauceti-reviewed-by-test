@@ -193,6 +193,10 @@
     head.append(verdictBadge(v), who(v.by), el('span', 'faint', date(v.at)));
     if (v.url) head.append(ext(v.url, 'issue', 'faint'));
     box.append(head);
+    return threadBody(box, v, byId);
+  }
+  /* What a record says, after its head: where it is from, whether it still applies, and its text. */
+  function threadBody(box, v, byId) {
     if (v.source) box.append(el('div', 'from', `From the ${v.source.name} store`));
     const note = statusNote(v);
     if (note) box.append(el('div', 'status-note', note));
@@ -274,7 +278,7 @@
       card('#/named', 'Named results', `The ${count(c.named)} theorems and definitions Voyager announced on the Lean Zulip: the ones to read first.`),
       card('#/browse', 'Browse', `${lib} area by area: ${plural(meta.areas.length, 'area')}, ${plural(c.modules, 'file')}.`),
       card('#/activity', 'Activity', `The latest reviews, ${plural(c.problems, 'open problem')}, ${plural(c.challenges, 'suggested test')} still open, and what to review next.`),
-      card('#/help', 'How to review', 'A review, a problem, a test or a question: a form on GitHub, filled in. No pull request.'));
+      card('#/help', 'How to review', 'Press Review it beside a statement: GitHub opens with the form filled in, and Create records it. AI agents review from the command line.'));
     const areas = el('div', 'chips');
     meta.areas.forEach(([a, n]) => {
       const chip = link('#/area/' + encodeURIComponent(a), null, 'chip');
@@ -362,7 +366,6 @@
     kinds.append(kindPill(n.kind));
     if (row) kinds.append(el('span', 'badge named', `★ Named by Voyager · ${date(row.at)}`));
     if (!project) kinds.append(el('span', 'badge', home === 'Mathlib' ? 'From Mathlib' : `From ${home}`));
-    kinds.append(stateBadge(stateOf(n), true));
     const h1 = el('h1');
     h1.append(row ? mdInline(row.name) : n.title ? mdInline(n.title) : el('span', 'mono', shortName(name)));
     const leanName = el('div', 'leanname'), copy = el('button', null, 'copy');
@@ -386,6 +389,7 @@
     }
     // The docstring, unless all it says is the title above.
     if (e.doc && (row || e.doc.trim() !== (n.title || '').trim())) parts.push(md(e.doc, 'prose'));
+    let statement = null;
     if (e.sig || e.stmt) {
       // What the docs show: the signature Lean prints, section variables included, its names linked; a
       // definition's value folded (the docs' Equations), a structure's fields; never a proof.
@@ -401,14 +405,15 @@
         lean.append(det);
       }
       if (e.cut && d.module) { const c = el('div', 'cut'); c.append('The text goes on: ', ext(URLS.source(meta, d.module.path, e.line), 'read it in the source')); lean.append(c); }
-      const sec = el('section', 'section');
-      sec.append(el('h3', null, 'In Lean'), lean,
-                 el('p', 'lean-note', 'As the docs show it, with no proof. Hover over a name to see what it is; click it to open it.'));
-      parts.push(sec);
+      statement = el('section', 'section');
+      statement.append(el('h3', null, 'In Lean'), lean,
+                       el('p', 'lean-note', 'As the docs show it, with no proof. Hover over a name to see what it is; click it to open it.'));
     }
-    // The review card.
+    // The statement, and beside it the review box.
     const records = project ? (e.records || []) : (up.records || []);
-    parts.push(reviewCard(meta, n, name, modName, project, records, e.tests || []));
+    const beside = el('div', 'statement-grid' + (statement ? '' : ' alone'));
+    beside.append(...[statement, reviewBox(meta, n, name, modName, project, records, e.tests || [])].filter(Boolean));
+    parts.push(beside);
     // The map, and the same as lists.
     const mapHost = el('div');
     if (project) {
@@ -440,55 +445,91 @@
     if (!project) parts.push(el('p', 'faint', `What it rests on is not followed outside ${lib}: Mathlib Explorer shows it.`));
     setNav('');
     show(...parts);
-    if (project) TauMap.draw(mapHost, n, d.entry, {ai: () => ai});
+    if (project) TauMap.draw(mapHost, n, d.entry, {ai: () => ai, lib});
   };
 
-  /* Where a declaration stands, the forms to review it, and every record about it. */
-  function reviewCard(meta, n, name, modName, project, records, tests) {
-    const card = el('section', 'review'), head = el('div', 'review-head');
-    card.id = 'review';
-    head.append(el('h2', null, 'Review'), aiSwitch());
-    const counted = (agent) => records.filter(v => v.kind === 'review' && v.verdict === 'accept' && v.inForce && v.applies &&
-                                                 (v.by.kind === 'agent') === agent).length;
-    const people = counted(false), agents = counted(true), line = el('div', 'state-line');
-    line.append(stateBadge(stateOf(n), true),
-                el('span', null, people || agents ? `Reviewed-by · ${plural(people, 'person', 'people')} · ${agents} AI`
-                  : records.some(v => v.kind === 'review' && v.verdict === 'accept') ? 'No review of this version yet.' : 'Nobody has reviewed it yet.'));
-    card.append(head, line);
-    if (project) {
-      const acts = el('div', 'review-actions'), forms = el('div', 'actions');
-      FORMS.forEach(([text, template, prefix, cls]) => forms.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
-      acts.append(ext(URLS.docs(meta, name, modName), 'Read it in the API docs ↗', 'btn docs-btn'), forms);
-      card.append(acts, hint('Each button opens a form on GitHub, filled in with this declaration and the commit shown here. ' +
-        `It is recorded under your account within minutes; nothing is written into ${meta.library.name}.`));
-    } else if (records.length) {
-      card.append(hint(`Reviews of ${name} are kept in the stores that review it; they show here as they are.`));
-    } else {
-      card.append(hint(`Outside ${meta.library.name}: review it where it lives, such as the Mathlib probability store.`));
-    }
-    const byId = new Map(records.map(v => [v.id, v]));
+  /* The review box, beside the statement: where it stands, the reviews it has had (people's in full; AI
+     agents' folded to their verdict, their reasons a click away), its tests, and one button for a
+     person. */
+  function reviewBox(meta, n, name, modName, project, records, tests) {
+    const box = el('aside', 'review-box'), head = el('div', 'rb-head');
+    box.id = 'review';
+    head.append(el('h2', null, 'Review'), stateBadge(stateOf(n), true));
+    box.append(head);
+    const live = v => v.inForce && v.applies !== false, agent = v => v.by.kind === 'agent';
     // Tests are listed below with whether they pass; Voyager's announcement heads the page.
-    const top = records.filter(v => v.kind !== 'comment' && v.kind !== 'test' && !(v.kind === 'named' && v.by.agent && v.by.agent.tool === 'Voyager'));
-    const order = v => (v.inForce && v.applies !== false ? 0 : 1);
-    top.sort((a, b) => order(a) - order(b) || (b.at || '').localeCompare(a.at || ''));
-    top.forEach(v => card.append(thread(v, byId)));
-    if (tests.length) {
-      const t = el('div', 'tests');
-      t.append(el('h3', null, 'Tests'));
-      tests.forEach(x => {
-        const row = el('div', 'test-line');
-        row.append(el('span', 'result ' + x.result, {passes: 'passes', sorry: 'with sorry', missing: 'missing'}[x.result]),
-                   link(URLS.decl(x.test), shortName(x.test), 'mono'));
-        if (x.text) row.append(' — ', mdInline(x.text));
-        const by = el('div', 'faint small');
-        by.append(x.challenge ? 'Suggested, and met; listed by ' : 'Listed by ', who(x.by), ' · ' + date(x.at));
-        if (x.url) by.append(' · ', ext(x.url, 'issue'));
-        row.append(by);
-        t.append(row);
-      });
-      card.append(t);
-    }
-    return card;
+    const shown = records.filter(v => v.kind !== 'comment' && v.kind !== 'test' && !(v.kind === 'named' && v.by.agent && v.by.agent.tool === 'Voyager'));
+    const accepts = ai => shown.filter(v => v.kind === 'review' && v.verdict === 'accept' && live(v) && agent(v) === ai).length;
+    const people = accepts(false), agents = accepts(true);
+    box.append(el('p', 'rb-count', people || agents ? [people ? plural(people, 'person', 'people') : '', agents ? `${agents} AI` : ''].filter(Boolean).join(' · ')
+      : shown.some(v => v.kind === 'review' && v.verdict === 'accept') ? 'No review of this version yet.' : 'Nobody has reviewed it yet.'));
+    const byId = new Map(records.map(v => [v.id, v]));
+    const order = v => (live(v) ? 0 : 1);
+    shown.sort((a, b) => order(a) - order(b) || (b.at || '').localeCompare(a.at || ''));
+    const humans = shown.filter(v => !agent(v)), bots = shown.filter(agent);
+    if (humans.length) { const l = el('div', 'rb-list'); humans.forEach(v => l.append(thread(v, byId))); box.append(l); }
+    if (bots.length) { const l = el('div', 'rb-list'); bots.forEach(v => l.append(aiFold(v, byId))); box.append(l); }
+    if (tests.length) box.append(testList(tests));
+    if (project) box.append(reviewButton(meta, name, modName));
+    else box.append(hint(records.length ? `Reviews of ${name} are kept in the stores that review it; they show here as they are.`
+                                        : `Outside ${meta.library.name}: review it where it lives, such as the Mathlib probability store.`));
+    return box;
+  }
+
+  /* An AI agent's record, folded to what it found and who found it; what it says (its reasons, what it
+     checked, what it compared it with) a click away. */
+  function aiFold(v, byId) {
+    const fold = el('details', 'ai-fold' + (v.applies === false || !v.inForce ? ' old' : '')), sum = el('summary'), a = v.by.agent || {};
+    sum.append(verdictBadge(v), el('span', 'ai', 'AI'), el('span', 'ai-name', [a.tool || 'agent', a.model].filter(Boolean).join(' · ')),
+               el('span', 'faint', date(v.at)));
+    const body = el('div', 'thread'), by = el('div', 'thread-head');
+    by.append(who(v.by));
+    if (v.url) by.append(ext(v.url, 'issue', 'faint'));
+    body.append(by);
+    fold.append(sum, threadBody(body, v, byId));
+    return fold;
+  }
+
+  /* Its tests, folded to how many pass (and how many do not), so the button stays in sight. */
+  function testList(tests) {
+    const t = el('details', 'tests'), sum = el('summary'), pass = tests.filter(x => x.result === 'passes').length, fail = tests.length - pass;
+    sum.append(el('b', null, 'Tests'), fail ? `${pass} of ${tests.length} pass` : tests.length === 1 ? '1 passes' : `all ${tests.length} pass`);
+    if (fail) sum.append(el('span', 'bad', `${fail} ${fail === 1 ? 'does' : 'do'} not`));
+    t.append(sum);
+    tests.forEach(x => {
+      const row = el('div', 'test-line');
+      row.append(el('span', 'result ' + x.result, {passes: 'passes', sorry: 'with sorry', missing: 'missing'}[x.result]),
+                 link(URLS.decl(x.test), shortName(x.test), 'mono'));
+      if (x.text) row.append(' — ', mdInline(x.text));
+      const by = el('div', 'faint small');
+      by.append(x.challenge ? 'Suggested, and met; listed by ' : 'Listed by ', who(x.by), ' · ' + date(x.at));
+      if (x.url) by.append(' · ', ext(x.url, 'issue'));
+      row.append(by);
+      t.append(row);
+    });
+    return t;
+  }
+
+  /* One button for a person, which opens the choice: each choice is a form on GitHub filled in with this
+     declaration and the commit shown here, so a review takes this, then GitHub's Create. */
+  function reviewButton(meta, name, modName) {
+    const act = el('div', 'rb-act'), go = el('button', 'btn primary rb-go', 'Review it'), choose = el('div', 'rb-choose');
+    go.type = 'button';
+    choose.hidden = true;
+    const form = (kind, text, cls) => ext(URLS.form(meta, FORMS[kind][0], FORMS[kind][1], name), text, cls);
+    const minor = el('div', 'rb-minor'), shut = el('button', 'rb-shut', 'Not now');
+    shut.type = 'button';
+    minor.append(form('challenge', 'Suggest a test'), ' · ', form('question', 'Ask a question'), ' · ',
+                 ext(URLS.docs(meta, name, modName), 'Read it in the docs ↗'));
+    choose.append(el('p', 'rb-q', 'Does it say what it should?'), form('review', '✓ Yes, it’s right', 'btn primary'),
+                  form('problem', '✗ Something’s wrong', 'btn'), minor,
+                  el('p', 'rb-how', 'Each opens GitHub with this filled in: press Create. It is kept under your account and shows here within minutes.'),
+                  shut);
+    const flip = open => { choose.hidden = !open; go.hidden = open; if (open) choose.querySelector('a').focus(); else go.focus(); };
+    go.addEventListener('click', () => flip(true));
+    shut.addEventListener('click', () => flip(false));
+    act.append(go, choose);
+    return act;
   }
 
   VIEWS.module = async (name, gen) => {
@@ -640,23 +681,27 @@
     const code = t => { const c = el('pre', 'small-code'); c.textContent = t; return c; };
     setNav('help');
     show(el('h1', null, 'How to review'),
-      el('p', 'lede', 'Leave a review, a problem, a test or a question. Each is a form on GitHub, filled in, and no pull request.'),
-      prose(p('Open a declaration and use the buttons in its Review card: each opens a form on GitHub, filled in with the declaration and the commit this page shows. ',
-              `Submit it, and the record is kept in this site's evidence store under your GitHub account, and shown here within minutes.`)),
-      section('What each form records', null, prose(
-        p(el('b', null, 'Review this'), ': it is the intended mathematical notion, or states the intended result. Say what you compared it with and which ways it could go wrong you checked. A person need not say why; an AI agent must.'),
-        p(el('b', null, 'Report a problem'), ': it is wrong, and why. The problem stays open, and the declaration is flagged, until someone marks it fixed, intended, or not a problem.'),
+      el('p', 'lede', 'Read a declaration, press Review it beside its statement, and say whether it says what it should. ' +
+        'GitHub opens with the rest filled in: press Create. No pull request.'),
+      section('People', null, prose(
+        p(`Open a declaration: its statement is shown as its documentation shows it, and beside it the review box, with the reviews it has had. `,
+          'Press ', el('b', null, 'Review it'), ' and choose:'),
+        p(el('b', null, 'Yes, it’s right'), ': it is the intended notion, or states the intended result. That is all a review needs; say why if you like.'),
+        p(el('b', null, 'Something’s wrong'), ': what, and why. The problem stays open, and the declaration is flagged, until someone marks it fixed, intended, or not a problem.'),
         p(el('b', null, 'Suggest a test'), `: a property it should have, in words and if you can in Lean. It stays open until a declaration of ${lib} proves it.`),
-        p(el('b', null, 'List a test'), `: a declaration of ${lib} that already pins it down, and what it checks.`),
-        p(el('b', null, 'Ask a question'), ': anything you want its authors or reviewers to answer.'))),
+        p(el('b', null, 'Ask a question'), ': anything you want its authors or reviewers to answer.'),
+        p(`Each opens a form on GitHub filled in with the declaration and the commit the page shows. Press Create, and it is kept in this site's evidence store under your GitHub account, and shown here within minutes.`))),
+      section('AI agents', null, prose(
+        p('AI agents review from the command line, not from the page: each reads the declaration against its source, ',
+          'runs the Checks its roadmap gives it (the examples in ', el('code', null, `${lib}/Examples`), ' that carry their tags), ',
+          'and files its verdict with its reasons. Its review shows in the review box, folded to its verdict; open it to read the reasons.'),
+        p('To ask an agent for one, give it this:'),
+        code(`Review TauCeti.Foo.bar for the Tau Ceti review site, following\nhttps://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`),
+        p(ext(`https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`, 'The instructions'), ' say how; ',
+          ext(URLS.bulk(meta), `issue #${meta.store.bulk}`), ' takes many records at once, one a line.'))),
       section('Versions', null, prose(
         p("A review is pinned to the declaration as it was: to its meaning hash, which changes when the declaration changes or anything it rests on does. ",
           `A review of an earlier version stays, greyed: "the declaration has changed since", or "something it rests on has changed since". Nothing is written into ${lib}.`))),
-      section('Many at once, and AI agents', null, prose(
-        p('Comment lines like these on ', ext(URLS.bulk(meta), `issue #${meta.store.bulk}`), ', one record each:'),
-        code('Reviewed-by: TauCeti.Foo.bar — what you checked\nTest: TauCeti.Foo.bar — TauCeti.Foo.bar_zero — its value at 0\nChallenge: TauCeti.Foo.bar — it is additive\nNamed: TauCeti.Foo.bar — The bar theorem — a sentence'),
-        p("An AI agent names itself in its comment, and its records are shown apart from people's:"),
-        code('<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->'))),
       section("On a record's issue", null, prose(
         p('A comment whose first line is a command changes its state: ', el('code', null, '/withdraw'), ', ', el('code', null, '/fixed'), ', ',
           el('code', null, '/intended'), ', ', el('code', null, '/invalid'), ', ', el('code', null, '/met <declaration>'), ', ',

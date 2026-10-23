@@ -59,7 +59,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 60px; min-height: 6
 main:focus { outline: none; }
 .loading, .empty { color: var(--muted); }
 .lede { font-family: var(--serif); font-size: 1.15rem; color: var(--muted); max-width: 46rem; }
-.crumbs { font-size: 13px; color: var(--faint); margin-bottom: 6px; }
+.crumbs { font-size: 13px; color: var(--faint); margin-bottom: 6px; overflow-wrap: anywhere; }
 .crumbs a { color: var(--muted); }
 .crumbs .sep { margin: 0 6px; }
 .kind-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -181,17 +181,39 @@ a.card:hover { border-color: var(--accent); text-decoration: none; }
 .coverage { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 14px; color: var(--muted); }
 
 /* The review card. */
-.review { margin: 1.6rem 0; padding: 16px 18px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.review-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
-.review-head h2 { margin: 0; }
-.review-head .switch { margin-left: auto; }
-.state-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 6px 0 12px; font-size: 14px; color: var(--muted); }
-.state-line .st { font-size: 14px; color: var(--ink); font-weight: 600; }
-.review-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.review .hint { margin: 8px 0 4px; }
+/* The statement, and beside it the review box: what reviews it has had, and one button. */
+.statement-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 320px); gap: 0 26px; align-items: start; margin-top: 1.6rem; }
+.statement-grid.alone { grid-template-columns: minmax(0, 360px); }
+.statement-grid > .section { margin-top: 0; }
+.review-box { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.rb-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.rb-head h2 { margin: 0; font-size: 1.2rem; }
+.rb-head .st { font-size: 13.5px; color: var(--ink); font-weight: 600; }
+.rb-count { margin: 4px 0 6px; color: var(--muted); font-size: 13.5px; }
+.review-box .thread { padding: 10px 0; font-size: 13.5px; }
+.review-box .thread-head { font-size: 13px; }
+.review-box .hint { margin: 10px 0 0; font-size: 13px; }
+.ai-fold { border-top: 1px solid var(--line-soft); font-size: 13.5px; }
+.ai-fold.old { opacity: .62; }
+.ai-fold > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 9px 0; cursor: pointer; list-style: none; color: var(--muted); font-size: 13px; }
+.ai-fold > summary::-webkit-details-marker { display: none; }
+.ai-fold > summary::before { content: '▸'; width: 12px; color: var(--muted); font-size: 14px; }
+.ai-fold[open] > summary::before { content: '▾'; }
+.ai-fold > summary:hover .ai-name { color: var(--ink); }
+.ai-fold > summary .faint { margin-left: auto; }
+.ai-name { color: var(--ink-soft); }
+.ai-fold > .thread { padding: 0 0 10px 18px; border-top: 0; }
+.rb-act { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.rb-go { width: 100%; justify-content: center; padding: 8px 12px; font-size: 15px; }
+.rb-choose { display: grid; gap: 8px; }
+.rb-choose[hidden], .rb-go[hidden] { display: none; }
+.rb-choose .btn { justify-content: center; }
+.rb-q { margin: 0 0 2px; font-weight: 600; }
+.rb-minor { font-size: 13.5px; text-align: center; }
+.rb-how { margin: 2px 0 0; font-size: 12.5px; color: var(--faint); }
+.rb-shut { justify-self: center; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+.rb-shut:hover { color: var(--ink); text-decoration: underline; }
 .thread { padding: 12px 0; border-top: 1px solid var(--line-soft); font-size: 14.5px; }
-.review .thread:first-of-type { margin-top: 8px; }
 .thread.old { opacity: .62; }
 .thread-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; color: var(--muted); font-size: 13.5px; }
 .thread-head a { color: var(--muted); }
@@ -218,8 +240,14 @@ a.card:hover { border-color: var(--accent); text-decoration: none; }
 .record-actions { margin-top: 6px; color: var(--faint); font-size: 12.5px; }
 .record-actions a { font-family: var(--mono); color: var(--muted); }
 .decl-link { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 13px; }
-.tests { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line-soft); }
-.tests h3 { margin: 4px 0 6px; font-size: 1rem; }
+.tests { border-top: 1px solid var(--line-soft); font-size: 13.5px; }
+.tests > summary { display: flex; align-items: center; gap: 8px; padding: 9px 0; cursor: pointer; list-style: none; color: var(--muted); }
+.tests > summary::-webkit-details-marker { display: none; }
+.tests > summary::before { content: '▸'; width: 12px; color: var(--muted); font-size: 14px; }
+.tests[open] > summary::before { content: '▾'; }
+.tests > summary b { color: var(--ink); font-weight: 600; }
+.tests > summary .bad { color: var(--st-problem); }
+.tests .test-line { padding: 4px 0 6px 20px; }
 .test-line { padding: 5px 0; font-size: 14px; }
 .test-line .mono { font-size: 13px; }
 .result { margin-right: 7px; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
@@ -232,12 +260,18 @@ pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; backgrou
 .map { position: relative; margin: 6px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
 .map-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); }
 .map-tools .hint { margin: 0 0 0 auto; font-size: 12px; color: var(--faint); }
-.map-canvas { height: 460px; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; background: var(--bg); }
+.map-canvas { height: var(--h, 460px); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; background: var(--bg); }
 .map-canvas.dragging { cursor: grabbing; }
+.map-canvas.busy { cursor: progress; }
+.map-canvas.busy svg { opacity: .55; transition: opacity .15s; }
 .map-canvas svg { display: block; width: 100%; height: 100%; }
 .map-wait { padding: 20px; color: var(--faint); }
-.map.full { position: fixed; inset: 0; z-index: 60; margin: 0; border: 0; border-radius: 0; }
-.map.full .map-canvas { height: calc(100vh - 46px); }
+/* Full screen: the window, the tools on top (their button says how to leave), the drawing below. */
+.map.full { position: fixed; inset: 0; z-index: 60; margin: 0; border: 0; border-radius: 0; display: flex; flex-direction: column; }
+.map.full .map-canvas { flex: 1; height: auto; }
+/* What an arrow that found nothing says. */
+.map-note { position: absolute; left: 12px; bottom: 12px; max-width: min(36rem, calc(100% - 24px)); padding: 7px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); color: var(--ink-soft); font-size: 13px; box-shadow: 0 6px 20px rgba(0, 0, 0, .25); opacity: 0; transform: translateY(4px); transition: opacity .2s, transform .2s; pointer-events: none; }
+.map-note.on { opacity: 1; transform: none; }
 .map .edge { fill: none; stroke: var(--edge); stroke-width: 1.15; }
 .map .edge.proof { stroke-dasharray: 4 3; }
 .map .edge.hot { stroke: var(--accent); stroke-width: 1.7; }
@@ -257,8 +291,11 @@ pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; backgrou
 .map .node.more text { fill: var(--muted); }
 .map .open circle { fill: var(--surface); stroke: var(--edge); }
 .map .open text { fill: var(--muted); font-size: 10px; }
-.map .open:hover circle { stroke: var(--accent); }
-.map .open:hover text { fill: var(--accent); }
+.map .open:hover circle, .map .open:focus-visible circle { stroke: var(--accent); }
+.map .open:hover text, .map .open:focus-visible text { fill: var(--accent); }
+.map .open.opened circle { fill: var(--accent-soft); stroke: var(--accent); }
+.map .open.opened text { fill: var(--accent); font-size: 12px; }
+.map .open:focus { outline: none; }
 
 /* Hover over a name. */
 .tip { position: fixed; z-index: 50; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, .3); font-size: 13.5px; pointer-events: none; }
@@ -271,13 +308,15 @@ pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; backgrou
 .foot a { color: var(--muted); }
 .glossary dt { font-weight: 600; margin-top: 10px; } .glossary dd { margin: 2px 0 0; color: var(--muted); max-width: 46rem; }
 
+@media (max-width: 900px) {
+  .statement-grid { grid-template-columns: minmax(0, 1fr); }
+  .review-box { margin-top: 1rem; }
+}
 @media (max-width: 760px) {
   h1 { font-size: 1.55rem; }
   .two { grid-template-columns: minmax(0, 1fr); }
   .nav { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; }
-  .map-canvas { height: 380px; }
+  .map-canvas { height: min(var(--h, 380px), 70vh); }
   .map-tools .hint { display: none; }
-  .review { padding: 14px 12px 10px; }
-  .review-head .switch { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
