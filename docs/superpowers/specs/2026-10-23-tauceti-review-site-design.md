@@ -354,10 +354,9 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      (fetched when first opened); a suggested one says where it stands and opens to the rest);
   5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
      dependency map (6.5), shown;
-  6. the same neighbours as lists, in two columns, each ranked with its first dozen shown: built from
-     or about (what comes from Mathlib and Lean as a line of chips, named as a mathematician names
-     Lean's basic notions), proof uses (routine steps counted, not listed), results about it, built on
-     it, examples, used to prove. Each item: its title, what it states (its signature without its
+  6. some neighbours as lists, in two columns, each ranked with its first dozen shown: proof uses
+     (routine steps counted, not listed), built on it, examples, used to prove. What it is built from
+     or about, and the results about it, are left to the map (asked for on 2026-10-24). Each item: its title, what it states (its signature without its
      name, its implicit arguments and the arguments that only introduce a type, names by their last
      component, at most 140 characters: `[CommRing R] [IsRegularRing R] [IsDomain R] :
      IsIntegrallyClosed R`), its Lean name, and its review state when reviewed.

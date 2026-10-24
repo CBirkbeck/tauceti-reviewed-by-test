@@ -144,17 +144,15 @@ def declaration(browser, url, errors):
     hrefs = page.eval_on_selector_all(".links a", "as => as.map(a => a.href)")
     expect("https://example.org/docs/Fixture/Basic.html#Fixture.triple" in hrefs, "the API docs")
     expect("https://github.com/test/fixture/blob/B/Fixture/Basic.lean#L15-L16" in hrefs, "the source at the pin")
-    expect(page.locator("h2", has_text="Results about it").count() == 1, "what rests on it, as a list")
-    expect(page.locator(".list > li", has_text="triple 2 = 6").count() == 1, "each result in a list with its statement")
+    expect(page.locator("h2", has_text="Results about it").count() == 0 and page.locator("h2", has_text="What it is built from").count() == 0,
+           "what it is built from and the results about it are the map's, not lists")
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors)
     expect(page.locator(".lean pre").first.inner_text() == "theorem Fixture.triple_pos (n : Nat) (h : 0 < n) : 0 < Fixture.triple n",
            "a theorem's signature, section variables and all")
     ref = page.locator(".lean a.ref", has_text="Fixture.triple")
     expect(ref.get_attribute("href") == "#/d/Fixture.triple", "its names link")
     expect(page.locator(".lean details").count() == 0 and "omega" not in page.inner_text("main"), "no proof")
-    about = page.locator(".section", has=page.locator("h2", has_text="What it is about"))
-    expect(about.locator(".list > li").count() == 1 and "natural numbers ℕ" in about.locator(".basics").inner_text(),
-           "what it rests on in the library listed, what it uses from Mathlib and Lean as chips")
+    expect(page.locator("h2", has_text="What it is about").count() == 0, "what a theorem is about is the map's, not a list")
     ref.hover()
     page.wait_for_selector("#tip:not([hidden])")
     expect("Fixture.triple · Definition" in page.locator("#tip").inner_text(), "a name says what it is on hover")

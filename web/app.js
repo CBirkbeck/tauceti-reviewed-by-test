@@ -137,42 +137,13 @@
     }
     return box;
   }
-  /* A ranked list of declarations: the first dozen, all the data keeps on a click, and a count of the rest.
-     With `outside`, what is from Mathlib and Lean is a line of chips below it instead, Lean's notions named
-     as a mathematician would and its plumbing left out. */
-  async function nodeList(ids, total, empty, outside) {
+  /* A ranked list of declarations: the first dozen, all the data keeps on a click, and a count of the rest. */
+  async function nodeList(ids, total, empty) {
     const all = ids && ids.length ? await TauData.nodes(ids) : [];
-    const chips = outside ? all.filter(n => !(n.flags & FLAG.PROJECT)) : [];
-    const box = itemList(all.filter(n => !chips.includes(n)), n => nodeItem(n), 12, chips.length ? '' : empty);
-    if (chips.length) {
-      const line = el('p', 'hint basics'), seen = new Set();
-      line.append('From Mathlib and Lean: ');
-      chips.forEach(n => {
-        const word = n.name in BASIC_WORDS ? BASIC_WORDS[n.name] : shortName(n.name);
-        if (!word || seen.has(word)) return;
-        seen.add(word);
-        const chip = link(URLS.decl(n.name), word, 'chip basic');
-        chip.title = n.name + (n.brief ? ' : ' + n.brief : '');
-        line.append(chip, ' ');
-      });
-      if (seen.size) box.append(line);
-    }
+    const box = itemList(all, n => nodeItem(n), 12, empty);
     if (ids && total > ids.length) box.append(el('p', 'faint small', `and ${plural(total - ids.length, 'more')} not listed`));
     return box;
   }
-  /* Words for Lean's basic notions; '' is plumbing. */
-  const BASIC_WORDS = {Eq: 'equality', Ne: '≠', Nat: 'natural numbers ℕ', Int: 'integers ℤ', Real: 'real numbers ℝ',
-    Complex: 'complex numbers ℂ', Rat: 'rationals ℚ', HMul: 'multiplication', Mul: 'multiplication', HAdd: 'addition',
-    Add: 'addition', HSub: 'subtraction', Sub: 'subtraction', HDiv: 'division', Div: 'division', HPow: 'powers', Pow: 'powers',
-    Neg: 'negation', Inv: 'inverse', Zero: 'zero', One: 'one', OfNat: 'numerals', LE: '≤', LT: '<', Exists: 'there exists',
-    And: 'and', Or: 'or', Not: 'not', Iff: 'if and only if', Membership: '∈', HSMul: 'scalar multiplication',
-    SMul: 'scalar multiplication', Prod: 'pairs', Subtype: 'subsets as types', List: 'lists', Array: 'arrays', Bool: 'booleans',
-    String: 'strings', Fin: 'Fin n', Option: 'optional values', True: 'true', False: 'false', Function: 'functions',
-    Unit: 'unit', Sum: 'disjoint union', Sigma: 'dependent pairs', Quotient: 'quotients', Setoid: 'equivalence relations',
-    NatCast: 'ℕ → R', IntCast: 'ℤ → R', HEq: 'equality', Set: 'sets', Decidable: '', DecidableEq: '', DecidablePred: '',
-    DecidableRel: '', outParam: '', semiOutParam: '', Inhabited: '', Nonempty: 'nonempty', 'Classical.propDecidable': '',
-    'Classical.decEq': '', 'Classical.decPred': '', instDecidableEqNat: '', id: 'identity', ite: 'if … then … else',
-    dite: 'if … then … else', optParam: '', autoParam: '', CoeFun: '', CoeSort: '', FunLike: '', DFunLike: '', HFunLike: ''};
 
   /* --- records -------------------------------------------------------------------------------------- */
   function verdictBadge(v) {
@@ -513,7 +484,7 @@
     const read = !answerable ? null : project ? {url: URLS.docs(meta, name, modName), label: 'Read it in the API docs ↗'}
       : {url: URLS.mathlib(name, modName), label: "Read it in Mathlib's docs ↗", from: home};
     parts.push(reviewCard(meta, name, read, records, e.tests || [], questionWord(n.kind, e.kw)));
-    // The map, and the same as lists.
+    // The map; then, as lists, how it is proved and what rests on it beyond the map's first level.
     const mapHost = el('div');
     if (project) {
       const sec = section('What it rests on, and what rests on it', null,
@@ -528,14 +499,13 @@
       sec.append(mapHost);
       parts.push(sec);
     }
-    const lists = [], about = n.kind === 'theorem' || n.kind === 'axiom' || n.kind === 'instance';
-    if (project) lists.push(section(about ? 'What it is about' : 'What it is built from', n.nm || null, await nodeList(n.m, n.nm, 'Only Lean itself.', true)));
+    // What it is built from or about, and the results about it, are the map's: no lists of them (asked for on 2026-10-24).
+    const lists = [];
     if (n.p.length || e.nRoutine) {
       const box = await nodeList(n.p, n.np, 'Only routine steps.');
       if (e.nRoutine) box.append(el('p', 'faint small', `and ${plural(e.nRoutine, 'routine step')} (arithmetic, logic and automation)`));
       lists.push(section(n.kind === 'theorem' ? 'How it is proved' : 'What the proofs in it use', n.np || null, box));
     }
-    if (e.facts) lists.push(section('Results about it', e.nFacts, await nodeList(e.facts, e.nFacts)));
     if (e.builtOn) lists.push(section('Built on it', e.nBuiltOn, await nodeList(e.builtOn, e.nBuiltOn)));
     if (e.examples) lists.push(section('Examples', e.nExamples, await nodeList(e.examples, e.nExamples)));
     if (e.usedIn) lists.push(section('Used to prove', e.nUsedIn, await nodeList(e.usedIn, e.nUsedIn)));

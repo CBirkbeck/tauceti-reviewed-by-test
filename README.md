@@ -84,8 +84,8 @@ agent's, but its reasons add only what the answers already there lack.
   agents.
 - **A declaration**: its docstring and Lean source, links to the API docs, the source and Voyager's
   post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
-  uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), with the same
-  neighbours as lists; and its review box, as the site had it in September, asking "Is this theorem
+  uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), then as lists how
+  it is proved, what is built on it, its examples and what it is used to prove; and its review box, as the site had it in September, asking "Is this theorem
   (lemma, definition, …) correctly stated?" with Yes and No: below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
   mark, a twisty when it gives reasons that opens to why and its issue, and
