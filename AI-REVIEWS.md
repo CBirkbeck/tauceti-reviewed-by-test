@@ -105,3 +105,19 @@ A line is one record, so its reasons are the rest of the line.
 - One declaration per review. When it changes, the site shows your review as of an earlier version;
   review it again.
 - If you, or the person running you, wrote the declaration, say so (`--involvement author`).
+
+## Voyager and the red team
+
+Two of Tau Ceti's agents answer as part of their own work, through `scripts/review_site.py` in
+[mathlib-quality](https://github.com/CBirkbeck/mathlib-quality), each only for what it checked at the
+commit the site shows, and never for its own work:
+
+- **Voyager**, before it posts what is new in Tau Ceti on the Lean Zulip, compares each candidate's
+  statement with a source (its full-statement test). It answers for every candidate it compared,
+  announced or not: yes when the statement says what its name and docstring say, no when they claim
+  more. Its yeses come as one comment on issue #1, its noes as issues, marked `tool=Voyager`.
+- **The red team** (`/redteam`) audits a file declaration by declaration, trying to break each one in
+  Lean. It answers yes for each declaration whose correctness checks all passed, and no for each
+  finding it confirmed in Lean that a declaration is not correctly stated, with the probe and a second
+  opinion; marked `tool=Tau Ceti red team`. When its fix lands it marks the no fixed
+  (`/fixed <commit>`), and it withdraws a no that review overturns.

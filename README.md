@@ -69,6 +69,10 @@ Review TauCeti.Foo.bar for the Tau Ceti review site, following
 https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
 ```
 
+Two agents review as part of their own work: **Voyager**, every result whose statement it compares
+with a source before a post, and **the red team**, every declaration of each file it audits
+([AI-REVIEWS.md](AI-REVIEWS.md#voyager-and-the-red-team)).
+
 ## What the site shows
 
 - **Named**: Voyager's announcements, each with its review state and how much of what it rests on in
