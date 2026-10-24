@@ -236,6 +236,20 @@
     return box;
   }
 
+  /* A docstring after its first sentence, when it starts with the sentence a page has as its title; else all of
+     it. Whitespace is compared loosely, the title being the sentence on one line. */
+  function afterTitle(doc, title) {
+    let i = 0, j = 0;
+    const space = c => /\s/.test(c);
+    while (i < doc.length && space(doc[i])) i++;
+    while (j < title.length) {
+      if (space(title[j])) { j++; while (i < doc.length && space(doc[i])) i++; continue; }
+      if (doc[i] !== title[j]) return doc;
+      i++; j++;
+    }
+    return doc.slice(i).replace(/^\s+/, '');
+  }
+
   /* A signature as the docs show it: the keyword, then each name a link to its declaration (hover over
      it to see what it is), `names` the module's table of them. Positions are code points (S2), hence
      Array.from. */
@@ -431,8 +445,11 @@
     if (row) kinds.append(el('span', 'badge named', `★ Named by Voyager · ${date(row.at)}`));
     if (!project) kinds.append(el('span', 'badge', home === 'Mathlib' ? 'From Mathlib' : `From ${home}`));
     kinds.append(stateBadge(stateOf(n), true));
+    // The title: Voyager's name, else the docstring's first sentence, else the Lean name. A first sentence cut
+    // short (for lists) gives way to the Lean name, the docstring below saying it in full.
+    const cut = !row && (n.title || '').endsWith(' …');
     const h1 = el('h1');
-    h1.append(row ? mdInline(row.name) : n.title ? mdInline(n.title) : el('span', 'mono', shortName(name)));
+    h1.append(row ? mdInline(row.name) : n.title && !cut ? mdInline(n.title) : el('span', 'mono', shortName(name)));
     const leanName = el('div', 'leanname'), copy = el('button', null, 'copy');
     copy.type = 'button'; copy.title = 'Copy the Lean name';
     copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(name); copy.textContent = 'copied'; } catch (x) { /* no clipboard */ } });
@@ -452,8 +469,9 @@
       box.append(el('div', 'announce-label', 'Voyager announced it'), md(row.text, 'prose'));
       parts.push(box);
     }
-    // The docstring, unless all it says is the title above.
-    if (e.doc && (row || e.doc.trim() !== (n.title || '').trim())) parts.push(md(e.doc, 'prose'));
+    // The docstring, less the sentence the title above already says.
+    const doc = e.doc && (row || cut || !n.title ? e.doc : afterTitle(e.doc, n.title));
+    if (doc && doc.trim()) parts.push(md(doc, 'prose'));
     if (e.sig || e.stmt) {
       // What the docs show: the signature Lean prints, section variables included, its names linked; a
       // definition's value folded (the docs' Equations), a structure's fields; never a proof.
@@ -1037,6 +1055,7 @@
     get ready() { return ready; },
     route: () => current,
     mapNodes: () => [...document.querySelectorAll('.map .node[data-name]')].map(g => g.dataset.name),
+    afterTitle,
     fnv: TauData.fnv,
   });
 })();

@@ -123,6 +123,10 @@ def declaration(browser, url, errors):
     expect(page.locator(".kind-row .kind").inner_text().lower() == "definition", "its kind")
     expect(page.locator(".lean pre").first.inner_text() == "def Fixture.triple (n : Nat) : Nat", "its signature, as the docs show it")
     expect(page.locator(".lean details:not([open]) summary", has_text="Definition").count() == 1, "its value, folded as in the docs")
+    expect(page.locator("main > .md.prose").count() == 0, "a docstring that is all title is not said twice")
+    expect(page.evaluate("[TauReview.afterTitle('First, wrapped\\nhere. Then more.', 'First, wrapped here.'), "
+                         "TauReview.afterTitle('# A heading\\nText.', 'Text.'), TauReview.afterTitle('Only this.', 'Only this.')]")
+           == ["Then more.", "# A heading\nText.", ""], "below a title, the docstring goes on from its second sentence")
     hrefs = page.eval_on_selector_all(".links a", "as => as.map(a => a.href)")
     expect("https://example.org/docs/Fixture/Basic.html#Fixture.triple" in hrefs, "the API docs")
     expect("https://github.com/test/fixture/blob/B/Fixture/Basic.lean#L15-L16" in hrefs, "the source at the pin")
