@@ -74,6 +74,10 @@ class VoyagerWorkflowTests(unittest.TestCase):
         named = load("follow.yml")["jobs"]["named"]
         self.assertEqual(named["uses"], "./.github/workflows/voyager.yml")
         self.assertIn("needs.pin.outputs.moved == 'true'", named["if"])  # not every hour: only after a new dataset
+        jobs = load("follow.yml")["jobs"]
+        for name in ("named", "prune", "site"):  # a cancelled run stops: no site without its dataset
+            self.assertTrue(jobs[name]["if"].startswith("!cancelled()"), name)
+        self.assertIn("needs.dataset.result == 'success' || needs.dataset.result == 'skipped'", jobs["site"]["if"])
         self.assertEqual(named["with"], {"site": False})
         self.assertEqual(named["secrets"], "inherit")
 
