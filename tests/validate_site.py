@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """The browser check: serves a built site as GitHub Pages would and checks, in Chromium, what a
 reader does: the shell and its two themes, the old addresses, the home page, the Named page, search,
-a declaration, its review box, formulas typeset, its dependency map, the other pages, and a phone. Without --site it
+a declaration, its review box and its one question, the Reviewed page, formulas typeset, its dependency
+map, the other pages, and a phone. Without --site it
 builds the fixture's site first (tests/fixture_site.py).
 
   python3 tests/validate_site.py [--site DIR | --url URL] [--only NAME,NAME] [--smoke]
@@ -58,7 +59,7 @@ def settle(page, route: str) -> None:
 def shell(browser, url, errors):
     page = visit(browser, url, "#/", errors)
     expect(page.locator(".brand").inner_text().strip() == "Tau Ceti Review", "the top bar names the site")
-    expect(page.locator(".nav a").all_inner_texts() == ["Named", "Browse", "Activity", "How to review"], "and its sections")
+    expect(page.locator(".nav a").all_inner_texts() == ["Named", "Reviewed", "Browse", "Activity", "How to review"], "and its sections")
     expect("Fixture at B" in page.locator("#foot").inner_text(), "the footer names the pinned commit")
     background = "getComputedStyle(document.body).backgroundColor"
     expect(page.evaluate(background) == "rgb(11, 16, 22)", "dark at first, in the Atlas's colours")
@@ -83,7 +84,8 @@ def old_addresses(browser, url, errors):
 def home(browser, url, errors):
     page = visit(browser, url, "#/", errors)
     expect(page.locator("h1").inner_text() == "Review the mathematics in Fixture", "the home page")
-    expect(page.locator(".stat").count() == 5 and page.locator("a.card").count() == 4, "its counts and its tiles")
+    expect(page.locator(".stat").count() == 6 and page.locator("a.card").count() == 5, "its counts and its tiles")
+    expect(page.locator("a.stat[href='#/reviewed'] b").inner_text() == "10", "how many are reviewed, a click from the list of them")
     expect(page.locator(".section", has_text="Latest named").locator(".list > li").count() == 2, "the latest named")
     expect(page.locator(".section", has_text="Areas").locator("a.chip").count() == 3, "the areas")
 
@@ -144,31 +146,67 @@ def declaration(browser, url, errors):
 def review(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     box = page.locator(".review")
-    tally = box.locator(".mark.tally").first
-    expect(tally.locator(".trailer").inner_text() == "Reviewed-by" and tally.locator(".who").inner_text() == "1 person · 1 AI",
-           "people are counted apart from AI agents")
-    expect(box.locator("details.whose .mark.person").count() == 1 and box.locator("details.whose .mark.agent .ai").count() == 1,
-           "in Who, each reviewer's mark, the AI agent's marked")
-    expect(box.locator("details.whose .mark.agent").get_attribute("href") == "https://github.com/example/fixture-store/issues/11",
-           "a mark opens its review's issue")
-    href = box.locator(".actions a", has_text="Review this").get_attribute("href")
-    expect(href.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in href
-           and "decl=Fixture.triple" in href and "commit=B" in href, "Review this opens the form, filled in")
-    expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts()
-           == ["Review this", "Suggest a test", "Report a problem", "List a test", "Ask a question"], "a button for each form")
+    expect(box.locator(".question").inner_text() == "Is this definition correctly stated?", "one question, naming what it asks about")
+    expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts() == ["Yes", "No"], "and two answers")
+    yes, no = (box.locator(".actions a", has_text=t).get_attribute("href") for t in ("Yes", "No"))
+    expect(yes.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in yes
+           and "decl=Fixture.triple" in yes and "commit=B" in yes, "yes opens the review form, filled in")
+    expect("template=evidence-problem.yml" in no and "decl=Fixture.triple" in no and "commit=B" in no, "no opens the form that asks why")
     expect(box.locator(".actions a", has_text="Read it in the API docs").get_attribute("href")
            == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review box links to the docs")
+    tally = box.locator(".mark.tally.yes")
+    expect(tally.locator(".trailer").inner_text() == "Correctly stated" and tally.locator(".who").inner_text() == "1 person · 1 AI",
+           "the yeses, people counted apart from AI agents")
+    expect(box.locator("details.whose .mark.person").count() == 1 and box.locator("details.whose .mark.agent .ai").count() == 1,
+           "in Who, each answer's mark, the AI agent's marked")
+    expect(box.locator("details.whose .mark.agent").get_attribute("href") == "https://github.com/example/fixture-store/issues/11",
+           "a mark opens its answer's issue")
     expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".which .pass").count() == 1, "Tested by: the listed test passes")
+    expect(page.evaluate("[TauRender.questionWord('theorem', 'lemma'), TauRender.questionWord('structure', 'structure')]")
+           == ["lemma", "structure"], "a lemma is asked about as a lemma")
+    page = visit(browser, url, "#/d/Fixture.triple_comm", errors)
+    box = page.locator(".review")
+    expect(box.locator(".question").inner_text() == "Is this theorem correctly stated?", "a theorem, as a theorem")
+    no = box.locator(".mark.tally.no")
+    expect(no.locator(".trailer").inner_text() == "Not correctly stated" and no.locator(".who").inner_text() == "1 person",
+           "a no still open, counted apart from the yes")
+    expect(box.locator("details.whose .mark.no.person").count() == 1 and box.locator("details.whose .mark.yes").count() == 1,
+           "in Who, a cross for the no and a tick for the yes")
+    report = box.locator(".report").inner_text()
+    expect("answered no by @someone" in report and "the definition, unfolded" in report and "Issue #14" in report,
+           "the no in full: who, why, and its issue")
+    expect(box.locator(".sub", has_text="Tests").count() == 0, "no Tests heading where nothing tests it")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
     expect("what it rests on has changed" in page.locator(".review details.whose").inner_text(), "stale underneath, said")
     page = visit(browser, url, "#/d/Fixture.double", errors)
     box = page.locator(".review")
     expect(box.locator("details.whose .mark.stale").count() == 1 and "1 on an earlier version" in box.inner_text(),
-           "a review of an earlier version, greyed")
+           "a yes about an earlier version, greyed")
     expect(box.locator(".which .test", has_text="Suggested by").count() == 1, "the open suggested test")
     page = visit(browser, url, "#/d/Int", errors)
     expect("from the Test imports store" in page.locator(".review").inner_text(), "an imported review names its store")
-    expect(page.locator(".actions").count() == 0 and page.locator(".map").count() == 0, "no forms and no map outside the library")
+    expect(page.locator(".actions").count() == 0 and page.locator(".map").count() == 0, "no question and no map outside the library")
+
+
+@check
+def reviewed(browser, url, errors):
+    page = visit(browser, url, "#/reviewed", errors)
+    expect(page.locator("h1").inner_text() == "Reviewed" and page.locator(".nav a.on").inner_text() == "Reviewed", "the Reviewed page")
+    items = page.locator(".list > li")
+    expect(items.count() == 10, "every declaration answered for")
+    first = items.first
+    expect(first.locator(".item-sub").inner_text() == "Fixture.triple_comm", "the latest answer first")
+    expect(first.locator(".answer.yes").count() == 1 and first.locator(".answer.no").count() == 1, "with its yes and its no")
+    page.click("[data-answer=no]")
+    expect(page.locator(".list > li").count() == 1, "the noes still open")
+    page.click("[data-answer=yes]")
+    expect(page.locator(".list > li").count() == 5, "the yeses")
+    page.select_option("select[aria-label='Answered by']", "ai")
+    expect(page.locator(".list .item-sub").all_inner_texts() == ["Fixture.triple"], "the AI agents' yeses")
+    expect(page.locator(".list .answer.yes").text_content() == "✓1 AI", "counted as AI")
+    page.click(".list > li a")
+    settle(page, "decl:Fixture.triple")
+    expect(page.locator(".review .mark.tally.yes").count() == 1, "an item opens its declaration")
 
 
 @check
@@ -249,7 +287,7 @@ def other_pages(browser, url, errors):
 
 @check
 def phone(browser, url, errors):
-    for route in ("#/d/Fixture.triple_pos", "#/named"):
+    for route in ("#/d/Fixture.triple_pos", "#/named", "#/reviewed"):
         page = visit(browser, url, route, errors, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         expect(page.locator("#q").is_visible() and page.locator(".nav a").first.is_visible(), "search and the sections at the top")
         expect(page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), f"{route}: nothing is wider than the screen")
@@ -263,7 +301,7 @@ def map_drawn(page) -> None:
 
 def smoke(browser, url, errors):
     """Any build: every kind of page opens, and the first named declarations draw their maps."""
-    for route in ("#/", "#/named", "#/browse", "#/activity", "#/help", "#/search/theorem"):
+    for route in ("#/", "#/named", "#/reviewed", "#/browse", "#/activity", "#/help", "#/search/theorem"):
         visit(browser, url, route, errors)
     page = visit(browser, url, "#/named", errors)
     expect(page.locator("h1").inner_text() == "Named results and notable definitions", "the Named page")
@@ -276,8 +314,8 @@ def smoke(browser, url, errors):
     for name in names:
         page = visit(browser, url, "#/d/" + name, errors)
         map_drawn(page)
-        expect(page.locator("h1").count() == 1 and page.locator(".review .actions a[href*='/issues/new?']").count() == 5,
-               f"{name}: its page and its forms")
+        expect(page.locator("h1").count() == 1 and page.locator(".review .actions a[href*='/issues/new?']").count() == 2,
+               f"{name}: its page and its question's two answers")
         arrow = page.locator(".map .node .open:not(.opened)")
         if arrow.count():  # an arrow unfolds something, or says it found nothing
             before = page.locator(".map .node").count()

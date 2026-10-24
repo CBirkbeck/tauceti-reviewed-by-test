@@ -121,6 +121,13 @@ details.more > summary { cursor: pointer; color: var(--accent); font-size: 14px;
 .item-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin-top: 3px; font-size: 12px; color: var(--faint); }
 .item-meta .item-sub { display: inline; }
 .item-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; padding-top: 3px; font-size: 12px; color: var(--faint); }
+/* A reviewed declaration's answers, in a list: ✓ for the yeses, ✗ for the noes. */
+.answers { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.answer { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; color: var(--ink-soft); }
+.answer .tick { width: 15px; height: 15px; font-size: 9.5px; }
+.answer.yes .tick { background: var(--result); color: var(--bg); }
+.answer.no .tick { background: var(--st-problem); color: var(--bg); }
+.answer.earlier { font-style: italic; color: var(--faint); }
 .list .more-line { padding: 4px 22px; font-size: 13.5px; color: var(--faint); }
 .list-more { margin: 8px 0 0 22px; }
 .more-link { display: inline-block; margin: 8px 0 0 22px; font-size: 14px; }
@@ -161,7 +168,7 @@ a.chip:hover { border-color: var(--accent); text-decoration: none; }
 .switch input { accent-color: var(--accent); }
 
 /* Home, Browse. */
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin: 18px 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin: 18px 0; }
 .card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; color: var(--ink); }
 a.card:hover { border-color: var(--accent); text-decoration: none; }
 .card h3 { margin: 0 0 4px; font-size: 1.08rem; }
@@ -170,6 +177,8 @@ a.card:hover { border-color: var(--accent); text-decoration: none; }
 .stats { display: flex; flex-wrap: wrap; gap: 22px; margin: 14px 0 6px; }
 .stat b { display: block; font-family: var(--serif); font-size: 1.6rem; font-weight: 600; }
 .stat span { font-size: 13px; color: var(--muted); }
+a.stat { color: var(--ink); }
+a.stat span { color: var(--accent); }
 .summary { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
 
 /* How much of what a named result rests on is reviewed. */
@@ -179,16 +188,22 @@ a.card:hover { border-color: var(--accent); text-decoration: none; }
 .b-done { background: var(--st-covered); } .b-ai { background: var(--st-uncounted); } .b-problem { background: var(--st-problem); }
 .coverage { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 14px; color: var(--muted); }
 
-/* The review box, as the site had it in September: a button for each form, then Problems, Reviews and
-   Tests under small capitals, each review a mark (a tick in a pill), people's filled, AI agents' ringed,
-   one of an earlier version grey. */
+/* The review box, as the site had it in September, asking one question: is it correctly stated? Then
+   Reviews and Tests under small capitals, each answer a mark (a tick or a cross in a pill), people's
+   filled, AI agents' ringed, one that no longer stands grey; each no in full. */
 .review { margin: 1.6rem 0; padding: 14px 18px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
-  --person: var(--result); --agent: var(--st-uncounted); --tested: var(--concept); }
+  --person: var(--result); --agent: var(--st-uncounted); --tested: var(--concept); --no: var(--st-problem); }
 .review .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.review .question { margin-right: 6px; font-family: var(--serif); font-size: 1.12rem; font-weight: 600; color: var(--ink); }
 .review .actions .btn { font-size: 13.5px; padding: 5px 12px; border-radius: 6px; color: var(--muted); }
 .review .actions .btn:hover { color: var(--ink); }
-.review .actions .btn.primary { color: var(--accent-ink); padding: 5px 14px; }
-.review .actions .btn.warn { color: var(--st-problem); border-color: color-mix(in srgb, var(--st-problem) 40%, var(--line)); }
+.review .actions .btn.yes, .review .actions .btn.no { min-width: 64px; justify-content: center; font-weight: 600; }
+.review .actions .btn.yes { color: var(--result); border-color: color-mix(in srgb, var(--result) 55%, var(--line)); }
+.review .actions .btn.no { color: var(--no); border-color: color-mix(in srgb, var(--no) 55%, var(--line)); }
+.review .actions .btn.yes:hover { background: color-mix(in srgb, var(--result) 14%, var(--surface)); }
+.review .actions .btn.no:hover { background: color-mix(in srgb, var(--no) 14%, var(--surface)); }
+.review .actions .btn.docs { margin-left: auto; }
+.review .how { margin: 6px 0 0; font-size: 12.5px; color: var(--faint); }
 .review .sub { margin: 16px 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 .review .empty { margin: 4px 0; font-size: 14px; }
 .review details { margin: 2px 0 8px; }
@@ -206,6 +221,8 @@ a.mark:hover { border-color: var(--accent); text-decoration: none; }
 .tick { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: 700; }
 .mark.person .tick { background: var(--person); color: var(--bg); }
 .mark.agent .tick { box-shadow: inset 0 0 0 1.5px var(--agent); color: var(--agent); }
+.mark.no.person .tick { background: var(--no); color: var(--bg); }
+.mark.no.agent .tick { box-shadow: inset 0 0 0 1.5px var(--no); color: var(--no); }
 .mark.tested .tick { background: var(--tested); color: var(--bg); }
 .mark.stale { color: var(--faint); }
 .mark.stale .tick { background: none; box-shadow: inset 0 0 0 1.5px var(--faint); color: var(--faint); }
@@ -317,5 +334,7 @@ pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; backgrou
   .map-canvas { height: min(var(--h, 380px), 70vh); }
   .map-tools .hint { display: none; }
   .review { padding: 12px 12px 8px; }
+  .review .question { flex-basis: 100%; }
+  .review .actions .btn.docs { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

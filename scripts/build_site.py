@@ -53,6 +53,7 @@ def build(dataset: Path, store: Path, out: Path, settings: dict, source: Path | 
     write(data / "named.json", site.named_rows())
     write(data / "upstream.json", site.upstream())
     write(data / "activity.json", site.activity())
+    write(data / "reviewed.json", site.reviewed_rows())
     counts = site.counts()
     write(data / "meta.json", site.meta(counts))
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())

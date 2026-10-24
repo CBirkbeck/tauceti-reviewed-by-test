@@ -60,5 +60,6 @@
     json, meta, node, nodes, idOf, decl, moduleByName, fnv, KINDS, FLAG, STATES,
     modules: () => json('modules.json'), named: () => json('named.json'), search: () => json('search.json'),
     titles: () => json('titles.json'), activity: () => json('activity.json'), upstream: () => json('upstream.json'),
+    reviewed: () => json('reviewed.json'),
   });
 })();

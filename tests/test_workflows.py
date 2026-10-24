@@ -136,6 +136,23 @@ class FormTests(unittest.TestCase):
             self.assertFalse(ids & {"involvement", "who", "agent"}, name)
             self.assertNotIn("AI agent", yaml.safe_dump(t["body"], allow_unicode=True), name)
 
+    def test_one_question_yes_or_no(self):
+        # The yes asks nothing more; the no asks why, and will not go without it.
+        forms = dict(self.templates())
+        fields = lambda name: [(f["id"], bool(f.get("validations", {}).get("required")))
+                               for f in forms[name]["body"] if f["type"] != "markdown"]
+        self.assertEqual(fields("evidence-review.yml"), [("decl", True), ("commit", False), ("rationale", False)])
+        self.assertEqual(fields("evidence-problem.yml"), [("decl", True), ("commit", False), ("rationale", True)])
+        self.assertEqual((forms["evidence-review.yml"]["labels"], forms["evidence-problem.yml"]["labels"]),
+                         (["evidence:review"], ["evidence:problem"]))
+
+    def test_a_no_from_the_form_says_why(self):
+        from evidence_store import forms
+        t = dict(self.templates())["evidence-problem.yml"]
+        answers = {"decl": "Fixture.triple_comm", "commit": "B", "rationale": "It states the definition, unfolded."}
+        body = "\n\n".join(f"### {f['attributes']['label']}\n\n{answers[f['id']]}" for f in t["body"] if f["type"] != "markdown")
+        self.assertEqual(forms.parse("problem", body), answers)  # no category: intake records "other"
+
     def test_a_review_from_the_form_is_a_persons(self):
         from evidence_store import forms, intake
         t = dict(self.templates())["evidence-review.yml"]
@@ -143,7 +160,7 @@ class FormTests(unittest.TestCase):
         body = "\n\n".join(f"### {f['attributes']['label']}\n\n{answers.get(f['id'], '_No response_')}"
                            for f in t["body"] if f["type"] != "markdown")
         read = forms.parse("review", body)
-        self.assertEqual(read, {**answers, "checked": {}})  # nothing ticked
+        self.assertEqual(read, answers)  # the yes, and why: nothing else to tick or choose
         self.assertEqual(intake.author_of({"login": "someone"}, None, read.get("involvement") or "unknown")["kind"], "person")
 
 

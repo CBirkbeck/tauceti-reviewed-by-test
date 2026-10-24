@@ -58,7 +58,8 @@ at the same address. It must:
 ## 4. The repository after the change
 
 ```
-.github/ISSUE_TEMPLATE/evidence-*.yml, config.yml   from `evidence-store init`, less You are, Written by, Agent
+.github/ISSUE_TEMPLATE/evidence-*.yml, config.yml   from `evidence-store init`, less You are, Written by, Agent;
+                                                     the review and problem forms cut to yes and no
 .github/workflows/
   follow.yml           daily: pin Tau Ceti, extract its dataset, prune old datasets, then pages
   dataset.yml          one commit's dataset as a release (called by follow.yml, or by hand)
@@ -132,7 +133,11 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   report a problem, propose a test (a challenge), list a test, ask a question, name a result, and a
   change of state. The forms leave out "You are", "Written by" and "Agent" (asked for on 2026-10-24):
   only people fill them in, and intake records the account that opened the issue as a person, of
-  unknown involvement; AI agents submit from the command line with `evidence-store submit`. Intake turns an issue into a record keyed in the dataset of the commit the form
+  unknown involvement; AI agents submit from the command line with `evidence-store submit`. A review
+  answers one question, "is it correctly stated?" (asked for on 2026-10-24): the review form is the
+  yes (the declaration and the commit, filled in by the site, and an optional why) and the problem
+  form the no (the same, and a why it will not submit without; with no "What is wrong", intake records
+  `other`). The site offers no other form. Intake turns an issue into a record keyed in the dataset of the commit the form
   names, answers on the issue, and starts `pages.yml`. A comment whose first line is a command
   changes a record's state (`/withdraw`, `/fixed [commit]`, `/intended`, `/invalid`,
   `/met <declaration>`, `/failed`, `/declined`, `/answered`, `/reopen`); so does closing or reopening
@@ -211,6 +216,7 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   | `names/<k>.json` | name to id, sharded by the FNV-1a hash of the name, as Mathlib Explorer does |
   | `m/<n>.json` | module number `n` (its place in the dataset's modules): its docstring, and for each of its declarations the docstring, the statement in Lean, whether it has a proof, its source range and keyword; `built_on`, `facts`, `examples`, `used_in` (ids, most important first, at most 60 each, with totals); its record threads, tests and open challenges; its announcement |
   | `activity.json` | the newest records, open problems, open challenges, the reviewers (people and agents), and the review queue of the named declarations |
+  | `reviewed.json` | every declaration of the library answered for, the latest answer first: its id and name, its yeses of this version, its noes still open and its earlier answers, each as [people, AI agents], and the latest answer's date |
   | `modules.json` | every module a node belongs to: name, package, title, source path; the project's first, in the dataset's order, then the others |
   | `upstream.json` | the record threads about declarations outside Tau Ceti (from the imported stores), by name |
 
@@ -264,27 +270,31 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
 
 ### 6.2 Shell
 
-- **Top bar:** "Tau Ceti Review"; the search box (`⌘K` or `/`, results as you type); Named, Browse,
-  Activity, How to review; the theme button.
+- **Top bar:** "Tau Ceti Review"; the search box (`⌘K` or `/`, results as you type); Named, Reviewed,
+  Browse, Activity, How to review; the theme button.
 - **Footer:** the pinned commit and its date, when the site was built, the store, How to review.
 - **Phone width:** the sections wrap under the search box, and the page is one column.
 
 ### 6.3 Addresses
 
-`#/` (home), `#/named`, `#/d/<name>`, `#/m/<module>`, `#/area/<Area>`, `#/search/<query>`,
+`#/` (home), `#/named`, `#/reviewed`, `#/d/<name>`, `#/m/<module>`, `#/area/<Area>`, `#/search/<query>`,
 `#/browse`, `#/activity`, `#/help`. The old site's addresses, query-style hashes, still work:
 `#d=<name>` opens `#/d/<name>`, `#m=<module>` opens `#/m/<module>`, `#area=<Area>` opens
 `#/area/<Area>`, and `#q=<query>` opens `#/search/<query>`.
 
 ### 6.4 Pages
 
-- **Home:** what the site is; the counts (declarations, named, reviews by people and by AI agents,
-  open problems); tiles for Named, Browse, Activity and How to review; the eight latest named; the
-  areas.
+- **Home:** what the site is; the counts (declarations, named, reviewed (a link to Reviewed), yeses
+  by people and by AI agents, noes still open); tiles for Named, Reviewed, Browse, Activity and How to
+  review; the eight latest named; the areas.
 - **Named:** Voyager's announcements grouped by area, each with Voyager's name and sentence, the Lean
   name, its review state, a coverage bar (how much of what it rests on in Tau Ceti has been reviewed)
   and the date. Filters: results or definitions, area, review state, words; sorted by newest, by
   name, or by how much rests on it; the "Count AI reviews" switch.
+- **Reviewed** (asked for on 2026-10-24): every declaration of Tau Ceti answered for, the latest
+  answer first (`data/reviewed.json`), each with its yeses of this version and its noes still open,
+  people apart from AI agents, and how many earlier answers; filters for yes or no, for people or AI
+  agents, and words.
 - **Declaration,** one column:
   1. the breadcrumbs; the kind's pill, "Named by Voyager" and the review state; the title (Voyager's
      name, else the docstring's first sentence, else the Lean name); the Lean name, with copy; links
@@ -296,15 +306,18 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
   3. **In Lean,** what the docs show of it: the signature Lean prints (the dataset's `signature`
      facet: section variables included, every name a link, and on hover what it is), a definition's
      value folded (the docs' Equations), a structure's fields, and never a proof;
-  4. the **review box**, as the site had it in September (asked for on 2026-10-24): the buttons Review
-     this, Suggest a test, Report a problem, List a test, Ask a question and "Read it in the API
-     docs"; then, under small capitals, **Problems** and **Questions** (each where it stands, who
-     raised it and when, what they said, the replies, its issue and what was decided on it),
-     **Reviews** (a mark "✓ Reviewed-by · 2 people · 1 AI", and in **Who** a mark for each reviewer: a
-     person's ticked and filled, an AI agent's ringed and marked AI, one of an earlier version grey
-     with "earlier version" or "what it rests on has changed", an imported one "from the Mathlib
-     probability store"; each links to its issue and shows on hover what was compared and checked
-     and why) and **Tests** (a mark "✓ Tested by · 1 test that passes · 1 suggested", and in **Which**
+  4. the **review box**, as the site had it in September (asked for on 2026-10-24), asking one
+     question (asked for the same day): "Is this theorem correctly stated?" (lemma, definition,
+     structure, …: a lemma by its keyword, else its kind) with **Yes** and **No**, "Read it in the API
+     docs", and a line saying that either opens a short form and a no asks why; then, under small
+     capitals, **Reviews** (a mark "✓ Correctly stated · 2 people · 1 AI" for the yeses of this
+     version, a mark "✗ Not correctly stated · 1 person" for the noes still open, and in **Who** a
+     mark for each answer: a person's filled, an AI agent's ringed and marked AI, a tick for a yes and
+     a cross for a no, one that no longer stands grey with "earlier version", "what it rests on has
+     changed" or what resolved it, an imported one "from the Mathlib probability store"; each links to
+     its issue and shows on hover why; then each no in full: where it stands, who said it and when,
+     why, the replies, its issue and what was decided on it), any **Questions**, and **Tests** when
+     something tests it (a mark "✓ Tested by · 1 test that passes · 1 suggested", and in **Which**
      each listed test with whether it passes and each suggested one with where it stands);
   5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
      dependency map (6.5), shown;
@@ -324,13 +337,15 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
 - **Browse:** a tile for each area. **Area:** its named declarations and its modules.
 - **Search:** names and titles of every declaration, notions and results in two columns, named ones
   first.
-- **Activity:** the open problems, questions and suggested tests, what to review next for the named
+- **Activity:** the noes still open, any open questions and suggested tests, what to review next for the named
   results (the unreviewed declarations they rest on, those most of them share first), the newest
   records, and the reviewers.
-- **How to review:** the forms, the bulk issue's lines, the AI marker, and what each status means.
+- **How to review:** the question and its two answers, what "correctly stated" means, versions, AI
+  agents (AI-REVIEWS.md and the bulk issue's lines), and the commands on an answer's issue.
 
-Each button opens `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
-with the form's `decl` and `commit` fields filled in (the declaration and the pinned commit).
+Yes and No open `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
+(`evidence-review.yml`, `evidence-problem.yml`) with the form's `decl` and `commit` fields filled in
+(the declaration and the pinned commit).
 
 ### 6.5 The dependency map
 

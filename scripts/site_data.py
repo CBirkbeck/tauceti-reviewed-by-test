@@ -368,6 +368,30 @@ class Site:
                          "imp": round(self.g.importance[d.id], 2)})
         return sorted(rows, key=lambda x: (x["at"], x["decl"]), reverse=True)
 
+    def reviewed_rows(self) -> list[dict]:
+        """Every declaration of the library someone has answered for, yes (a review's acceptance) or no (its
+        problem), the latest answer first, with its answers counted as [people, AI agents]: the yeses of this
+        version, the noes still open, and the answers that no longer stand (a yes of an earlier version, a no
+        resolved). An answer withdrawn, or superseded by its answerer's later one, is left out."""
+        rows = []
+        for name in self.ev.by_decl:
+            d = self.ds.by_name.get(name)
+            if d is None or not d.is_project:
+                continue
+            yes, no, earlier, last = [0, 0], [0, 0], [0, 0], ""
+            for v in views.views_on(self.ev, name, "review"):
+                if v.get("verdict") not in ("accept", "problem") or not v["inForce"]:
+                    continue
+                k = 1 if v["by"]["kind"] == "agent" else 0
+                if v["verdict"] == "accept":
+                    (yes if v["applies"] else earlier)[k] += 1
+                else:
+                    (no if v["state"] == "open" else earlier)[k] += 1
+                last = max(last, v["at"])
+            if last:
+                rows.append({"id": d.id, "name": name, "yes": yes, "no": no, "earlier": earlier, "at": last})
+        return sorted(rows, key=lambda r: (r["at"], r["name"]), reverse=True)
+
     def activity(self) -> dict:
         ev = self.ev
         recent = [views.record_view(ev, r, s, name) for name, rows in ev.by_decl.items() for r, s in rows
@@ -396,13 +420,11 @@ class Site:
         return [[a, n, named[a]] for a, n in decls.most_common()]
 
     def counts(self) -> dict:
-        people = ai = 0
-        for name in self.ev.by_decl:
-            p, a = self.accepts(name)
-            people, ai = people + p, ai + a
-        act = self.activity()
+        # The yeses as the Reviewed page counts them: of the library's declarations, of their versions now.
+        reviewed, act = self.reviewed_rows(), self.activity()
+        people, ai = sum(r["yes"][0] for r in reviewed), sum(r["yes"][1] for r in reviewed)
         return {"declarations": sum(1 for d in self.ds.decls if d.is_project), "modules": self.project_modules,
-                "named": len(self.named), "accepts": {"people": people, "ai": ai},
+                "named": len(self.named), "reviewed": len(reviewed), "accepts": {"people": people, "ai": ai},
                 "problems": len(act["problems"]), "challenges": len(act["challenges"]),
                 "tests": sum(len(self.ev.tests(n)) for n in self.ev.by_decl)}
 

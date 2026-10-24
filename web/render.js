@@ -35,10 +35,11 @@
   const kindClass = kind => ({theorem: 'result', axiom: 'result', instance: 'instance'})[kind] || 'concept';
   const kindPill = (kind, word) => el('span', 'kind ' + kindClass(kind), word || KIND_WORD[kind] || 'Declaration');
   /* A review state is a badge: a dot in its colour and a word. */
-  const STATE_TEXT = {unreviewed: 'Not reviewed yet', covered: 'Reviewed', uncounted: 'Reviewed, by AI agents only',
-                      stale: 'Reviewed on an earlier version', problem: 'An open problem', disputed: 'Reviewed, with an open problem'};
+  const STATE_TEXT = {unreviewed: 'Not reviewed yet', covered: 'Reviewed: correctly stated', uncounted: 'Reviewed, by AI agents only',
+                      stale: 'Reviewed on an earlier version', problem: 'Answered no: not correctly stated',
+                      disputed: 'Answered yes, and also no'};
   const STATE_SHORT = {unreviewed: 'Not reviewed', covered: 'Reviewed', uncounted: 'AI only', stale: 'Earlier version',
-                       problem: 'Problem', disputed: 'Disputed'};
+                       problem: 'Answered no', disputed: 'Disputed'};
   function stateBadge(state, long) {
     const s = el('span', 'st st-' + state);
     s.append(el('i'), (long ? STATE_TEXT : STATE_SHORT)[state] || state);
@@ -61,13 +62,14 @@
       new URLSearchParams({template, title: title + name, decl: name, commit: meta.library.commit}).toString(),
     decl: name => '#/d/' + encodeURIComponent(name),
   };
-  const FORMS = [
-    ['Review this', 'evidence-review.yml', 'Review: ', 'primary'],
-    ['Suggest a test', 'evidence-challenge.yml', 'Challenge: ', ''],
-    ['Report a problem', 'evidence-problem.yml', 'Problem: ', 'warn'],
-    ['List a test', 'evidence-test.yml', 'Test: ', ''],
-    ['Ask a question', 'evidence-question.yml', 'Question: ', ''],
+  /* The one question a review answers, and its two answers: yes opens the review form, no the problem
+     form, which asks why. */
+  const ANSWERS = [
+    ['Yes', 'evidence-review.yml', 'Correctly stated: ', 'yes'],
+    ['No', 'evidence-problem.yml', 'Not correctly stated: ', 'no'],
   ];
+  /* What the question calls a declaration: a lemma is a lemma, else its kind's word. */
+  const questionWord = (kind, kw) => kw === 'lemma' ? 'lemma' : (KIND_WORD[kind] || 'declaration').toLowerCase();
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function date(iso) {
@@ -99,5 +101,5 @@
   }
 
   window.TauRender = Object.freeze({el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT,
-                                    URLS, FORMS, date, plural, who, shortName, modulePath, plain});
+                                    URLS, ANSWERS, questionWord, date, plural, who, shortName, modulePath, plain});
 })();

@@ -2,10 +2,11 @@
 
 The [review site](https://cbirkbeck.github.io/tauceti-reviewed-by-test/) shows each declaration of
 [Tau Ceti](https://github.com/TauCetiProject/TauCeti) as its docs show it, with the reviews it has
-had. People review it from the page, with the buttons of its review box: the forms are for people. An
-AI agent reviews from the command line, as below; its review shows in the same box as a mark of its
-own, marked AI and counted apart from people's, with its reasons on hover and on its issue.
-So the reasons are the review: write them for a mathematician who will read them.
+had. A review answers one question: **is this declaration correctly stated?** Yes, or no and why.
+People answer from the page, with the Yes and No of its review box: the forms are for people. An AI
+agent answers from the command line, as below; its answer shows in the same box as a mark of its own,
+marked AI and counted apart from people's, with its reasons on hover and on its issue. So the reasons
+are the review: write them for a mathematician who will read them.
 
 To ask an agent for a review, give it this:
 
@@ -14,8 +15,9 @@ To ask an agent for a review, give it this:
 
 ## What a review says
 
-That the declaration says what it should: it is the intended notion, or states the intended result.
-Not that its proof is right, which Lean checks. A review is kept against the declaration's meaning
+Yes: the declaration is correctly stated. It says what it should: it is the intended notion, or states
+the intended result, as its name, its docstring and the literature say. No: it is not, and why. Not
+that its proof is right, which Lean checks. A review is kept against the declaration's meaning
 hash, so it goes stale by itself when the declaration, or anything it rests on, changes.
 
 ## What you need
@@ -51,27 +53,26 @@ hash, so it goes stale by itself when the declaration, or anything it rests on, 
    When a Check is a named theorem, also list it as a test (`evidence-store test`, below), and the
    site will show whether it still passes at each commit. A Check that fails is a problem, not an
    acceptance.
-5. **Decide**: accept when it says what it should and every Check there passes; a problem when it does
-   not; a question when you cannot tell.
-6. **File it**, with the site's commit:
+5. **Decide**: yes when it says what it should and every Check there passes; no when it does not, or a
+   Check fails. If you cannot tell, do not answer: tell the person running you what stopped you.
+6. **File it**, with the site's commit. Yes:
 
    ```sh
    evidence-store submit --repo CBirkbeck/tauceti-reviewed-by-test \
      --decl TauCeti.Foo.bar --commit <commit> --verdict accept \
-     --checked object,convention,edge-cases --reference "Stacks, Tag 0BSC" \
      --rationale "$(cat reasons.md)" --agent "Claude Code, claude-opus-5-5"
    ```
 
-   For a problem, `--verdict problem --category edge-cases --rationale "…"`; for a question,
-   `--verdict question --question "…"`. To list a named test,
+   No: `--verdict problem --rationale "$(cat why.md)"`, the same otherwise. Your reasons say what you
+   compared it with and what you checked; the page shows them as they are. To list a named test,
    `evidence-store test --repo … --decl TauCeti.Foo.bar --test TauCeti.Foo.bar_zero --checks "*test_zero*: its value at 0" --agent "…"`;
    to propose one that is not there yet, `evidence-store challenge`. Add `--dry-run` to see the issue
    first. Within minutes the intake workflow records it and the site shows it.
 
-Reasons look like this:
+Reasons for a yes look like this:
 
 ```markdown
-Matches Stacks, Tag 0BSC: the same ring, and the same map to its completion.
+Correctly stated: it matches Stacks, Tag 0BSC, the same ring and the same map to its completion.
 
 Checks (TauCetiRoadmap/ModularCurves, strict henselisation):
 - *strictHenselization_sepClosed_field*: passes, [TauCeti/Examples/…/Strict.lean#L22](https://github.com/TauCetiProject/TauCeti/blob/<commit>/TauCeti/Examples/…/Strict.lean#L22)
@@ -98,7 +99,7 @@ A line is one record, so its reasons are the rest of the line.
 
 ## Rules
 
-- Say what you checked and what you did not; never accept what you have not read at the site's
+- Say what you checked and what you did not; never answer yes to what you have not read at the site's
   commit.
 - One declaration per review. When it changes, the site shows your review as of an earlier version;
   review it again.

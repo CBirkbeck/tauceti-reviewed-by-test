@@ -205,9 +205,23 @@ class PageFilesTests(unittest.TestCase):
 
     def test_activity(self):
         act = data("activity.json")
-        self.assertEqual(act["problems"], [])
+        self.assertEqual([v["decl"] for v in act["problems"]], ["Fixture.triple_comm"])
         self.assertEqual([v["decl"] for v in act["challenges"]], ["Fixture.double"])
         self.assertIn("Claude Code (claude-opus-5-5) via example", [r["label"] for r in act["reviewers"]])
+
+    def test_reviewed(self):
+        # Every declaration answered for, the latest answer first, its answers as [people, AI agents]: the
+        # yeses of this version, the noes still open, and those that no longer stand.
+        rows = {r["name"]: r for r in data("reviewed.json")}
+        self.assertEqual(data("reviewed.json")[0]["name"], "Fixture.triple_comm")
+        self.assertEqual((rows["Fixture.triple_comm"]["yes"], rows["Fixture.triple_comm"]["no"]), ([1, 0], [1, 0]))
+        self.assertEqual(rows["Fixture.triple"]["yes"], [1, 1])                # a person and an AI agent
+        self.assertEqual(rows["Fixture.double"]["earlier"], [1, 0])            # a yes of an earlier version
+        self.assertEqual((rows["Fixture.one"]["no"], rows["Fixture.one"]["earlier"]), ([0, 0], [1, 0]))  # a no resolved
+        self.assertEqual(rows["Fixture.triple"]["id"], node_id("Fixture.triple"))
+        self.assertNotIn("Int", rows)                                          # the library's own only
+        m = data("meta.json")["counts"]
+        self.assertEqual((m["reviewed"], m["accepts"]), (len(rows), {"people": 5, "ai": 1}))
 
     def test_a_cap_keeps_the_totals(self):
         root = OUT / "capped"
