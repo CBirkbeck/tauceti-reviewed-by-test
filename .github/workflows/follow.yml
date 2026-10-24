@@ -1,14 +1,16 @@
 name: Follow Tau Ceti
 
-# Hourly: pins the commit Tau Ceti's API docs show, or the newest before it the extractor can read
-# (scripts/pin.py). When that moves, which is when the docs have been rebuilt (a few times a day), it
-# extracts the dataset, records what Voyager announced against it, rebuilds the site, and deletes the
-# datasets nobody needs any more (scripts/prune.py); otherwise it stops there, in a minute. Reviews keep
+# Every 20 minutes: pins the commit Tau Ceti's published API docs show, its `docgen` branch, where
+# Voyager's window also ends, or the newest before it the extractor can read (scripts/pin.py). When
+# that moves, which is when new docs go live (a few times a day), it extracts the dataset, records what
+# Voyager announced against it, rebuilds the site, and deletes the datasets nobody needs any more
+# (scripts/prune.py); otherwise it stops there, in a minute. Voyager also starts it by hand when the
+# site is behind `docgen` at the time of a post. Reviews keep
 # the meaning hashes they were made on: a declaration whose meaning changed shows them greyed until
 # reviewed again.
 on:
   schedule:
-    - cron: '20 * * * *'
+    - cron: '*/20 * * * *'
   workflow_dispatch:
 
 permissions:

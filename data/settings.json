@@ -7,7 +7,7 @@
   "repo": "TauCetiProject/TauCeti",
   "root": "TauCeti",
   "docs": "https://taucetiproject.org/docs",
-  "docs_workflow": "api-docs.yml"
+  "docs_branch": "docgen"
  },
  "extractor": {
   "repo": "LeanTrustBuilders/extractor",

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Move the pin (`tauceti` in data/settings.json) to the commit Tau Ceti's API docs show, so that the
-site and the docs it links to show the same declarations: the head of the newest successful run on
-main of the docs workflow (`library.docs_workflow`), or main itself when there is none. From there
-back, among 30 commits, the pin takes the newest that can be extracted cheaply: whose toolchain the
-extractor series has a release for and whose build Tau Ceti's cache has published. When the docs have
-moved to a toolchain the series does not support, the pin waits on the last commit before the move,
-and says so.
+"""Move the pin (`tauceti` in data/settings.json) to the commit Tau Ceti's published API docs show:
+its `docgen` branch (`library.docs_branch`), which Tau Ceti points at a commit only once that commit's
+docs are live. It is also where Voyager's window ends, so every declaration Voyager can announce, and
+link to this site, is in the site's build. Main itself when the branch cannot be read. From there back,
+among 30 commits, the pin takes the newest that can be extracted cheaply: whose toolchain the extractor
+series has a release for and whose build Tau Ceti's cache has published. When the docs have moved to a
+toolchain the series does not support, the pin waits on the last commit before the move, and says so.
 
   python3 scripts/pin.py      prints moved=true or moved=false (a line for $GITHUB_OUTPUT)
 """
@@ -46,15 +46,13 @@ def gh_json(path: str):
     return json.loads(subprocess.run(["gh", "api", path], check=True, capture_output=True, text=True).stdout)
 
 
-def docs_commit(repo: str, workflow: str) -> str | None:
-    """The commit of the library's newest API docs: the head of the docs workflow's newest successful
-    run on main. None when there is none, or it cannot be read."""
+def docs_commit(repo: str, branch: str) -> str | None:
+    """The commit the library's published API docs show: the head of ``branch``. None when it cannot
+    be read."""
     try:
-        runs = gh_json(f"repos/{repo}/actions/workflows/{workflow}/runs?branch=main&status=success&per_page=1")
+        return (gh_json(f"repos/{repo}/branches/{branch}") or {}).get("commit", {}).get("sha")
     except subprocess.CalledProcessError:
         return None
-    runs = (runs or {}).get("workflow_runs") or []
-    return runs[0]["head_sha"] if runs else None
 
 
 def recent_commits(repo: str, start: str = "main", n: int = 30):
@@ -80,8 +78,8 @@ def main() -> int:
     settings = load_settings()
     repo = settings["library"]["repo"]
     toolchains = set(supported(release_tags(settings["extractor"]["repo"]), settings["extractor"]["series"]))
-    workflow = settings["library"].get("docs_workflow")
-    start = (docs_commit(repo, workflow) if workflow else None) or "main"
+    branch = settings["library"].get("docs_branch")
+    start = (docs_commit(repo, branch) if branch else None) or "main"
     if start == settings["tauceti"]:
         print("moved=false")  # the docs show the pinned commit already
         return 0

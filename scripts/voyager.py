@@ -9,7 +9,9 @@
                                                       a `named` record for each announcement whose
                                                       declaration the dataset has, once each
 
-An announcement is a bullet `- **[<name>](<docs address>#<declaration>)** — <sentence> (TauCeti#<n>)`;
+An announcement is a bullet `- **[<name>](<link>)** — <sentence> (TauCeti#<n>)`, the link to the
+declaration's page on this site (`…/#/d/<declaration>`, since 2026-10-24) or, before, its anchor in
+the API docs (`<docs address>#<declaration>`);
 the heading above it (`*Named results*`, `*Notable definitions*`) says whether it is a result or a
 definition. One whose declaration the pinned dataset does not have yet is recorded on a later run,
 once the pin includes it.
@@ -32,6 +34,7 @@ from common import ROOT, load_settings  # noqa: E402
 
 from evidence_core import Dataset  # noqa: E402
 from evidence_core import records as rec  # noqa: E402
+from evidence_core.status import classify  # noqa: E402
 from evidence_core.store import Store  # noqa: E402
 
 ANNOUNCEMENTS = ROOT / "data" / "voyager.jsonl"
@@ -39,6 +42,8 @@ STORE = ROOT / "evidence"
 VOYAGER = {"kind": "agent", "agent": {"tool": "Voyager"}}
 BULLET = re.compile(r"^\s*[-*] \*\*\[(?P<name>.+?)\]\((?P<url>https://[^)\s]+)\)\*\*[†‡*]*\s*(?:[—–-]\s*)?(?P<about>.*)$")
 DOCS = re.compile(r"^https://(?:taucetiproject\.github\.io/TauCeti|taucetiproject\.org)/docs/[^#]+\.html#(?P<decl>.+)$")
+#: A declaration's page on this site, as Voyager links it since 2026-10-24: `<site>/#/d/<name>`.
+SITE = re.compile(r"^https://[^/\s]+/[^#\s]*#/d/(?P<decl>[^\s)]+)$")
 HEADING = re.compile(r"^\s*\*(?P<title>[^*\s][^*]*?)\*(?:\s|$)")
 PRS = re.compile(r"TauCeti#(\d+)")
 WHAT = {"named results": "result", "notable definitions": "definition",
@@ -61,7 +66,7 @@ def parse_post(message: dict) -> list[dict]:
     for line in (message.get("content") or "").splitlines():
         b = BULLET.match(line)
         if b:
-            m = DOCS.match(b["url"])
+            m = DOCS.match(b["url"]) or SITE.match(b["url"])
             if m:
                 about = b["about"].strip()
                 out.append({"decl": urllib.parse.unquote(m["decl"]), "name": b["name"].strip(), "what": what,
@@ -106,9 +111,15 @@ def post_url(site: str, stream: int | None, channel: str, topic: str, message_id
 
 def named_records(announcements: list[dict], ds: Dataset, store: Store, voyager: dict) -> list[dict]:
     """A `named` record for each announcement whose declaration is one of ``ds``'s own and that
-    Voyager has not yet named in ``store``, keyed in ``ds``."""
-    done = {r["subject"]["name"] for r in store.records
-            if r.get("kind") == "named" and ((r.get("by") or {}).get("agent") or {}).get("tool") == "Voyager"}
+    Voyager has not yet named in ``store``, keyed in ``ds``. A declaration named under an earlier name
+    and renamed since counts as named: a post whose link was moved to the new name names it again."""
+    done = set()
+    for r in store.records:
+        if r.get("kind") == "named" and ((r.get("by") or {}).get("agent") or {}).get("tool") == "Voyager":
+            done.add(r["subject"]["name"])
+            now = classify(r["subject"], ds).decl
+            if now is not None:
+                done.add(now.name)
     out = []
     for a in announcements:
         d = ds.by_name.get(a["decl"])

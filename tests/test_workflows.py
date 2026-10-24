@@ -41,7 +41,7 @@ class DatasetWorkflowTests(unittest.TestCase):
 
     def test_follow_pins_extracts_and_prunes(self):
         wf = load("follow.yml")
-        self.assertEqual(wf["on"]["schedule"], [{"cron": "20 * * * *"}])  # hourly: does the docs' commit move?
+        self.assertEqual(wf["on"]["schedule"], [{"cron": "*/20 * * * *"}])  # has docgen moved?
         jobs = wf["jobs"]
         self.assertIn("python3 scripts/pin.py", runs(jobs["pin"]))
         self.assertEqual(jobs["dataset"]["uses"], "./.github/workflows/dataset.yml")

@@ -40,16 +40,19 @@ class PinTests(unittest.TestCase):
         self.assertIsNone(pin.choose(self.COMMITS, {"4.35.0"}, lambda sha, text: True))
 
     def run_main(self, pinned: str, docs_runs: list):
-        """pin.main() against a fake GitHub: the docs workflow's runs, two commits from d2 back, and main.
+        """pin.main() against a fake GitHub: the docgen branch (at the head of ``docs_runs``' first, or
+        unreadable when there is none), two commits from d2 back, and main.
         Returns (what it printed, the pin it saved, the API paths it read)."""
-        settings = {"tauceti": pinned, "library": {"repo": "o/r", "docs_workflow": "api-docs.yml"},
+        settings = {"tauceti": pinned, "library": {"repo": "o/r", "docs_branch": "docgen"},
                     "extractor": {"repo": "x/e", "series": "0.13"}}
         paths, saved, printed = [], {}, []
 
         def gh(path):
             paths.append(path)
-            if path.startswith("repos/o/r/actions/workflows/api-docs.yml/runs?branch=main&status=success"):
-                return {"workflow_runs": docs_runs}
+            if path == "repos/o/r/branches/docgen":
+                if not docs_runs:
+                    raise pin.subprocess.CalledProcessError(1, "gh")
+                return {"commit": {"sha": docs_runs[0]["head_sha"]}}
             if path.startswith("repos/o/r/commits?sha=d2"):
                 return [{"sha": "d2"}, {"sha": "d1"}]
             if path.startswith("repos/o/r/commits?sha=main"):

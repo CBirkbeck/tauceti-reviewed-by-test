@@ -48,6 +48,18 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(len(merged), 5)
         self.assertEqual(merged, sorted(merged, key=lambda a: a["at"]))
 
+    def test_links_to_this_site(self):
+        message = {"id": 900, "stream_id": 610393, "timestamp": 1792800000, "content": "\n".join([
+            "*Named results*",
+            "- **[Stickelberger's congruence](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#/d/"
+            "TauCeti.NumberField.discr_emod_four_eq_zero_or_one)** — d ≡ 0 or 1 mod 4 (Narkiewicz, Ch. 4). (TauCeti#12)",
+            "- **[A finite Selmer group](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#/d/"
+            "WeierstrassCurve.Affine.finite_selmerGroup%E2%82%82)** — it is finite. (TauCeti#13)"])}
+        got = voyager.parse_post(message)
+        self.assertEqual([(a["decl"], a["what"], a["prs"]) for a in got], [
+            ("TauCeti.NumberField.discr_emod_four_eq_zero_or_one", "result", [12]),
+            ("WeierstrassCurve.Affine.finite_selmerGroup₂", "result", [13])])
+
     def test_pull_requests_leave_the_sentence(self):
         self.assertEqual(voyager.plain("a sentence. (TauCeti#1, TauCeti#2)"), "a sentence.")
         self.assertEqual(voyager.plain("a (Book, §2) sentence (TauCeti#1 and TauCeti#2)"), "a (Book, §2) sentence")
@@ -102,6 +114,18 @@ class RecordTests(unittest.TestCase):
         self.assertEqual(r["reference"], {"text": "Voyager, TauCeti#5", "url":
             "https://leanprover.zulipchat.com/#narrow/channel/610393-Tau-Ceti/topic/new.20results/near/101"})
         self.assertEqual(r["subject"]["commit"], "B")
+
+    def test_a_renamed_declaration_is_named_once(self):
+        # Voyager named Fixture.triple_three, renamed since to triple_three'; a post whose link now says
+        # the new name names nothing new.
+        old = next(json.loads(l) for l in (HERE / "fixtures" / "records.jsonl").read_text().splitlines()
+                   if '"Fixture.triple_three"' in l)
+        self.store.add([{"schema": old["schema"], "kind": "named", "subject": old["subject"], "by": voyager.VOYAGER,
+                         "at": "2026-10-01T00:00:00Z", "origin": {"kind": "zulip", "ref": "voyager 99"},
+                         "name": "Three", "what": "result"}])
+        moved = [{"decl": "Fixture.triple_three'", "name": "Three", "what": "result", "about": "", "prs": [],
+                  "source": {"voyager": 99, "stream": 610393}, "at": "2026-10-01T00:00:00Z"}]
+        self.assertEqual(voyager.named_records(moved, self.ds, self.store, SETTINGS), [])
 
     def test_a_second_run_records_nothing(self):
         self.store.add(voyager.named_records(self.announcements, self.ds, self.store, SETTINGS))

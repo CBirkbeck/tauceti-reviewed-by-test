@@ -63,7 +63,7 @@ at the same address. It must:
                                                      the question form recast as What could be better,
                                                      the challenge form cut down for Suggest a test
 .github/workflows/
-  follow.yml           hourly: pin the commit Tau Ceti's API docs show; when it moves, extract its
+  follow.yml           every 20 minutes: pin Tau Ceti's `docgen`; when it moves, extract its
                        dataset, record Voyager's announcements, prune old datasets, then pages
   dataset.yml          one commit's dataset as a release (called by follow.yml, or by hand)
   voyager.yml          twice daily: Voyager's announcements as named records, then pages
@@ -100,15 +100,16 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
 
 ### 5.1 Datasets: `follow.yml`, `dataset.yml`, `scripts/prune.py`
 
-- **When:** hourly at 20 past (asked for on 2026-10-24: the site should follow Tau Ceti's API docs,
-  which are rebuilt a few times a day, each run taking one to three hours), and by hand. A run whose
-  pin does not move stops after a minute.
-- **The pin:** the commit Tau Ceti's API docs show (the head of the newest successful run of its
-  `api-docs.yml` on main, `library.docs_workflow` in the settings; `main` when there is none), or the
-  newest of the 30 commits from there back whose toolchain the extractor has a release for and whose
-  build Tau Ceti's cache has published (the pilot's rule). It is written to `data/settings.json` and
-  committed. An unchanged pin ends the run; so does a docs commit that is the pin already, after one
-  request.
+- **When:** every 20 minutes (asked for on 2026-10-24: the site should follow Tau Ceti's published
+  API docs, which go live a few times a day, and have everything Voyager links to it), by hand, and
+  by Voyager when the site is behind `docgen` at the time of a post. A run whose pin does not move
+  stops after a minute.
+- **The pin:** Tau Ceti's `docgen` branch (`library.docs_branch` in the settings), which Tau Ceti's
+  Pages workflow points at a commit only once that commit's docs are live, and where Voyager's window
+  ends (`main` when the branch cannot be read); or the newest of the 30 commits from there back whose
+  toolchain the extractor has a release for and whose build Tau Ceti's cache has published (the
+  pilot's rule). It is written to `data/settings.json` and committed. An unchanged pin ends the run;
+  so does a `docgen` that is the pin already, after one request.
 - **Extraction:** a blob-less clone of Tau Ceti at the pin; Tau Ceti and Mathlib from their caches
   (`lake exe cache get`, then Tau Ceti's `scripts/lake-cache-get.sh`, with `uv` installed first);
   then the extractor's `extract` action with the pilot's arguments: `--parts 8 --jobs 1
@@ -176,11 +177,14 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   `new results`, sender Voyager's bot account, with `apply_markdown=false`, paging back from the
   newest until `found_oldest`. Credentials are the secrets `ZULIP_SITE`, `ZULIP_EMAIL` and
   `ZULIP_API_KEY` (Voyager's own key). The job only reads.
-- **Parsing:** an announcement is a bullet `- **[<name>](<docs address>#<declaration>)**`, possibly
-  followed by `†` or `*`, then `—` and a sentence ending in `(TauCeti#<n>)` pull requests. The docs
-  address is either form: `https://taucetiproject.github.io/TauCeti/docs/<Module path>.html` (posts
-  until mid-October) or `https://taucetiproject.org/docs/<Module path>.html`. The anchor is the
-  declaration's full name. The heading above a bullet sets `what`: `*Named results*` gives `result`,
+- **Parsing:** an announcement is a bullet `- **[<name>](<link>)**`, possibly followed by `†` or
+  `*`, then `—` and a sentence ending in `(TauCeti#<n>)` pull requests. Since 2026-10-24 the link is
+  the declaration's page on this site, `<site>/#/d/<declaration>` (percent-encoded); before, its anchor
+  in the API docs, `<docs address>#<declaration>`, the docs address either
+  `https://taucetiproject.github.io/TauCeti/docs/<Module path>.html` (posts until mid-October) or
+  `https://taucetiproject.org/docs/<Module path>.html`; both are read. A declaration Voyager named
+  under an earlier name and renamed since is not named again when a post's link moves to the new
+  name. The heading above a bullet sets `what`: `*Named results*` gives `result`,
   `*Notable definitions*` gives `definition`; under any other heading (the first post's subject
   headings) the declaration decides, `result` for a proof and `definition` otherwise. The
   `*In progress*` and `*Stats*` lines have no such bullets, so they are never announcements.
