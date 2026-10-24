@@ -1,11 +1,14 @@
 name: Follow Tau Ceti
 
-# Daily: pins Tau Ceti's newest main commit the extractor can read (scripts/pin.py), extracts its
-# dataset, and deletes the datasets nobody needs any more (scripts/prune.py). Reviews keep the meaning
-# hashes they were made on: a declaration whose meaning changed shows them greyed until reviewed again.
+# Hourly: pins the commit Tau Ceti's API docs show, or the newest before it the extractor can read
+# (scripts/pin.py). When that moves, which is when the docs have been rebuilt (a few times a day), it
+# extracts the dataset, records what Voyager announced against it, rebuilds the site, and deletes the
+# datasets nobody needs any more (scripts/prune.py); otherwise it stops there, in a minute. Reviews keep
+# the meaning hashes they were made on: a declaration whose meaning changed shows them greyed until
+# reviewed again.
 on:
   schedule:
-    - cron: '40 5 * * *'
+    - cron: '20 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -49,7 +52,7 @@ jobs:
       contents: write
   named:
     needs: [pin, dataset]
-    if: always() && needs.pin.result == 'success' && needs.dataset.result != 'failure'
+    if: always() && needs.pin.outputs.moved == 'true' && needs.dataset.result == 'success'
     uses: ./.github/workflows/voyager.yml
     with:
       site: false

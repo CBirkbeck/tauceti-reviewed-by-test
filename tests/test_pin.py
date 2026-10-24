@@ -1,3 +1,4 @@
+import base64
 import sys
 import unittest
 from pathlib import Path
@@ -37,6 +38,47 @@ class PinTests(unittest.TestCase):
 
     def test_nothing_when_nothing_fits(self):
         self.assertIsNone(pin.choose(self.COMMITS, {"4.35.0"}, lambda sha, text: True))
+
+    def run_main(self, pinned: str, docs_runs: list):
+        """pin.main() against a fake GitHub: the docs workflow's runs, two commits from d2 back, and main.
+        Returns (what it printed, the pin it saved, the API paths it read)."""
+        settings = {"tauceti": pinned, "library": {"repo": "o/r", "docs_workflow": "api-docs.yml"},
+                    "extractor": {"repo": "x/e", "series": "0.13"}}
+        paths, saved, printed = [], {}, []
+
+        def gh(path):
+            paths.append(path)
+            if path.startswith("repos/o/r/actions/workflows/api-docs.yml/runs?branch=main&status=success"):
+                return {"workflow_runs": docs_runs}
+            if path.startswith("repos/o/r/commits?sha=d2"):
+                return [{"sha": "d2"}, {"sha": "d1"}]
+            if path.startswith("repos/o/r/commits?sha=main"):
+                return [{"sha": "m9"}]
+            if "lean-toolchain" in path:
+                return {"content": base64.b64encode(b"leanprover/lean4:v4.36.0-rc1\n").decode()}
+            raise AssertionError(path)
+        with mock.patch.object(pin, "load_settings", return_value=settings), \
+             mock.patch.object(pin, "save_settings", side_effect=saved.update), \
+             mock.patch.object(pin, "release_tags", return_value=TAGS), \
+             mock.patch.object(pin, "gh_json", side_effect=gh), \
+             mock.patch.object(pin, "cached_in", return_value=lambda sha, text: True), \
+             mock.patch("builtins.print", side_effect=lambda *a, **k: printed.append(a[0] if a else "")):
+            pin.main()
+        return printed, saved.get("tauceti"), paths
+
+    def test_the_pin_follows_the_docs(self):
+        printed, pinned, paths = self.run_main("old", [{"head_sha": "d2"}])
+        self.assertEqual((pinned, printed[-1]), ("d2", "moved=true"))
+        self.assertEqual(sum("lean-toolchain" in p for p in paths), 1)  # read as needed: the first fits
+
+    def test_nothing_moves_while_the_docs_show_the_pin(self):
+        printed, pinned, paths = self.run_main("d2", [{"head_sha": "d2"}])
+        self.assertEqual((pinned, printed[-1]), (None, "moved=false"))
+        self.assertFalse(any("commits?" in p for p in paths))  # one request, and done
+
+    def test_main_when_there_are_no_docs_to_follow(self):
+        printed, pinned, _ = self.run_main("old", [])
+        self.assertEqual((pinned, printed[-1]), ("m9", "moved=true"))
 
     def test_the_cache_is_asked_with_a_user_agent(self):
         # The cache's server refuses Python's default User-Agent: 403 for every commit.

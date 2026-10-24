@@ -41,7 +41,7 @@ class DatasetWorkflowTests(unittest.TestCase):
 
     def test_follow_pins_extracts_and_prunes(self):
         wf = load("follow.yml")
-        self.assertEqual(wf["on"]["schedule"], [{"cron": "40 5 * * *"}])
+        self.assertEqual(wf["on"]["schedule"], [{"cron": "20 * * * *"}])  # hourly: does the docs' commit move?
         jobs = wf["jobs"]
         self.assertIn("python3 scripts/pin.py", runs(jobs["pin"]))
         self.assertEqual(jobs["dataset"]["uses"], "./.github/workflows/dataset.yml")
@@ -73,6 +73,7 @@ class VoyagerWorkflowTests(unittest.TestCase):
     def test_follow_records_after_a_new_dataset(self):
         named = load("follow.yml")["jobs"]["named"]
         self.assertEqual(named["uses"], "./.github/workflows/voyager.yml")
+        self.assertIn("needs.pin.outputs.moved == 'true'", named["if"])  # not every hour: only after a new dataset
         self.assertEqual(named["with"], {"site": False})
         self.assertEqual(named["secrets"], "inherit")
 
