@@ -148,6 +148,10 @@ class FormTests(unittest.TestCase):
         # What could be better: a suggestion, on the question form, required.
         self.assertEqual(fields("evidence-question.yml"), [("decl", True), ("commit", False), ("question", True)])
         self.assertEqual(forms["evidence-question.yml"]["name"], "What could be better")
+        # Suggest a test: the property it should have, required; the rest optional.
+        self.assertEqual(fields("evidence-challenge.yml"), [("decl", True), ("commit", False), ("property", True),
+                                                            ("statement", False), ("catches", False)])
+        self.assertEqual(forms["evidence-challenge.yml"]["name"], "Suggest a test")
 
     def test_a_no_from_the_form_says_why(self):
         from evidence_store import forms

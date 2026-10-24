@@ -162,9 +162,12 @@ def review(browser, url, errors):
     expect(box.locator("details.whose .mark.agent").get_attribute("href") == "https://github.com/example/fixture-store/issues/11",
            "a mark opens its answer's issue")
     expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".which .pass").count() == 1, "Tested by: the listed test passes")
-    better = box.locator(".better a", has_text="Suggest an improvement").get_attribute("href")
+    better = box.locator(".offer a", has_text="Suggest an improvement").get_attribute("href")
     expect("template=evidence-question.yml" in better and "decl=Fixture.triple" in better and "commit=B" in better,
            "What could be better: a suggestion opens its form, filled in")
+    test = box.locator(".offer a", has_text="Suggest a test").get_attribute("href")
+    expect("template=evidence-challenge.yml" in test and "decl=Fixture.triple" in test and "commit=B" in test,
+           "Tests: a test to suggest opens its form, filled in")
     suggestion = box.locator(".report.question").inner_text()
     expect("suggested by @someone" in suggestion and "any semiring" in suggestion and "Issue #15" in suggestion,
            "and each suggestion shows, with who made it and its issue")
@@ -181,7 +184,8 @@ def review(browser, url, errors):
     report = box.locator(".report").inner_text()
     expect("answered no by @someone" in report and "the definition, unfolded" in report and "Issue #14" in report,
            "the no in full: who, why, and its issue")
-    expect(box.locator(".sub", has_text="Tests").count() == 0, "no Tests heading where nothing tests it")
+    expect(box.locator(".sub", has_text="Tests").count() == 1 and "No tests yet." in box.inner_text()
+           and box.locator(".offer a", has_text="Suggest a test").count() == 1, "Tests, with a test to suggest, where nothing tests it yet")
     expect("No suggestions yet." in box.inner_text(), "What could be better, with nothing suggested yet")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
     expect("what it rests on has changed" in page.locator(".review details.whose").inner_text(), "stale underneath, said")

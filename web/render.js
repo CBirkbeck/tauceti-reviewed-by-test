@@ -68,8 +68,10 @@
     ['Yes', 'evidence-review.yml', 'Correctly stated: ', 'yes'],
     ['No', 'evidence-problem.yml', 'Not correctly stated: ', 'no'],
   ];
-  /* What could be better: a suggestion for a declaration that is correct, on the question form. */
-  const SUGGEST = ['Suggest an improvement', 'evidence-question.yml', 'What could be better: ', 'better'];
+  /* What could be better: a suggestion for a declaration that is correct, on the question form. And a test
+     to suggest: a property it should have, on the challenge form. */
+  const SUGGEST = ['Suggest an improvement', 'evidence-question.yml', 'What could be better: ', 'offer'];
+  const SUGGEST_TEST = ['Suggest a test', 'evidence-challenge.yml', 'Suggested test: ', 'offer'];
   /* What the question calls a declaration: a lemma is a lemma, else its kind's word. */
   const questionWord = (kind, kw) => kw === 'lemma' ? 'lemma' : (KIND_WORD[kind] || 'declaration').toLowerCase();
 
@@ -103,5 +105,5 @@
   }
 
   window.TauRender = Object.freeze({el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT,
-                                    URLS, ANSWERS, SUGGEST, questionWord, date, plural, who, shortName, modulePath, plain});
+                                    URLS, ANSWERS, SUGGEST, SUGGEST_TEST, questionWord, date, plural, who, shortName, modulePath, plain});
 })();

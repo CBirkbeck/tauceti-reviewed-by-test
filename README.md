@@ -34,10 +34,15 @@ improvement** opens `evidence-question.yml`, recast for it (the suggestion requi
 the field "Question", the label intake reads it by). A suggestion is recorded as a question, open
 until it is dealt with, and counts as neither a yes nor a no.
 
+Under **Tests**, **Suggest a test** opens `evidence-challenge.yml`, cut to a property the declaration
+should have (required), as a Lean statement and what it would catch (both optional). It is recorded
+as a challenge, open until a declaration of Tau Ceti proves it; the page then lists that declaration
+as a test and checks at every commit that it still passes.
+
 The forms are for people: they do not ask who you are or who wrote them, and intake records the
 account that opened the issue as a person. AI agents answer from the command line instead (below).
-The store's other forms (tests, challenges, names) are still there for intake, but the site no longer
-offers them.
+The store's other forms (listing a test, names, statuses) are still there for intake, but the site
+does not offer them.
 
 Intake turns the issue into a record under the account that opened it, answers on the issue, and
 rebuilds the site within minutes. On an answer's issue, a comment whose first line is a command
@@ -75,8 +80,8 @@ https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
   (lemma, definition, …) correctly stated?" with Yes and No: below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, each answer's mark
   in **Who** (its reasons on hover, its issue a click away), each no in full; **What could be
-  better**, its suggestions and the button to add one; and, when something tests it, a Tested by
-  mark with each test in **Which**. Formulas in docstrings and in Voyager's
+  better**, its suggestions and the button to add one; and **Tests**, the button to suggest one and,
+  when something tests it, a Tested by mark with each test in **Which**. Formulas in docstrings and in Voyager's
   sentences are typeset, whether written in TeX (`$…$`) or as text with TeX's marks
   (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`).
 - **Browse**, **Search** (names and docstring titles), **Activity** (the noes and the suggestions

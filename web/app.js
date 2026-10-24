@@ -3,8 +3,8 @@
    comes from TauData (what the build wrote), laid out with TauRender and TauMap. */
 (function () {
   'use strict';
-  const {el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT, URLS, ANSWERS, SUGGEST, questionWord,
-         date, plural, who, shortName, plain} = TauRender;
+  const {el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT, URLS, ANSWERS, SUGGEST, SUGGEST_TEST,
+         questionWord, date, plural, who, shortName, plain} = TauRender;
   const {FLAG, STATES} = TauData;
   const $ = id => document.getElementById(id);
   const main = $('main');
@@ -514,7 +514,7 @@
   /* The review box, as the site had it in September (scripts/build_site.py before the rebuild), asking one
      question: is it correctly stated? Yes, or no and why. Below it the answers, people counted apart from AI
      agents and each answerer a click away, each no in full; then what could be better, people's suggestions
-     for it when it is correct; and what tests it. */
+     for it when it is correct; and what tests it, with a test to suggest. */
   function reviewCard(meta, name, modName, project, records, tests, word) {
     const card = el('section', 'review');
     card.id = 'review';
@@ -538,21 +538,27 @@
       card.append(line);
     });
     card.append(el('p', 'sub', 'Reviews'), answers(reviews('accept'), reviews('problem'), byId));
+    // A line offering a form: what it is for, and its button.
+    const offer = (text, [label, template, prefix, cls]) => {
+      const line = el('div', 'offer');
+      line.append(el('span', 'how', text), ext(URLS.form(meta, template, prefix, name), label, 'btn ' + cls));
+      return line;
+    };
     // What could be better: suggestions, on the store's question form, which count as neither yes nor no.
     const suggestions = reviews('question');
     if (project || suggestions.length) {
       card.append(el('p', 'sub', 'What could be better'));
-      if (project) {
-        const line = el('div', 'better');
-        line.append(el('span', 'how', 'Correct, but could it be done better? More general, a better name or docstring, a cleaner statement.'),
-                    ext(URLS.form(meta, SUGGEST[1], SUGGEST[2], name), SUGGEST[0], 'btn ' + SUGGEST[3]));
-        card.append(line);
-      }
+      if (project) card.append(offer('Correct, but could it be done better? More general, a better name or docstring, a cleaner statement.', SUGGEST));
       if (suggestions.length) card.append(...suggestions.map(v => report(v, byId)));
       else card.append(el('p', 'empty', 'No suggestions yet.'));
     }
+    // Tests: those listed, those suggested, and a test to suggest, on the store's challenge form.
     const challenges = records.filter(v => v.kind === 'challenge' && v.state !== 'met');  // a met one is a listed test
-    if (tests.length || challenges.length) card.append(el('p', 'sub', 'Tests'), testMarks(tests, challenges, byId));
+    if (project || tests.length || challenges.length) {
+      card.append(el('p', 'sub', 'Tests'));
+      if (project) card.append(offer('A property it should have, such as a value, an edge case or an agreement with another notion, for someone to prove?', SUGGEST_TEST));
+      card.append(testMarks(tests, challenges, byId));
+    }
     return card;
   }
   /* Whether a record speaks for the declaration as it is now; and an answer, whether it still stands: a yes
@@ -628,7 +634,7 @@
      and each suggested one with where it stands. */
   function testMarks(tests, challenges, byId) {
     const box = el('div'), total = tests.length + challenges.length;
-    if (!total) { box.append(el('p', 'empty', 'No tests yet: none is listed or suggested.')); return box; }
+    if (!total) { box.append(el('p', 'empty', 'No tests yet.')); return box; }
     const passes = tests.filter(x => x.result === 'passes').length, failing = tests.length - passes;
     const open = challenges.filter(v => v.state === 'open').length;
     const parts = [passes ? (passes === 1 ? '1 test that passes' : `${passes} tests that pass`) : 'nothing that passes yet'];
@@ -865,6 +871,11 @@
           'cleanly, or with a lemma it should come with. Say so under ', el('b', null, 'What could be better'), ' in the review box: ',
           el('b', null, 'Suggest an improvement'), ' opens a short form on GitHub, filled in. A suggestion is neither a yes nor a no. ',
           'Replies are comments on its issue, and you or a maintainer close it when it is dealt with.'))),
+      section('Tests', null, prose(
+        p('Under ', el('b', null, 'Tests'), ' in the review box, ', el('b', null, 'Suggest a test'), ' opens a short form on GitHub, filled ',
+          'in: a property the declaration should have, such as a value, an edge case or an agreement with another notion, in words and ',
+          `if you can in Lean. It stays open until a declaration of ${lib} proves it; the page then lists that declaration as a test, `,
+          'and checks at every commit that it still passes.'))),
       section('Versions', null, prose(
         p("An answer is pinned to the declaration as it was: to its meaning hash, which changes when the declaration changes or anything it rests on does. ",
           `A yes about an earlier version stays, greyed: "the declaration has changed since", or "something it rests on has changed since". Nothing is written into ${lib}.`))),
