@@ -1,0 +1,41 @@
+name: Label answers
+
+# Gives an answer filed from the site's page its form's label, which GitHub drops when whoever filed it may not
+# set labels (anyone not a collaborator), as it does for an AI agent's from `evidence-store submit`; then reads
+# it in, as evidence-intake.yml would have. Intake reads an issue's form from its label: without one, an issue is
+# never read. scripts/label_issue.py says how it knows the form.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  label:
+    if: ${{ !github.event.issue.pull_request && github.event.sender.type != 'Bot' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Its form's label, from its title and its fields
+        id: label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pip install -q -r requirements.txt
+          python scripts/label_issue.py --event "$GITHUB_EVENT_PATH" --repo "$GITHUB_REPOSITORY"
+      # The intake evidence-intake.yml runs, with the same inputs; it reads the issue afresh, label and all.
+      - name: Intake, now that it can read it
+        if: steps.label.outputs.labelled == 'true'
+        uses: LeanTrustBuilders/evidence-store/intake@v0.7.2
+        with:
+          store: evidence
+          pages-workflow: 'pages.yml'
+          ref: v0.7.2

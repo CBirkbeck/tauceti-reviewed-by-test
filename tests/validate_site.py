@@ -15,12 +15,17 @@ the check that met them.
 from __future__ import annotations
 
 import argparse
+import base64
 import functools
+import hashlib
 import http.server
+import json
+import re
 import sys
 import tempfile
 import threading
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -42,10 +47,12 @@ def expect(condition, what: str) -> None:
         raise Fail(what)
 
 
-def visit(browser, url: str, route: str, errors: list, **context):
+def visit(browser, url: str, route: str, errors: list, before=None, **context):
     page = browser.new_context(**({"viewport": {"width": 1440, "height": 900}} | context)).new_page()
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    if before:
+        before(page)
     page.goto(url + route, wait_until="load")
     page.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
     return page
@@ -171,9 +178,19 @@ def declaration(browser, url, errors):
            "a variable's card is its type, and its uses light up")
 
 
+def without_signin(page):
+    """The site as it is with no sign-in in its settings: data/meta.json without `signin`."""
+    def handle(route):
+        r = route.fetch()
+        meta = r.json()
+        meta.pop("signin", None)
+        route.fulfill(response=r, json=meta)
+    page.route("**/data/meta.json", handle)
+
+
 @check
 def review(browser, url, errors):
-    page = visit(browser, url, "#/d/Fixture.triple", errors)
+    page = visit(browser, url, "#/d/Fixture.triple", errors, before=without_signin)
     box = page.locator(".review")
     expect(box.locator(".ask").inner_text() == "Is this definition correctly stated?", "one question, naming what it asks about")
     expect(box.locator(".actions button").all_inner_texts() == ["Yes", "No"], "and two answers")
@@ -237,6 +254,7 @@ def review(browser, url, errors):
     page.wait_for_function("document.querySelector('.ai-offer button').textContent.startsWith('Copied')")
     expected = ("Review Fixture.triple for the Fixture review site, following\n"
                 "https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md\n"
+                "Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.\n"
                 "The site shows it at Fixture commit B: https://example.org/#/d/Fixture.triple")
     expect(box.locator(".ai-prompt").is_visible() and box.locator(".ai-prompt").inner_text() == expected,
            "instructions for an AI agent to review it, filled in and shown")
@@ -281,6 +299,193 @@ def review(browser, url, errors):
            in box.locator(".ai-prompt").inner_text(), "its instructions for an AI agent say which version")
     page = visit(browser, url, "#/d/Bool", errors)
     expect(page.locator(".review .actions").count() == 0, "a package the settings do not name is not asked about")
+
+
+class FakeGitHub:
+    """GitHub as the page meets it signing in and filing: its sign-in page sends the reader straight back with a code
+    (or, denied, with an error); the helper swaps the code for a token; the API says whose it is, and files issues and
+    comments, kept here to look at. `refuse` makes the next filings answer that status instead."""
+    CORS = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type, X-GitHub-Api-Version"}
+
+    def __init__(self, page, back_to: str):
+        self.back_to, self.deny, self.refuse = back_to, False, None
+        self.authorized, self.exchanged, self.issues, self.comments = [], [], [], []
+        page.route(re.compile(r"^https://github\.com/login/oauth/authorize\?"), self.authorize)
+        page.route("https://signin.example.org/token", self.exchange)
+        page.route("https://api.github.com/**", self.api)
+
+    def authorize(self, route):
+        q = {k: v[0] for k, v in parse_qs(urlparse(route.request.url).query).items()}
+        self.authorized.append(q)
+        back = f"error=access_denied&state={q['state']}" if self.deny else f"code=the-code&state={q['state']}"
+        route.fulfill(status=302, headers={"Location": f"{self.back_to}?{back}"})
+
+    def exchange(self, route):
+        if route.request.method == "OPTIONS":
+            return route.fulfill(status=204, headers=self.CORS)
+        self.exchanged.append(route.request.post_data_json)
+        route.fulfill(status=200, headers=self.CORS, json={"access_token": "ghu_fixture", "token_type": "bearer", "expires_in": 28800})
+
+    def api(self, route):
+        req, path = route.request, urlparse(route.request.url).path
+        if req.method == "OPTIONS":
+            return route.fulfill(status=204, headers=self.CORS)
+        auth = req.headers.get("authorization")
+        if path == "/user" and auth == "Bearer ghu_fixture":
+            return route.fulfill(status=200, headers=self.CORS, json={"login": "tester"})
+        if self.refuse and req.method == "POST":
+            return route.fulfill(status=self.refuse, headers=self.CORS, json={"message": "Bad credentials"})
+        if path == "/repos/example/fixture-store/issues" and req.method == "POST":
+            n = 40 + len(self.issues)
+            self.issues.append({"auth": auth, **req.post_data_json})
+            return route.fulfill(status=201, headers=self.CORS,
+                                 json={"number": n, "html_url": f"https://github.com/example/fixture-store/issues/{n}"})
+        m = re.fullmatch(r"/repos/example/fixture-store/issues/(\d+)/comments", path)
+        if m and req.method == "POST":
+            self.comments.append((int(m.group(1)), req.post_data_json["body"], auth))
+            return route.fulfill(status=201, headers=self.CORS, json={"id": 1})
+        route.fulfill(status=404, headers=self.CORS, json={"message": "Not Found"})
+
+
+@check
+def signin(browser, url, errors):
+    import yaml
+    from evidence_store import forms
+    fake = {}
+
+    def before(page):
+        page.add_init_script("window.__opened = []; window.open = u => { window.__opened.push(u); return null; };")
+        fake["gh"] = FakeGitHub(page, url)
+    page = visit(browser, url, "#/d/Fixture.triple", errors, before=before)
+    gh, box = fake["gh"], page.locator(".review")
+    note, prompt, shown = box.locator(".sent-note:visible"), box.locator(".unfold.prompt"), box.locator("form.unfold:visible")
+    opened = lambda: page.evaluate("window.__opened[window.__opened.length - 1]")
+    kept = lambda: page.evaluate("JSON.parse(localStorage.getItem('tauceti-review:github') || 'null')")
+    said = lambda pattern: page.wait_for_function(  # in the note showing: each form has its own
+        f"[...document.querySelectorAll('.review .sent-note')].some(n => !n.hidden && /{pattern}/.test(n.textContent))", timeout=30000)
+
+    def via_github(button):
+        """Off to GitHub (the fake) and back, which loads the page afresh."""
+        with page.expect_navigation(wait_until="load", timeout=30000):
+            button.click()
+        page.wait_for_function("window.TauReview && window.TauReview.ready", timeout=30000)
+    issue = lambda i, kind: (gh.issues[i]["title"], gh.issues[i]["labels"], forms.parse(kind, gh.issues[i]["body"]))
+    # The forms as the site writes them are the templates' forms: titles, labels, and fields in order.
+    site_forms = page.evaluate("TauRender.FORMS")
+    for name, f in site_forms.items():
+        t = yaml.safe_load((HERE.parent / ".github" / "ISSUE_TEMPLATE" / name).read_text(encoding="utf-8"))
+        expect((f["title"], [f["label"]], [tuple(x) for x in f["fields"]])
+               == (t["title"], t["labels"], [(b["id"], b["attributes"]["label"]) for b in t["body"] if b["type"] != "markdown"]),
+               f"{name}: the site writes an issue as the form does")
+    expect(sorted(site_forms) == ["evidence-challenge.yml", "evidence-problem.yml", "evidence-question.yml", "evidence-review.yml"],
+           "each form the review box fills in")
+    # Signed out: Yes asks to sign in, or to answer on GitHub as before.
+    expect(box.locator("p.how").inner_text().startswith("Sign in with GitHub and Yes files your answer in one click"), "signed out, said")
+    box.locator(".actions button", has_text="Yes").click()
+    expect(prompt.is_visible() and prompt.locator("button.send").inner_text() == "Sign in with GitHub" and shown.count() == 0,
+           "signed out, Yes asks to sign in first")
+    prompt.locator("button", has_text="or answer on GitHub").click()
+    expect("template=evidence-review.yml" in opened() and "decl=Fixture.triple" in opened() and "commit=B" in opened()
+           and note.inner_text().startswith("Opened on GitHub"), "or answers on GitHub, filled in")
+    box.locator(".actions button", has_text="Yes").click()
+    via_github(prompt.locator("button", has_text="Sign in with GitHub"))
+    # GitHub sends the reader back; the page signs in, and files the yes it was given.
+    said("Filed")
+    a = gh.authorized[0]
+    expect((a["client_id"], a["redirect_uri"], a["code_challenge_method"]) == ("Iv23fixture", "https://example.org/", "S256")
+           and len(a["code_challenge"]) == 43 and len(a["state"]) >= 20, "off to GitHub with the app's client ID, a state and PKCE")
+    x = gh.exchanged[0]
+    verifier = base64.urlsafe_b64encode(hashlib.sha256(x["code_verifier"].encode()).digest()).rstrip(b"=").decode()
+    expect(x["code"] == "the-code" and x["redirect_uri"] == "https://example.org/" and verifier == a["code_challenge"],
+           "the helper is given the code and the verifier that matches the challenge")
+    expect(issue(0, "review") == ("Correctly stated: Fixture.triple", ["evidence:review"], {"decl": "Fixture.triple", "commit": "B"})
+           and gh.issues[0]["auth"] == "Bearer ghu_fixture", "the yes is filed as the form files it: intake reads it so")
+    expect(page.evaluate("location.search") == "" and page.evaluate("location.hash") == "#/d/Fixture.triple",
+           "and the page's address is as it was")
+    expect("issue #40" in note.inner_text() and "by @tester" in note.inner_text()
+           and note.locator("a[href='https://github.com/example/fixture-store/issues/40']").count() == 1, "it says so, with its issue")
+    expect(kept()["login"] == "tester" and kept()["token"] == "ghu_fixture" and "Answering as @tester" in box.locator("p.how").inner_text(),
+           "and whom it answers as")
+    # Undo: /withdraw on its issue.
+    note.locator("button", has_text="Undo").click()
+    said("Taken back")
+    expect(gh.comments == [(40, "/withdraw", "Bearer ghu_fixture")], "Undo comments /withdraw on the issue")
+    # Signed in, Yes is one click.
+    box.locator(".actions button", has_text="Yes").click()
+    said("issue #41")
+    expect(len(gh.issues) == 2 and shown.count() == 0 and not prompt.is_visible(), "signed in, Yes files at once, with no form")
+    box.locator(".actions button", has_text="Yes").click()
+    expect(len(gh.issues) == 2 and note.count() == 1, "and again says so, filing nothing twice")
+    note.locator("button", has_text="Add why").click()
+    expect(shown.count() == 1 and shown.locator("label").inner_text() == "Why is it correctly stated?"
+           and shown.locator("button.send").is_disabled() and shown.locator(".again").is_visible(), "Add why: the reason is the point")
+    shown.locator("textarea").fill("Checked against Stacks.")
+    shown.locator("button.send").click()
+    said("issue #42")
+    expect(issue(2, "review")[2] == {"decl": "Fixture.triple", "commit": "B", "rationale": "Checked against Stacks."},
+           "filed again, with why")
+    # No, a suggestion, a test: their forms, and Send files them.
+    box.locator(".actions button", has_text="No").click()
+    expect(shown.locator("button.send").inner_text() == "Send" and shown.locator("button.send").is_disabled(), "No asks why")
+    shown.locator("textarea").fill("It is the wrong object.")
+    shown.locator("button.send").click()
+    said("your no, issue #43")
+    expect(issue(3, "problem") == ("Not correctly stated: Fixture.triple", ["evidence:problem"],
+                                   {"decl": "Fixture.triple", "commit": "B", "rationale": "It is the wrong object."}), "the no, filed")
+    expect(note.locator("button", has_text="Add why").count() == 0 and note.locator("button", has_text="Undo").count() == 1,
+           "a no can be taken back too")
+    box.locator(".offer button", has_text="Suggest an improvement").click()
+    shown.locator("textarea").fill("State it for any semiring.")
+    shown.locator("button.send").click()
+    said("your suggestion, issue #44")
+    expect(issue(4, "question") == ("What could be better: Fixture.triple", ["evidence:question"],
+                                    {"decl": "Fixture.triple", "commit": "B", "question": "State it for any semiring."}), "the suggestion")
+    box.locator(".offer button", has_text="Suggest a test").click()
+    shown.locator("textarea").nth(0).fill("its value at 0")
+    shown.locator("textarea").nth(1).fill("triple 0 = 0")
+    shown.locator("textarea").nth(2).fill("a definition off by one")
+    shown.locator("button.send").click()
+    said("your test, issue #45")
+    expect(issue(5, "challenge") == ("Suggested test: Fixture.triple", ["evidence:challenge"],
+                                     {"decl": "Fixture.triple", "commit": "B", "property": "its value at 0", "statement": "triple 0 = 0",
+                                      "catches": "a definition off by one"}), "the test")
+    box.locator(".actions button", has_text="No").click()
+    shown.locator("textarea").fill("Off by one.")
+    shown.locator("button", has_text="or send it on GitHub").click()
+    expect("template=evidence-problem.yml" in opened() and "rationale=Off+by+one." in opened() and len(gh.issues) == 6,
+           "signed in, a form still opens on GitHub if asked")
+    # A sign-in that has ended: say so, sign in again, and file it then.
+    gh.refuse = 401
+    box.locator(".actions button", has_text="No").click()
+    shown.locator("textarea").fill("Off by two.")
+    shown.locator("button.send").click()
+    said("sign-in has ended")
+    expect(kept() is None, "an ended sign-in is forgotten")
+    gh.refuse = None
+    via_github(note.locator("button", has_text="Sign in with GitHub and send"))
+    said("your no, issue #46")
+    expect(issue(6, "problem")[2]["rationale"] == "Off by two." and len(gh.authorized) == 2, "signed in again, the no is filed")
+    # Sign out.
+    box.locator("p.how button", has_text="Sign out").click()
+    expect(kept() is None and box.locator("p.how").inner_text().startswith("Sign in with GitHub"), "Sign out forgets the sign-in")
+    # GitHub not given access: back with the answer, and another way to send it.
+    gh.deny = True
+    box.locator(".actions button", has_text="Yes").click()
+    via_github(prompt.locator("button", has_text="Sign in with GitHub"))
+    said("not given access")
+    expect(prompt.is_visible() and note.locator("button", has_text="Send it on GitHub instead").count() == 1
+           and len(gh.exchanged) == 2 and len(gh.issues) == 7, "denied: said, nothing filed, and GitHub's form offered")
+    # A reply GitHub did not send (no sign-in under way here, or another state) is not used.
+    page.goto(url + "?code=forged&state=forged#/d/Fixture.triple", wait_until="load")
+    settle(page, "decl:Fixture.triple")
+    expect(len(gh.exchanged) == 2 and kept() is None and page.evaluate("location.search") == "", "a forged reply is not used")
+    # A sign-in whose token has ended counts as none.
+    page.evaluate("localStorage.setItem('tauceti-review:github', JSON.stringify({token: 'ghu_old', login: 'tester', expires: Date.now() - 1}))")
+    page.reload(wait_until="load")
+    settle(page, "decl:Fixture.triple")
+    expect(page.locator(".review p.how").inner_text().startswith("Sign in with GitHub"), "an ended sign-in shows as signed out")
+    errors[:] = [e for e in errors if "status of 401" not in e]  # the browser's own line for the 401 above, asked for
 
 
 @check

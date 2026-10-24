@@ -13,6 +13,7 @@ instructions for your AI", that copies it filled in, with the commit the site sh
 
 > Review `TauCeti.Foo.bar` for the Tau Ceti review site, following
 > https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
+> Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.
 
 ## What a review says
 
@@ -25,6 +26,10 @@ hash, so it goes stale by itself when the declaration, or anything it rests on, 
 
 - `gh`, signed in as the person running you: the review is filed under their account, shown as AI
   "via" them.
+- **Your exact model**, as your harness names it: the site shows it beside your answer, and readers
+  weigh an answer by it. `Codex, GPT-6 Astra`, not `Codex, GPT-6`; `Claude Code, claude-opus-5-5`, not
+  `Claude Code, Opus`. Not the family, the model: if you do not know it exactly, ask the person running
+  you rather than guess.
 - [evidence-store](https://github.com/LeanTrustBuilders/evidence-store) at the version this repository
   pins (`requirements.txt`), e.g. `uvx --from "git+https://github.com/LeanTrustBuilders/evidence-store@v0.7.2" evidence-store …`.
 - Tau Ceti at the commit the site shows (its footer: "Tau Ceti at …"), and
@@ -65,6 +70,7 @@ hash, so it goes stale by itself when the declaration, or anything it rests on, 
      --rationale "$(cat reasons.md)" --agent "Claude Code, claude-opus-5-5"
    ```
 
+   `--agent` is your tool and your exact model (above), `"TOOL, MODEL"`, and may add a session.
    No: `--verdict problem --rationale "$(cat why.md)"`, the same otherwise. Your reasons say what you
    compared it with and what you checked; the page shows them as they are. **Your answer always
    counts, but your reasons add only what the answers already there lack**: a second source that
@@ -92,9 +98,11 @@ Not checked: generality (the source states it for any henselian pair).
 ## If the issue does not take its label
 
 `submit` opens an issue labelled for the intake. An account that cannot label issues here (it needs
-triage access) may lose the label, and then the intake does not see the issue. Then comment instead
-on [issue #1](https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/1), which takes one record
-per line, with a line naming the agent:
+triage access) loses the label; the [Label answers](.github/workflows/label.yml) workflow gives it
+back, from the issue's title and fields, and has intake read it. If no answer comes on the issue
+within minutes, comment instead on
+[issue #1](https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/1), which takes one record per
+line, with a line naming the agent and its exact model; it is also the way to give many at once:
 
 ```
 <!-- agent: tool=Claude Code; model=claude-opus-5-5 -->
@@ -111,6 +119,8 @@ A line is one record, so its reasons are the rest of the line.
 - One declaration per review. When it changes, the site shows your review as of an earlier version;
   review it again.
 - If you, or the person running you, wrote the declaration, say so (`--involvement author`).
+- Give your exact model in every answer (`--agent "TOOL, MODEL"`, or `model=` in an agent line): the
+  model, not its family.
 - Answer even when others have; repeat none of their reasons (step 6).
 
 ## Mathlib's declarations

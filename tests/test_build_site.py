@@ -227,6 +227,13 @@ class PageFilesTests(unittest.TestCase):
         self.assertEqual((m["counts"]["reviewed"], m["counts"]["accepts"]), (len(rows), {"people": 6, "ai": 1}))
         self.assertEqual(m["review"], {"outside": ["Init.Data"]})
 
+    def test_signing_in_only_where_the_settings_say(self):
+        self.assertEqual(data("meta.json")["signin"],
+                         {"client_id": "Iv23fixture", "exchange": "https://signin.example.org/token"})
+        root = OUT / "no-signin"
+        fixture_site.build(root, settings={k: v for k, v in fixture_site.SETTINGS.items() if k != "signin"})
+        self.assertNotIn("signin", data("meta.json", root))
+
     def test_reviewed_outside_only_where_the_settings_say(self):
         root = OUT / "inside-only"
         fixture_site.build(root, settings={**fixture_site.SETTINGS, "review_outside": []})

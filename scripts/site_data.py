@@ -444,6 +444,9 @@ class Site:
                 "dataset": {"producer": ds.producer(), "spec": ds.meta.get("spec", "")},
                 "store": {"repo": s["repo"], "name": self.inp.store.name, "bulk": s["bulk_issue"]},
                 "review": {"outside": s.get("review_outside", [])},
+                # Signing in with GitHub, to answer from the page (web/signin.js): the GitHub App's client ID and the
+                # sign-in helper's address (signin/worker.js), neither of them secret. Absent: the forms open on GitHub.
+                **({"signin": s["signin"]} if s.get("signin") else {}),
                 "imports": [{"name": r["name"], "repo": r["repo"], "commit": r.get("commit"), "records": r["records"]}
                             for r in self.inp.imports],
                 "counts": counts, "areas": self.areas(),

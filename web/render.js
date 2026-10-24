@@ -57,20 +57,35 @@
     github: login => `https://github.com/${encodeURIComponent(login)}`,
     issues: meta => `https://github.com/${meta.store.repo}/issues`,
     bulk: meta => `https://github.com/${meta.store.repo}/issues/${meta.store.bulk}`,
-    form: (meta, template, title, name, fields = {}) => `https://github.com/${meta.store.repo}/issues/new?` +
-      new URLSearchParams({template, title: title + name, decl: name, commit: meta.library.commit, ...fields}).toString(),
+    form: (meta, template, name, fields = {}) => `https://github.com/${meta.store.repo}/issues/new?` +
+      new URLSearchParams({template, title: FORMS[template].title + name, decl: name, commit: meta.library.commit, ...fields}).toString(),
     decl: name => '#/d/' + encodeURIComponent(name),
   };
-  /* The one question a review answers, and its two answers: yes opens the review form, no the problem
-     form, which asks why. */
+  /* The store's issue forms the site fills in (.github/ISSUE_TEMPLATE/): each one's title, its label, and its
+     fields as GitHub writes them into an issue, `### <label>` sections in order, `_No response_` for an empty one.
+     Intake reads an issue so (evidence_store/forms.py, by label), so an answer filed from the page is written as
+     the form would write it. The browser check holds these to the templates. */
+  const DECL = [['decl', 'Declaration'], ['commit', 'Commit']];
+  const FORMS = {
+    'evidence-review.yml': {title: 'Correctly stated: ', label: 'evidence:review', fields: [...DECL, ['rationale', 'Why']]},
+    'evidence-problem.yml': {title: 'Not correctly stated: ', label: 'evidence:problem', fields: [...DECL, ['rationale', 'Why']]},
+    'evidence-question.yml': {title: 'What could be better: ', label: 'evidence:question', fields: [...DECL, ['question', 'Question']]},
+    'evidence-challenge.yml': {title: 'Suggested test: ', label: 'evidence:challenge',
+                               fields: [...DECL, ['property', 'What it should satisfy'], ['statement', 'As a Lean statement'],
+                                        ['catches', 'What it would catch']]},
+  };
+  const issueBody = (template, answers) =>
+    FORMS[template].fields.map(([id, label]) => `### ${label}\n\n${answers[id] || '_No response_'}`).join('\n\n') + '\n';
+  /* The one question a review answers, and its two answers: yes on the review form, no on the problem form,
+     which asks why. */
   const ANSWERS = [
-    ['Yes', 'evidence-review.yml', 'Correctly stated: ', 'yes'],
-    ['No', 'evidence-problem.yml', 'Not correctly stated: ', 'no'],
+    ['Yes', 'evidence-review.yml', 'yes'],
+    ['No', 'evidence-problem.yml', 'no'],
   ];
   /* What could be better: a suggestion for a declaration that is correct, on the question form. And a test
      to suggest: a property it should have, on the challenge form. */
-  const SUGGEST = ['Suggest an improvement', 'evidence-question.yml', 'What could be better: ', 'offer'];
-  const SUGGEST_TEST = ['Suggest a test', 'evidence-challenge.yml', 'Suggested test: ', 'offer'];
+  const SUGGEST = ['Suggest an improvement', 'evidence-question.yml', 'offer'];
+  const SUGGEST_TEST = ['Suggest a test', 'evidence-challenge.yml', 'offer'];
   /* What the question calls a declaration: a lemma is a lemma, else its kind's word. */
   const questionWord = (kind, kw) => kw === 'lemma' ? 'lemma' : (KIND_WORD[kind] || 'declaration').toLowerCase();
 
@@ -104,5 +119,6 @@
   }
 
   window.TauRender = Object.freeze({el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT,
-                                    URLS, ANSWERS, SUGGEST, SUGGEST_TEST, questionWord, date, plural, who, shortName, modulePath, plain});
+                                    URLS, FORMS, issueBody, ANSWERS, SUGGEST, SUGGEST_TEST, questionWord, date, plural, who, shortName,
+                                    modulePath, plain});
 })();

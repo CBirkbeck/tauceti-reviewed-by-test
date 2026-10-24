@@ -2,8 +2,8 @@
    comes from TauData (what the build wrote), laid out with TauRender and TauMap. */
 (function () {
   'use strict';
-  const {el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT, URLS, ANSWERS, SUGGEST, SUGGEST_TEST,
-         questionWord, date, plural, who, shortName, plain} = TauRender;
+  const {el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT, URLS, FORMS, issueBody, ANSWERS, SUGGEST,
+         SUGGEST_TEST, questionWord, date, plural, who, shortName, plain} = TauRender;
   const {FLAG, STATES} = TauData;
   const $ = id => document.getElementById(id);
   const main = $('main');
@@ -360,7 +360,7 @@
       card('#/reviewed', 'Reviewed', `The ${plural(c.reviewed || 0, 'declaration')} someone has answered for, yes or no, newest first.`),
       card('#/browse', 'Browse', `${lib} area by area: ${plural(meta.areas.length, 'area')}, ${plural(c.modules, 'file')}.`),
       card('#/activity', 'Activity', 'The latest answers, every no still open, and what to review next.'),
-      card('#/help', 'How to review', 'One question, yes or no: a short form on GitHub, filled in. No pull request.'));
+      card('#/help', 'How to review', 'One question, yes or no, answered on the page. No pull request.'));
     const areas = el('div', 'chips');
     meta.areas.forEach(([a, n]) => {
       const chip = link('#/area/' + encodeURIComponent(a), null, 'chip');
@@ -611,9 +611,7 @@
       const answers = ANSWERS.map(a => formFor(meta, name, a));
       answers.forEach(f => ask.append(f.button));
       ask.append(ext(read.url, read.label, 'btn docs'));
-      card.append(ask, ...answers.flatMap(f => [f.form, f.note]),
-                  el('p', 'how', 'Yes and No open a short form here; a no asks you why. Send takes it to GitHub, filled in, where one click files it.'),
-                  aiOffer(meta, name, read.from));
+      card.append(ask, ...answers.flatMap(f => f.parts), howTo(meta), aiOffer(meta, name, read.from));
     } else {
       card.append(hint(records.length ? `Reviews of ${name} are kept in the stores that review it; they show here as they are.`
                                       : `Outside ${meta.library.name}: review it where it lives.`));
@@ -632,7 +630,7 @@
     const offer = (text, spec) => {
       const f = formFor(meta, name, spec), line = el('div', 'offer'), frag = document.createDocumentFragment();
       line.append(el('span', 'how', text), f.button);
-      frag.append(line, f.form, f.note);
+      frag.append(line, ...f.parts);
       return frag;
     };
     // What could be better: suggestions, on the store's question form, which count as neither yes nor no.
@@ -652,8 +650,34 @@
     }
     return card;
   }
-  /* A short form that unfolds in the review box: what each one asks for, by its template, and Send, which opens it
-     on GitHub filled in with the declaration, the commit and what was written, for one click to file it. */
+  /* What the answers do, under them; and, signed in with GitHub, as whom, with a way out. */
+  function howTo(meta) {
+    const how = el('p', 'how');
+    const draw = () => {
+      const s = TauSignin.configured(meta) && TauSignin.session();
+      if (!TauSignin.configured(meta)) {
+        how.replaceChildren('Yes and No open a short form here; a no asks you why. Send takes it to GitHub, filled in, where one click files it.');
+      } else if (!s) {
+        how.replaceChildren('Sign in with GitHub and Yes files your answer in one click; No asks you why. Answers are filed under your GitHub account.');
+      } else {
+        const out = el('button', 'btn link', 'Sign out');
+        out.type = 'button';
+        out.addEventListener('click', () => {
+          TauSignin.signOut();
+          how.closest('.review').querySelectorAll('.unfold').forEach(x => { x.hidden = true; });
+          draw();
+        });
+        how.replaceChildren('Yes files your answer at once; No asks you why. Answering as ', ext(URLS.github(s.login), '@' + s.login), ' · ', out);
+      }
+    };
+    draw();
+    return how;
+  }
+  /* A short form that unfolds in the review box, by its template: what it asks for, and Send. Signed in with GitHub
+     (web/signin.js), Send files it from here, under the reader's account, and Yes needs no form at all: one click
+     files it, with Undo, and Add why for a reason. Signed out, Send signs in first, then files it. And it can always
+     open on GitHub instead, filled in with the declaration, the commit and what was written, for one click there to
+     file it: the only way where the site has no sign-in. */
   const FIELDS = {
     'evidence-review.yml': [{id: 'rationale', label: 'Why? (optional)', hint: 'What you compared it with, what you checked.'}],
     'evidence-problem.yml': [{id: 'rationale', label: 'Why is it not correctly stated?', hint: 'A case it gets wrong, a counterexample, or what it should say.', required: true}],
@@ -662,15 +686,22 @@
                                {id: 'statement', label: 'As a Lean statement (optional)', mono: true},
                                {id: 'catches', label: 'What it would catch (optional)'}],
   };
+  const WHAT = {'evidence-review.yml': 'yes', 'evidence-problem.yml': 'no', 'evidence-question.yml': 'suggestion',
+                'evidence-challenge.yml': 'test'};
+  const OPENED = 'Opened on GitHub, filled in: submit it there, and it shows here within minutes.';
+  const live = [];  // the forms of the page shown, for what was to be done on return from signing in (start)
   let formSeq = 0;
-  function formFor(meta, name, [label, template, prefix, cls]) {
+  function formFor(meta, name, [label, template, cls]) {
+    const signin = TauSignin.configured(meta), oneClick = signin && template === 'evidence-review.yml';
     const id = 'form-' + (++formSeq), button = el('button', 'btn ' + cls, label), form = el('form', 'unfold');
-    const note = el('p', 'sent-note', 'Opened on GitHub, filled in: submit it there, and it shows here within minutes.');
+    const prompt = el('div', 'unfold prompt'), note = el('div', 'sent-note');
+    const btn = (text, klass, type = 'button') => { const b = el('button', 'btn' + (klass ? ' ' + klass : ''), text); b.type = type; return b; };
     button.type = 'button';
     button.setAttribute('aria-expanded', 'false');
     button.setAttribute('aria-controls', id);
     form.id = id;
-    form.hidden = note.hidden = true;
+    form.hidden = prompt.hidden = note.hidden = true;
+    note.setAttribute('role', 'status');
     const fields = FIELDS[template].map(f => {
       const t = el('textarea', f.mono ? 'mono' : null), l = el('label', null, f.label);
       t.id = `${id}-${f.id}`;
@@ -678,41 +709,134 @@
       if (f.hint) t.placeholder = f.hint;
       l.htmlFor = t.id;
       form.append(l, t);
-      return [f, t];
+      return [f, t, l];
     });
-    const send = el('button', 'btn send', 'Send on GitHub ↗'), cancel = el('button', 'btn', 'Cancel'), row = el('div', 'form-actions');
-    send.type = 'submit';
-    cancel.type = 'button';
+    // After a yes, Add why: the same form, the reason now the point of it.
+    let whyWanted = false, busy = false, filed = null;
+    const again = el('p', 'again', 'This files your yes again, with why: it takes the place of the first.');
+    again.hidden = true;
+    const send = btn('', 'send', 'submit'), cancel = btn('Cancel'), row = el('div', 'form-actions');
     row.append(cancel, send);
-    form.append(row);
-    const sync = () => { send.disabled = fields.some(([f, t]) => f.required && !t.value.trim()); };
-    const shut = () => { form.hidden = true; button.setAttribute('aria-expanded', 'false'); };
-    button.addEventListener('click', () => {
-      const opening = form.hidden, box = button.closest('.review');
-      // One form open at a time in a review box.
-      box.querySelectorAll('form.unfold').forEach(x => { x.hidden = true; });
+    form.append(again, row);
+    const values = () => Object.fromEntries(fields.filter(([, t]) => t.value.trim()).map(([f, t]) => [f.id, t.value.trim()]));
+    const sync = () => {
+      send.textContent = !signin ? 'Send on GitHub ↗' : TauSignin.session() ? 'Send' : 'Sign in with GitHub and send';
+      send.disabled = busy || fields.some(([f, t]) => (f.required || whyWanted) && !t.value.trim());
+      fields.forEach(([f, , l]) => { l.textContent = whyWanted ? 'Why is it correctly stated?' : f.label; });
+      again.hidden = !whyWanted;
+    };
+    // One form open at a time in a review box.
+    function closeAll() {
+      const box = button.closest('.review');
+      box.querySelectorAll('.unfold').forEach(x => { x.hidden = true; });
       box.querySelectorAll('[aria-controls^="form-"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
       box.querySelectorAll('.sent-note').forEach(x => { x.hidden = true; });
-      if (!opening) return;
-      form.hidden = false;
+    }
+    function unfold(what) {
+      closeAll();
+      what.hidden = false;
       button.setAttribute('aria-expanded', 'true');
+      if (what === form) { sync(); fields[0][1].focus(); }
+    }
+    const shut = () => { form.hidden = prompt.hidden = true; whyWanted = false; button.setAttribute('aria-expanded', 'false'); };
+    const say = (...content) => { note.replaceChildren(...content); note.hidden = false; };
+    const onGitHub = v => {
+      window.open(URLS.form(meta, template, name, v), '_blank', 'noopener');
+      form.reset();
+      shut();
+      say(OPENED);
+    };
+    const toGitHub = (text, v) => { const b = btn(text, 'link gh'); b.addEventListener('click', () => onGitHub(v())); return b; };
+    // Signed out: off to GitHub to sign in, and back here to file it.
+    const begin = v => {
+      say('Off to GitHub to sign in…');
+      TauSignin.signIn(meta, {decl: name, template, values: v})
+        .catch(e => say(`Not signed in: ${e.message}. `, toGitHub('Send it on GitHub instead ↗', () => v)));
+    };
+    async function deliver(v) {
+      if (busy) return;
+      busy = true;
       sync();
-      fields[0][1].focus();
+      say('Sending…');
+      try {
+        filed = await TauSignin.file(meta, {title: FORMS[template].title + name, labels: [FORMS[template].label],
+                                            body: issueBody(template, {...v, decl: name, commit: meta.library.commit})});
+        form.reset();
+        shut();
+        sent(filed);
+      } catch (e) {
+        if (e.status === 401) {  // the sign-in ended meanwhile
+          const back = btn('Sign in with GitHub and send', 'send');
+          back.addEventListener('click', () => begin(v));
+          say('Your GitHub sign-in has ended. ', back, ' ', toGitHub('or send it on GitHub ↗', () => v));
+        } else say(`Not sent: ${e.message}. `, toGitHub('Send it on GitHub instead ↗', () => v));
+      } finally {
+        busy = false;
+        sync();
+      }
+    }
+    function sent(f) {
+      const s = TauSignin.session(), undo = btn('Undo', 'link');
+      undo.addEventListener('click', () => withdraw(f));
+      const line = ['✓ Filed: your ' + WHAT[template] + ', ', ext(f.url, `issue #${f.number}`), s ? ` by @${s.login}` : '',
+                    '. It shows here within minutes. '];
+      if (template !== 'evidence-review.yml') return say(...line, undo);
+      const why = btn('Add why', 'link');
+      why.addEventListener('click', () => { whyWanted = true; unfold(form); });
+      say(...line, why, ' · ', undo);
+    }
+    // Undo: the record's own command, on its issue.
+    async function withdraw(f) {
+      if (busy) return;
+      busy = true;
+      say('Taking it back…');
+      try {
+        await TauSignin.comment(meta, f.number, '/withdraw');
+        filed = null;
+        say('Taken back: ', ext(f.url, `issue #${f.number}`), ' says /withdraw, and the page shows it within minutes.');
+      } catch (e) {
+        say(`Not taken back: ${e.message}. Comment /withdraw on `, ext(f.url, `issue #${f.number}`), '.');
+      } finally {
+        busy = false;
+      }
+    }
+    button.addEventListener('click', () => {
+      if (busy) return;
+      if (!(form.hidden && prompt.hidden)) return closeAll();
+      if (oneClick && filed) { closeAll(); note.hidden = false; return; }  // filed already: say so again, not twice
+      if (oneClick && TauSignin.session()) { closeAll(); return deliver({}); }
+      unfold(oneClick ? prompt : form);
     });
+    if (oneClick) {
+      const go = btn('Sign in with GitHub', 'send'), no = btn('Cancel'), actions = el('div', 'form-actions');
+      go.addEventListener('click', () => begin({}));
+      no.addEventListener('click', shut);
+      actions.append(toGitHub('or answer on GitHub ↗', () => ({})), no, go);
+      prompt.append(el('p', null, 'Sign in with GitHub once, and Yes files your answer from here in one click, under your GitHub account.'), actions);
+    }
+    if (signin) row.prepend(toGitHub('or send it on GitHub ↗', values));
     form.addEventListener('input', sync);
     cancel.addEventListener('click', () => { form.reset(); shut(); });
     form.addEventListener('submit', ev => {
       ev.preventDefault();
       sync();
       if (send.disabled) return;
-      const values = {};
-      fields.forEach(([f, t]) => { if (t.value.trim()) values[f.id] = t.value.trim(); });
-      window.open(URLS.form(meta, template, prefix, name, values), '_blank', 'noopener');
-      form.reset();
-      shut();
-      note.hidden = false;
+      const v = values();
+      if (!signin) onGitHub(v);
+      else if (TauSignin.session()) deliver(v);
+      else begin(v);
     });
-    return {button, form, note};
+    // Back from signing in: file what was written, or say why not and give it back to send another way.
+    live.push({name, template, resume(v, error) {
+      v = v || {};
+      fields.forEach(([f, t]) => { t.value = v[f.id] || ''; });
+      if (error) {
+        unfold(oneClick && !Object.keys(v).length ? prompt : form);
+        say(error + ' ', toGitHub('Send it on GitHub instead ↗', () => v));
+      } else deliver(v);
+      note.scrollIntoView({block: 'center'});
+    }});
+    return {button, parts: oneClick ? [prompt, form, note] : [form, note]};
   }
   /* Instructions for an AI agent to review it as AI-REVIEWS.md says, for this declaration at this commit: copied
      with one click, and shown, to copy by hand where the browser will not. */
@@ -721,6 +845,7 @@
                     : ` at ${meta.library.name} commit ${meta.library.commit}`;
     const text = `Review ${name} for the ${meta.store.name} review site, following\n` +
       `https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md\n` +
+      `Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.\n` +
       `The site shows it${at}: ${meta.site.url}#/d/${encodeURIComponent(name)}`;
     const box = el('div', 'ai-offer'), line = el('div', 'offer'), btn = el('button', 'btn offer', 'Copy instructions for your AI');
     const prompt = el('pre', 'ai-prompt');
@@ -1067,14 +1192,24 @@
     const prose = (...ps) => { const box = el('div', 'prose'); box.append(...ps); return box; };
     const code = t => { const c = el('pre', 'small-code'); c.textContent = t; return c; };
     const outside = meta.review ? meta.review.outside : [];
+    const signin = TauSignin.configured(meta);
+    const sends = signin ? 'Send files it from the page, or opens it on GitHub, filled in' : 'Send takes it to GitHub, filled in';
     setNav('help');
     show(el('h1', null, 'How to review'),
       el('p', 'lede', 'A review answers one question: is this declaration correctly stated? Yes, or no and why.'),
-      prose(p('Open a declaration: its review box asks the question. ', el('b', null, 'Yes'), ' opens a short form in the box, a reason ',
-              'optional; ', el('b', null, 'No'), ' opens one that asks why, and will not send without it. ', el('b', null, 'Send'),
-              ' opens it on GitHub, filled in with the declaration, the commit this page shows and what you wrote: submit it there. ',
-              `Your answer is kept in this site's evidence store under your GitHub account, and shows on the page within minutes. `,
-              'No pull request.'),
+      prose(signin
+              ? p('Open a declaration: its review box asks the question. Sign in with GitHub once, and ', el('b', null, 'Yes'),
+                  ' files your answer from the page in one click, with Undo, and Add why to give a reason; ', el('b', null, 'No'),
+                  ' opens a short form that asks why, and will not send without it. Signing in lets the page file issues on ',
+                  ext(URLS.issues(meta), meta.store.repo), ' under your account, and nothing else, for eight hours; it is kept in your ',
+                  'browser alone. Rather not sign in? Each form opens on GitHub instead, filled in with the declaration, the commit this ',
+                  `page shows and what you wrote: submit it there. Your answer is kept in this site's evidence store under your GitHub `,
+                  'account, and shows on the page within minutes. No pull request.')
+              : p('Open a declaration: its review box asks the question. ', el('b', null, 'Yes'), ' opens a short form in the box, a reason ',
+                  'optional; ', el('b', null, 'No'), ' opens one that asks why, and will not send without it. ', el('b', null, 'Send'),
+                  ' opens it on GitHub, filled in with the declaration, the commit this page shows and what you wrote: submit it there. ',
+                  `Your answer is kept in this site's evidence store under your GitHub account, and shows on the page within minutes. `,
+                  'No pull request.'),
             p('Correctly stated means that it says what it should: it is the intended notion, or states the intended result, as its ',
               'name, its docstring and the literature say. Not that its proof is right: Lean checks that.'),
             p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first.'),
@@ -1084,11 +1219,11 @@
       section('What could be better', null, prose(
         p('Something can be correctly stated and still be done better: stated more generally, with a better name or docstring, more ',
           'cleanly, or with a lemma it should come with. Say so under ', el('b', null, 'What could be better'), ' in the review box: ',
-          el('b', null, 'Suggest an improvement'), ' opens a short form in the box, and Send takes it to GitHub, filled in. A suggestion is neither a yes nor a no. ',
+          el('b', null, 'Suggest an improvement'), ` opens a short form in the box, and ${sends}. A suggestion is neither a yes nor a no. `,
           'Replies are comments on its issue, and you or a maintainer close it when it is dealt with.'))),
       section('Tests', null, prose(
-        p('Under ', el('b', null, 'Tests'), ' in the review box, ', el('b', null, 'Suggest a test'), ' opens a short form in the box, ',
-          'which Send takes to GitHub, filled in: a property the declaration should have, such as a value, an edge case or an agreement with another notion, in words and ',
+        p('Under ', el('b', null, 'Tests'), ' in the review box, ', el('b', null, 'Suggest a test'), ` opens a short form in the box (${sends}): `,
+          'a property the declaration should have, such as a value, an edge case or an agreement with another notion, in words and ',
           `if you can in Lean. It stays open until a declaration of ${lib} proves it; the page then lists that declaration as a test, `,
           'and checks at every commit that it still passes.'))),
       section('Versions', null, prose(
@@ -1101,7 +1236,8 @@
           "and files its answer with its reasons, which list each Check. Its answers are marked AI and counted apart from people's. ",
           'An agent always answers, but its reasons give only what the answers already there do not, such as a second source that ',
           'states it as Lean does; with nothing to add, its yes has no reasons. To ask an agent for one, give it this:'),
-        code(`Review TauCeti.Foo.bar for the Tau Ceti review site, following\nhttps://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`),
+        code(`Review TauCeti.Foo.bar for the Tau Ceti review site, following\nhttps://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md\n` +
+             'Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.'),
         p('Each declaration\'s review box has a button, ', el('b', null, 'Copy instructions for your AI'), ', that copies these, filled in ',
           'with the declaration and the commit the site shows.'),
         p('Many yeses at once: comment lines like these on ', ext(URLS.bulk(meta), `issue #${meta.store.bulk}`), ', one each, after a line naming the agent:'),
@@ -1207,6 +1343,7 @@
     if (location.hash && !location.hash.startsWith('#/') && r[0] !== 'missing') history.replaceState(null, '', address(r));
     current = r.join(':');
     closeCards(0);
+    live.length = 0;
     const gen = ++generation;
     ready = false;
     try {
@@ -1238,9 +1375,22 @@
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem('tauceti-review:theme', next); } catch (e) { /* not kept */ }
   });
+  /* The first page; back from signing in with GitHub, the page as it was, then what was to be done there. */
+  async function start() {
+    let back = null;
+    try {
+      const meta = await TauData.meta();
+      if (TauSignin.configured(meta)) back = await TauSignin.finish(meta);
+    } catch (e) {
+      console.error(e);
+    }
+    await route();
+    const then = back && back.then, form = then && live.find(f => f.name === then.decl && f.template === then.template);
+    if (form) form.resume(then.values, back.error);
+  }
   window.addEventListener('hashchange', route);
   footer().catch(e => console.error(e));
-  route();
+  start();
 
   /* For the browser check (tests/validate_site.py). */
   window.TauReview = Object.freeze({

@@ -32,6 +32,7 @@ SETTINGS = {
     "voyager": {"site": "https://zulip.example.org", "channel": "Tau Ceti", "topic": "new results",
                 "sender": "voyager@example.org"},
     "site": {"title": "Tau Ceti Review", "url": "https://example.org/"},
+    "signin": {"client_id": "Iv23fixture", "exchange": "https://signin.example.org/token"},
 }
 ANNOUNCEMENTS = [
     {"decl": "Fixture.triple_pos", "name": "The positivity of triple", "what": "result",

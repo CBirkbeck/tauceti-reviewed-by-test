@@ -20,8 +20,11 @@ forms, and evidence-core for everything computed from them. The design:
 ## Reviewing
 
 A review answers one question: **is this declaration correctly stated?** Open a declaration on the site:
-its review box asks the question, with two buttons, each opening a short form on GitHub filled in with
-the declaration and the commit the site shows:
+its review box asks the question, with two buttons. Signed in with GitHub (below), **Yes** files your
+answer at once, with Undo, and Add why to give a reason; **No** opens a short form in the box that asks
+why, and Send files it. Signed out, or rather than signing in, a form opens on GitHub instead, filled in
+with the declaration and the commit the site shows, for one click there to file it. Either way the
+issue is the form's:
 
 | answer | form | records |
 |---|---|---|
@@ -45,7 +48,10 @@ The store's other forms (listing a test, names, statuses) are still there for in
 does not offer them.
 
 Intake turns the issue into a record under the account that opened it, answers on the issue, and
-rebuilds the site within minutes. On an answer's issue, a comment whose first line is a command
+rebuilds the site within minutes. An issue filed from the page by someone who is not a collaborator
+comes without its label (GitHub drops it), and intake reads an issue's form by its label: the Label
+answers workflow gives it back, from the title and the fields, and has intake read it
+(`scripts/label_issue.py`; it does the same for an AI agent's `evidence-store submit`). On an answer's issue, a comment whose first line is a command
 changes where it stands: `/withdraw`; on a no, `/fixed [commit]`, `/intended`, `/invalid`, `/reopen`.
 
 **Many yeses at once:** comment lines on [issue #1](../../issues/1), one record each (it also takes
@@ -56,8 +62,8 @@ Reviewed-by: TauCeti.Foo.bar — why it is correctly stated
 Test: TauCeti.Foo.bar — TauCeti.Foo.bar_zero — what it checks
 ```
 
-**AI agents** name themselves in their comment, and the site shows their records apart from people's:
-`<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->`. An AI agent reviewing one
+**AI agents** name themselves in their comment, tool and exact model, and the site shows their records
+apart from people's: `<!-- agent: tool=Codex; model=GPT-6 Astra; session=… -->`. An AI agent reviewing one
 declaration can follow [AI-REVIEWS.md](AI-REVIEWS.md) instead: it reads the declaration against its
 source, runs the Checks its roadmap gives it, and files its answer, yes or no, with
 `evidence-store submit`, its reasons listing each Check. Each declaration's review box has **Copy instructions for your AI**, which
@@ -67,6 +73,7 @@ by hand:
 ```
 Review TauCeti.Foo.bar for the Tau Ceti review site, following
 https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
+Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.
 ```
 
 Two agents review as part of their own work: **Voyager**, every result whose statement it compares
@@ -74,6 +81,27 @@ with a source before a post, and **the red team**, which says yes to each declar
 audits that passes its checks and fixes the rest in Tau Ceti instead of answering no
 ([AI-REVIEWS.md](AI-REVIEWS.md#voyager-and-the-red-team)). Any answer counts, a person's or an
 agent's, but its reasons add only what the answers already there lack.
+
+## Signing in with GitHub
+
+So that an answer is filed from the page, the site signs its readers in with GitHub (`web/signin.js`):
+
+- **The GitHub App** "Tau Ceti Review", public so that anyone can sign in with it, asks for one
+  permission, issues (read and write), and is installed on this repository alone, with no webhook and
+  expiring tokens. A reader's token can file issues and comments here under their own account, the
+  issue marked as made through the app, and nothing else; it lasts eight hours. The app has no private
+  key: it never acts as itself.
+- **The sign-in helper** (`signin/worker.js`, on Cloudflare Workers): GitHub hands the page a one-time
+  code, and swapping it for a token takes the app's client secret, which no page can hold (and
+  GitHub's token endpoint does not answer browsers). The page posts the code to the helper; the helper
+  posts it on with the secret and returns the token, keeping nothing. PKCE makes a code worth nothing
+  to anyone but the tab that asked for it. From `signin/`: `npx wrangler deploy`, and
+  `npx wrangler secret put CLIENT_SECRET` for the secret; `node --test worker.test.mjs` tests it.
+- **The settings:** `data/settings.json`'s `signin`, `{"client_id": …, "exchange": "https://…workers.dev/token"}`,
+  neither of them secret. Without it the site has no sign-in, and every form opens on GitHub.
+
+The token is kept in the reader's browser (`localStorage`) until it ends or they sign out, and on no
+server.
 
 ## What the site shows
 
@@ -88,8 +116,8 @@ agent's, but its reasons add only what the answers already there lack.
   post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
   uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), then as lists how
   it is proved, what is built on it, its examples and what it is used to prove; and its review box, as the site had it in September, asking "Is this theorem
-  (lemma, definition, …) correctly stated?" with Yes and No, each opening a short form in the box (Send opens
-  it on GitHub, filled in, for one click to file it): below, a Correctly stated mark counting
+  (lemma, definition, …) correctly stated?" with Yes and No (signed in, Yes files at once; No and the
+  rest open a short form in the box, which Send files, or opens on GitHub filled in): below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
   mark, a twisty when it gives reasons that opens to why and its issue, and
   each no in full; **What could be better**, its suggestions and the button to add one; and **Tests**,
@@ -115,6 +143,7 @@ the Named page says whether AI agents' reviews count.
 | [Follow Tau Ceti](.github/workflows/follow.yml) | every 20 minutes, going on only when new docs have gone live (a few times a day); and by Voyager, when the site is behind at the time of a post | pins the commit Tau Ceti's published API docs show, its `docgen` branch, where Voyager's window also ends, or the newest before it that the extractor's 0.13 series can read and its cache has built (`scripts/pin.py`), so that the site has every declaration Voyager can announce and link to it, and shows what the docs show; when that moves, extracts its dataset as the release `dataset-<commit12>` ([Dataset](.github/workflows/dataset.yml)); records Voyager's announcements; deletes datasets nobody needs (`scripts/prune.py`); rebuilds the site |
 | [Voyager](.github/workflows/voyager.yml) | 04:15 and 16:15 UTC | reads Voyager's topic on the Lean Zulip (secrets `ZULIP_SITE`, `ZULIP_EMAIL`, `ZULIP_API_KEY`; read only) into `data/voyager.jsonl`, and records a `named` record for each announcement whose declaration the pinned dataset has (`scripts/voyager.py`) |
 | [Evidence intake](.github/workflows/evidence-intake.yml), [Evidence check](.github/workflows/evidence-check.yml) | on every issue event; on every change to `evidence/` | evidence-store's: records from forms, comments and the bulk issue; the check that the store only grows, and that a push adds only its author's records |
+| [Label answers](.github/workflows/label.yml) | on every new issue | gives an answer that came without its form's label (filed from the page, or by `evidence-store submit`, under an account that cannot label) that label, from its title and fields, then runs intake on it (`scripts/label_issue.py`) |
 | [Pages](.github/workflows/pages.yml) | after any of these | runs the tests, builds the site (`scripts/build_site.py`), checks it in a browser, and publishes it from `main` |
 
 The tools are pinned: evidence-core `v0.16.1`, evidence-store `v0.7.2` (`requirements.txt`), the
@@ -124,12 +153,14 @@ extractor's 0.13 series (`data/settings.json`). The store imports no other store
 
 - `evidence/`: the store (`store.json`, `records/*.jsonl`).
 - `data/settings.json`: the pin, the library, the packages outside it the site also asks about
-  (`review_outside`: Mathlib), the extractor series, dataset retention, Voyager's topic.
+  (`review_outside`: Mathlib), the extractor series, dataset retention, Voyager's topic, signing in
+  (`signin`).
 - `data/voyager.jsonl`: every announcement Voyager has made.
-- `scripts/`: `pin.py`, `extractor.py`, `prune.py`, `voyager.py`; `site_data.py` (everything a page
-  shows, from evidence-core) and `build_site.py` (writes `_site/`).
-- `web/`: the front end (`index.html`, `style.css`, `data.js`, `render.js`, `map.js`, `app.js`) and
-  `vendor/` (elkjs, KaTeX, the Atlas's `markdown.js`; see `web/vendor/NOTICE`).
+- `scripts/`: `pin.py`, `extractor.py`, `prune.py`, `voyager.py`, `label_issue.py`; `site_data.py`
+  (everything a page shows, from evidence-core) and `build_site.py` (writes `_site/`).
+- `web/`: the front end (`index.html`, `style.css`, `data.js`, `render.js`, `map.js`, `signin.js`,
+  `app.js`) and `vendor/` (elkjs, KaTeX, the Atlas's `markdown.js`; see `web/vendor/NOTICE`).
+- `signin/`: the sign-in helper (`worker.js`, `wrangler.toml`) and its tests.
 - `tests/`: unit tests, the suite's fixture (`tests/fixtures`, see its NOTICE), `fixture_site.py`, and
   the browser check `validate_site.py`.
 

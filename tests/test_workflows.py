@@ -113,6 +113,22 @@ class PagesWorkflowTests(unittest.TestCase):
                          "pages.yml")
 
 
+class LabelWorkflowTests(unittest.TestCase):
+    def test_labels_what_lost_its_label_then_reads_it_as_intake_does(self):
+        wf = load("label.yml")
+        self.assertEqual(wf["on"], {"issues": {"types": ["opened"]}})
+        self.assertEqual(wf["permissions"], {"contents": "write", "issues": "write", "actions": "write"})
+        job = wf["jobs"]["label"]
+        self.assertIn("github.event.sender.type != 'Bot'", job["if"])  # as intake: not the bot's own
+        label = next(s for s in steps(job) if s.get("id") == "label")
+        self.assertIn("pip install -q -r requirements.txt", label["run"])  # evidence-store's own titles too
+        self.assertIn('python scripts/label_issue.py --event "$GITHUB_EVENT_PATH" --repo "$GITHUB_REPOSITORY"', label["run"])
+        intake = lambda j: next(s for s in steps(j) if "evidence-store/intake" in s.get("uses", ""))
+        mine, theirs = intake(job), intake(load("evidence-intake.yml")["jobs"]["intake"])
+        self.assertEqual(mine["if"], "steps.label.outputs.labelled == 'true'")
+        self.assertEqual((mine["uses"], mine["with"]), (theirs["uses"], theirs["with"]), "the same intake, pinned alike")
+
+
 
 class FormTests(unittest.TestCase):
     """The forms are evidence-store's, less what only an AI agent would answer: what is left must still

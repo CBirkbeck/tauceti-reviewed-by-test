@@ -1,0 +1,15 @@
+# Tau Ceti Review's sign-in helper (worker.js), on Cloudflare Workers. From this folder:
+#   npx wrangler deploy
+#   npx wrangler secret put CLIENT_SECRET     # the GitHub App's client secret, typed in; Cloudflare keeps it
+# Its address, https://tauceti-review-signin.<your subdomain>.workers.dev/token, is data/settings.json's
+# signin.exchange.
+name = "tauceti-review-signin"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[vars]
+# The GitHub App's client ID: not secret, as every sign-in address carries it.
+CLIENT_ID = ""
+# The sites whose pages may ask, comma-separated.
+ALLOWED_ORIGINS = "https://cbirkbeck.github.io"

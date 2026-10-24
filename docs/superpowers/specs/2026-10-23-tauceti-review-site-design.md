@@ -160,12 +160,13 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   `Challenge: <declaration> — <property>`, `Named: <declaration> — <name> — <sentence>`. An AI agent
   adds `<!-- agent: tool=…; model=…; session=… -->` to its comment, and its records are shown apart
   from people's.
-- **AI agents can review from the command line:** `AI-REVIEWS.md` says how. An agent reads the
+- **AI agents can review from the command line:** `AI-REVIEWS.md` says how. An agent names its exact
+  model, as its harness does ("GPT-6 Astra", not "GPT-6"; asked for on 2026-10-24). An agent reads the
   declaration against its source; runs the Checks its roadmap gives it (in TauCetiRoadmap a target's
   unit tests, each an `example` in `TauCeti/Examples/` carrying its tag once formalised, which the
   dataset cannot see, so the review is where they are recorded); and files its verdict with
   `evidence-store submit`, its reasons listing each Check and whether it passes. Without the right to
-  label issues it comments on the bulk issue instead.
+  label issues its issue is labelled for it by its title (Label answers); the bulk issue remains.
 - **Mathlib's declarations** (asked for on 2026-10-24): the site asks its question of the declarations of
   the packages outside Tau Ceti that `review_outside` in the settings names (Mathlib), as Tau Ceti builds on
   them. Their pages keep their link to Mathlib's docs and get the same review box, the read button going
@@ -381,6 +382,26 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
 Yes and No open `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
 (`evidence-review.yml`, `evidence-problem.yml`) with the form's `decl` and `commit` fields filled in
 (the declaration and the pinned commit).
+
+**Signing in with GitHub** (asked for on 2026-10-24, so that Send files the issue from the page; "the
+approval" one click). The settings' `signin` names a GitHub App's client ID and a sign-in helper's
+address, and the page (`web/signin.js`) signs its reader in with GitHub's web flow, with a state and
+PKCE (S256). The app is public, since a private one can be authorised only by its owner's account; its
+one permission is issues, read and write, on this repository, where alone it is installed; it has no
+webhook and no private key, and its user tokens end after eight hours. GitHub's token endpoint wants the
+client secret and does not answer browsers, so the helper (`signin/worker.js`, a Cloudflare Worker,
+allowed origins only) swaps the code for the token and keeps nothing. The token stays in the reader's
+`localStorage`. Signed in, Yes files a yes at once, with Undo (a `/withdraw` comment on its issue) and
+Add why (a second yes, with why, which takes the first one's place); No, What could be better and
+Suggest a test open their forms in the box, and Send files them. Signed out, Yes asks to sign in and
+Send reads "Sign in with GitHub and send": the answer waits in the tab (`sessionStorage`) while GitHub
+is asked, and is filed on return. An answer can always open on GitHub instead, filled in (asked for:
+"we can leave the open in github option"), and without `signin` that is the only way. An issue filed
+from the page is written as its form writes it, title, label and `### <label>` sections (render.js's
+`FORMS`, held to the templates by the browser check). GitHub drops the label of an issue filed so by
+anyone who is not a collaborator, and intake reads the form by its label; the Label answers workflow
+(`label.yml`, `scripts/label_issue.py`) gives it back, by title and first field, the forms' own and
+evidence-store's, and runs intake on the issue.
 
 ### 6.5 The dependency map
 
