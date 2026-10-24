@@ -181,6 +181,15 @@ def review(browser, url, errors):
     suggestion = box.locator(".report.question").inner_text()
     expect("suggested by @someone" in suggestion and "any semiring" in suggestion and "Issue #15" in suggestion,
            "and each suggestion shows, with who made it and its issue")
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    box.locator(".ai-offer button").click()
+    page.wait_for_function("document.querySelector('.ai-offer button').textContent.startsWith('Copied')")
+    expected = ("Review Fixture.triple for the Fixture review site, following\n"
+                "https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md\n"
+                "The site shows it at Fixture commit B: https://example.org/#/d/Fixture.triple")
+    expect(box.locator(".ai-prompt").is_visible() and box.locator(".ai-prompt").inner_text() == expected,
+           "instructions for an AI agent to review it, filled in and shown")
+    expect(page.evaluate("navigator.clipboard.readText()") == expected, "and copied with one click")
     expect(page.evaluate("[TauRender.questionWord('theorem', 'lemma'), TauRender.questionWord('structure', 'structure')]")
            == ["lemma", "structure"], "a lemma is asked about as a lemma")
     page = visit(browser, url, "#/d/Fixture.triple_comm", errors)

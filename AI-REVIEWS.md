@@ -8,7 +8,8 @@ agent answers from the command line, as below; its answer shows in the same box 
 marked AI and counted apart from people's, with its reasons on hover and on its issue. So the reasons
 are the review: write them for a mathematician who will read them.
 
-To ask an agent for a review, give it this:
+To ask an agent for a review, give it this (each declaration's review box has a button, "Copy
+instructions for your AI", that copies it filled in, with the commit the site shows):
 
 > Review `TauCeti.Foo.bar` for the Tau Ceti review site, following
 > https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md

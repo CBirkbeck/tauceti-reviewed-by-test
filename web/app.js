@@ -523,7 +523,7 @@
       ask.append(el('span', 'ask', `Is this ${word} correctly stated?`));
       ANSWERS.forEach(([text, template, prefix, cls]) => ask.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
       ask.append(ext(URLS.docs(meta, name, modName), 'Read it in the API docs ↗', 'btn docs'));
-      card.append(ask, el('p', 'how', 'Either answer opens a short form on GitHub, filled in; a no asks you why.'));
+      card.append(ask, el('p', 'how', 'Either answer opens a short form on GitHub, filled in; a no asks you why.'), aiOffer(meta, name));
     } else {
       card.append(hint(records.length ? `Reviews of ${name} are kept in the stores that review it; they show here as they are.`
                                       : `Outside ${meta.library.name}: review it where it lives, such as the Mathlib probability store.`));
@@ -560,6 +560,31 @@
       card.append(testMarks(tests, challenges, byId));
     }
     return card;
+  }
+  /* Instructions for an AI agent to review it as AI-REVIEWS.md says, for this declaration at this commit: copied
+     with one click, and shown, to copy by hand where the browser will not. */
+  function aiOffer(meta, name) {
+    const text = `Review ${name} for the ${meta.store.name} review site, following\n` +
+      `https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md\n` +
+      `The site shows it at ${meta.library.name} commit ${meta.library.commit}: ${meta.site.url}#/d/${encodeURIComponent(name)}`;
+    const box = el('div', 'ai-offer'), line = el('div', 'offer'), btn = el('button', 'btn offer', 'Copy instructions for your AI');
+    const prompt = el('pre', 'ai-prompt');
+    btn.type = 'button';
+    prompt.textContent = text;
+    prompt.hidden = true;
+    btn.addEventListener('click', async () => {
+      prompt.hidden = false;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied: paste them to your AI';
+      } catch (e) {  // no clipboard here: select them, to copy by hand
+        getSelection().selectAllChildren(prompt);
+        btn.textContent = 'Selected: copy them for your AI';
+      }
+    });
+    line.append(el('span', 'how', 'Or have an AI agent review it, under your GitHub account and marked AI:'), btn);
+    box.append(line, prompt);
+    return box;
   }
   /* Whether a record speaks for the declaration as it is now; and an answer, whether it still stands: a yes
      of this version, a no still open. */
@@ -915,6 +940,8 @@
           "and files its answer with its reasons, which list each Check. Its answers are marked AI and counted apart from people's. ",
           'To ask an agent for one, give it this:'),
         code(`Review TauCeti.Foo.bar for the Tau Ceti review site, following\nhttps://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`),
+        p('Each declaration\'s review box has a button, ', el('b', null, 'Copy instructions for your AI'), ', that copies these, filled in ',
+          'with the declaration and the commit the site shows.'),
         p('Many yeses at once: comment lines like these on ', ext(URLS.bulk(meta), `issue #${meta.store.bulk}`), ', one each, after a line naming the agent:'),
         code('<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->\nReviewed-by: TauCeti.Foo.bar — why it is correctly stated'))),
       section("On an answer's issue", null, prose(

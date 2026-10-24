@@ -60,7 +60,9 @@ Test: TauCeti.Foo.bar — TauCeti.Foo.bar_zero — what it checks
 `<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->`. An AI agent reviewing one
 declaration can follow [AI-REVIEWS.md](AI-REVIEWS.md) instead: it reads the declaration against its
 source, runs the Checks its roadmap gives it, and files its answer, yes or no, with
-`evidence-store submit`, its reasons listing each Check. To ask for one:
+`evidence-store submit`, its reasons listing each Check. Each declaration's review box has **Copy instructions for your AI**, which
+copies the request below, filled in with the declaration and the commit the site shows. To ask for one
+by hand:
 
 ```
 Review TauCeti.Foo.bar for the Tau Ceti review site, following

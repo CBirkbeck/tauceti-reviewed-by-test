@@ -208,6 +208,10 @@ a.stat span { color: var(--accent); }
 .review .offer .how { margin: 0; font-size: 13.5px; color: var(--muted); }
 .review .offer .btn { font-size: 13px; padding: 4px 11px; border-radius: 6px; color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.review .ai-offer { margin: 8px 0 0; }
+.review .ai-offer .offer { margin: 0; }
+.review .ai-prompt { margin: 6px 0 0; padding: 8px 12px; border: 1px dashed var(--edge); border-radius: 8px; background: var(--code);
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
 .review .sub { margin: 16px 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 .review .empty { margin: 4px 0; font-size: 14px; }
 .review details { margin: 2px 0 8px; }

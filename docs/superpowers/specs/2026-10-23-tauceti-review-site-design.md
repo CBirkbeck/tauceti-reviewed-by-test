@@ -316,7 +316,9 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
   4. the **review box**, as the site had it in September (asked for on 2026-10-24), asking one
      question (asked for the same day): "Is this theorem correctly stated?" (lemma, definition,
      structure, …: a lemma by its keyword, else its kind) with **Yes** and **No**, "Read it in the API
-     docs", and a line saying that either opens a short form and a no asks why; then, under small
+     docs", and a line saying that either opens a short form and a no asks why; then "Copy
+     instructions for your AI" (asked for on 2026-10-24), which copies, and shows, a request for an AI
+     agent to review it following AI-REVIEWS.md, with the declaration, the commit and its page; then, under small
      capitals, **Reviews** (a mark "✓ Correctly stated · 2 people · 1 AI" for the yeses of this
      version, a mark "✗ Not correctly stated · 1 person" for the noes still open, then a mark for each
      answer: a person's filled, an AI agent's ringed and marked AI, a tick for a yes and a cross for a
