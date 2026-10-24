@@ -157,11 +157,21 @@ def review(browser, url, errors):
     tally = box.locator(".mark.tally.yes")
     expect(tally.locator(".trailer").inner_text() == "Correctly stated" and tally.locator(".who").inner_text() == "1 person · 1 AI",
            "the yeses, people counted apart from AI agents")
-    expect(box.locator("details.whose .mark.person").count() == 1 and box.locator("details.whose .mark.agent .ai").count() == 1,
-           "in Who, each answer's mark, the AI agent's marked")
-    expect(box.locator("details.whose .mark.agent").get_attribute("href") == "https://github.com/example/fixture-store/issues/11",
-           "a mark opens its answer's issue")
-    expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".which .pass").count() == 1, "Tested by: the listed test passes")
+    expect(box.locator(".answers-list .mark.person").count() == 1 and box.locator(".answers-list .mark.agent .ai").count() == 1,
+           "each answer's mark, the AI agent's marked")
+    why = box.locator(".answers-list details.why", has=page.locator(".mark.agent"))
+    expect(why.count() == 1 and not why.evaluate("d => d.open"), "the AI agent's reasons, a closed twisty")
+    why.locator("summary").click()
+    expect(why.evaluate("d => d.open") and "Compared with its definition" in why.inner_text()
+           and why.locator(".twisty-body a[href='https://github.com/example/fixture-store/issues/11']").count() == 1,
+           "which opens to why, and its issue")
+    expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".tests-list .pass").count() == 1, "Tested by: the listed test passes")
+    test = box.locator(".tests-list details.test").first
+    expect("triple_two" in test.locator("summary").inner_text() and "its value at 2" in test.locator("summary").inner_text(),
+           "a test, a twisty saying which and what it checks")
+    test.locator("summary").click()
+    page.wait_for_function("document.querySelector('.tests-list details.test .lean pre')")
+    expect("= 6" in test.locator(".lean pre").inner_text(), "which opens to its statement, as the docs show it")
     better = box.locator(".offer a", has_text="Suggest an improvement").get_attribute("href")
     expect("template=evidence-question.yml" in better and "decl=Fixture.triple" in better and "commit=B" in better,
            "What could be better: a suggestion opens its form, filled in")
@@ -179,8 +189,8 @@ def review(browser, url, errors):
     no = box.locator(".mark.tally.no")
     expect(no.locator(".trailer").inner_text() == "Not correctly stated" and no.locator(".who").inner_text() == "1 person",
            "a no still open, counted apart from the yes")
-    expect(box.locator("details.whose .mark.no.person").count() == 1 and box.locator("details.whose .mark.yes").count() == 1,
-           "in Who, a cross for the no and a tick for the yes")
+    expect(box.locator(".answers-list .mark.no.person").count() == 1 and box.locator(".answers-list .mark.yes").count() == 1,
+           "a cross for the no and a tick for the yes")
     report = box.locator(".report").inner_text()
     expect("answered no by @someone" in report and "the definition, unfolded" in report and "Issue #14" in report,
            "the no in full: who, why, and its issue")
@@ -188,12 +198,15 @@ def review(browser, url, errors):
            and box.locator(".offer a", has_text="Suggest a test").count() == 1, "Tests, with a test to suggest, where nothing tests it yet")
     expect("No suggestions yet." in box.inner_text(), "What could be better, with nothing suggested yet")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
-    expect("what it rests on has changed" in page.locator(".review details.whose").inner_text(), "stale underneath, said")
+    expect("what it rests on has changed" in page.locator(".review .answers-list").inner_text(), "stale underneath, said")
     page = visit(browser, url, "#/d/Fixture.double", errors)
     box = page.locator(".review")
-    expect(box.locator("details.whose .mark.stale").count() == 1 and "1 on an earlier version" in box.inner_text(),
+    expect(box.locator(".answers-list .mark.stale").count() == 1 and "1 on an earlier version" in box.inner_text(),
            "a yes about an earlier version, greyed")
-    expect(box.locator(".which .test", has_text="Suggested by").count() == 1, "the open suggested test")
+    suggested = box.locator(".tests-list details.test.suggested")
+    expect(suggested.count() == 1 and "double n = n + n" in suggested.locator("summary").inner_text(), "the open suggested test")
+    suggested.locator("summary").click()
+    expect("Suggested by @example" in suggested.inner_text(), "which opens to who suggested it")
     page = visit(browser, url, "#/d/Int", errors)
     expect("from the Test imports store" in page.locator(".review").inner_text(), "an imported review names its store")
     expect(page.locator(".actions").count() == 0 and page.locator(".map").count() == 0, "no question and no map outside the library")

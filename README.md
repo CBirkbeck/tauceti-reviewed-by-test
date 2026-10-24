@@ -78,10 +78,11 @@ https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
   uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), with the same
   neighbours as lists; and its review box, as the site had it in September, asking "Is this theorem
   (lemma, definition, …) correctly stated?" with Yes and No: below, a Correctly stated mark counting
-  people apart from AI agents, a Not correctly stated mark for the noes still open, each answer's mark
-  in **Who** (its reasons on hover, its issue a click away), each no in full; **What could be
-  better**, its suggestions and the button to add one; and **Tests**, the button to suggest one and,
-  when something tests it, a Tested by mark with each test in **Which**. Formulas in docstrings and in Voyager's
+  people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
+  mark, a twisty when it gives reasons (an AI agent's always do) that opens to why and its issue, and
+  each no in full; **What could be better**, its suggestions and the button to add one; and **Tests**,
+  the button to suggest one and, when something tests it, a Tested by mark and each test as a twisty
+  that opens to what it checks and its statement as the docs show it. Formulas in docstrings and in Voyager's
   sentences are typeset, whether written in TeX (`$…$`) or as text with TeX's marks
   (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`).
 - **Browse**, **Search** (names and docstring titles), **Activity** (the noes and the suggestions

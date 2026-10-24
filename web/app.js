@@ -580,12 +580,13 @@
   const MARK_NOTE = {stale: () => 'earlier version', 'stale-underneath': () => 'what it rests on has changed',
                      renamed: v => 'as ' + v.renamedFrom, unavailable: () => 'did not build', orphaned: () => 'gone',
                      incomparable: () => 'cannot be compared'};
-  /* One answer, as its answerer's mark: a tick for a yes, a cross for a no, a link to its issue, what it says
-     on hover, greyed when it no longer stands (a yes of an earlier version, a no resolved). */
-  function mark(v) {
+  /* One answer, as its answerer's mark: a tick for a yes, a cross for a no, a link to its issue (unless it
+     heads a twisty, which holds the link), greyed when it no longer stands (a yes of an earlier version, a no
+     resolved). */
+  function mark(v, heading) {
     const answer = v.verdict === 'problem' ? 'no' : 'yes';
     const cls = `mark ${answer} ` + (v.by.kind === 'agent' ? 'agent' : 'person') + (stands(v) ? '' : ' stale');
-    const m = v.url ? ext(v.url, null, cls) : el('span', cls);
+    const m = v.url && !heading ? ext(v.url, null, cls) : el('span', cls);
     m.append(sign(answer), markWho(v.by));
     const note = !v.inForce && v.state === 'withdrawn' ? 'withdrawn'
       : answer === 'no' && v.state !== 'open' ? (STATE_WORDS[v.state] || v.state).toLowerCase()
@@ -593,14 +594,32 @@
     if (note) m.append(el('span', 'note', note));
     if (v.source) m.append(el('span', 'note', `from the ${v.source.name} store`));
     if ((v.replies || []).length) m.append(el('span', 'note', plural(v.replies.length, 'reply', 'replies')));
-    const checked = Object.entries(v.checked || {}).filter(([, s]) => s === 'checked').map(([axis]) => axis);
-    const ref = v.reference && (v.reference.text || v.reference.url);
     m.title = [answer === 'no' ? 'No: it is not correctly stated.' : 'Yes: it is correctly stated.',
-               (v.hash ? `Version ${v.hash}, ` : '') + date(v.at) + '.',
-               statusNote(v), ref ? `Compared with ${ref}.` : '', checked.length ? `Checked: ${checked.join(', ')}.` : '',
-               (v.caveats || []).length ? 'Caveats: ' + v.caveats.map(c => typeof c === 'string' ? c : [c.category, c.text].filter(Boolean).join(': ')).join('; ') + '.' : '',
-               plain(v.text)].filter(Boolean).join(' ');
+               (v.hash ? `Version ${v.hash}, ` : '') + date(v.at) + '.', statusNote(v)].filter(Boolean).join(' ');
     return m;
+  }
+  /* A twisty: a line that opens to show more. */
+  function twisty(cls, head, ...body) {
+    const d = el('details', 'twisty ' + cls), s = el('summary'), b = el('div', 'twisty-body');
+    s.append(...head);
+    b.append(...body.filter(Boolean));
+    d.append(s, b);
+    return d;
+  }
+  /* One yes in the list of answers: its mark, which opens, when it gives reasons (an AI agent's always do), to
+     show why: what it was compared with, what was checked, the Checks run; then its issue. A bare yes is just
+     its mark, and a no is shown in full below. */
+  function answerRow(v) {
+    const ref = v.reference && (v.reference.text || v.reference.url);
+    const checked = Object.entries(v.checked || {}).filter(([, s]) => s === 'checked').map(([axis]) => axis);
+    const caveats = (v.caveats || []).map(c => typeof c === 'string' ? c : [c.category, c.note || c.text].filter(Boolean).join(': '));
+    if (v.verdict === 'problem' || !(v.text || ref || checked.length || caveats.length)) return mark(v);
+    const line = el('p', 'line');
+    if (v.url) line.append(ext(v.url, issueText(v.url)), ' · ');
+    line.append(date(v.at) + (v.hash ? ' · version ' + v.hash.slice(0, 8) : ''));
+    return twisty('why', [mark(v, true), el('span', 'gist', 'why')],
+                  ref ? el('p', 'line', `Compared with ${ref}.`) : null, checked.length ? el('p', 'line', `Checked: ${checked.join(', ')}.`) : null,
+                  v.text ? md(v.text) : null, caveats.length ? el('p', 'line', 'What could be better: ' + caveats.join('; ')) : null, line);
   }
   /* A mark that counts the answers that stand, people apart from AI agents, and says how many no longer do. */
   function tally(answer, words, vs, gone) {
@@ -614,24 +633,23 @@
     if (k) t.append(counts ? ' · ' : ' ', el('span', 'note', gone(k)));
     return t;
   }
-  /* The answers: a mark for the yeses of this version and one for the noes still open, in Who each answer's
-     own mark, then each no in full, with why. */
+  /* The answers: a mark for the yeses of this version and one for the noes still open, then each answer's own
+     mark, a twisty when it gives reasons, then each no in full, with why. */
   function answers(yes, no, byId) {
     const box = el('div');
     if (!yes.length && !no.length) { box.append(el('p', 'empty', 'No answers yet.')); return box; }
     const row = el('div', 'marks');
     if (yes.length) row.append(tally('yes', 'Correctly stated', yes, k => k === 1 ? '1 on an earlier version' : `${k} on earlier versions`));
     if (no.length) row.append(tally('no', 'Not correctly stated', no, k => `${k} resolved`));
-    const all = [...yes, ...no], whose = el('details', 'whose'), list = el('div', 'marks');
-    whose.open = all.length <= 3;
-    all.sort((a, b) => stands(b) - stands(a) || (b.at || '').localeCompare(a.at || '')).forEach(v => list.append(mark(v)));
-    whose.append(el('summary', null, `Who (${all.length})`), list);
-    box.append(row, whose, ...no.map(v => report(v, byId)));
+    const list = el('div', 'answers-list');
+    [...yes, ...no].sort((a, b) => stands(b) - stands(a) || (b.at || '').localeCompare(a.at || '')).forEach(v => list.append(answerRow(v)));
+    box.append(row, list, ...no.map(v => report(v, byId)));
     return box;
   }
   const TEST_RESULT = {passes: 'passes', sorry: 'has sorry', missing: 'missing at this commit'};
-  /* Tested by: a mark that counts the tests that pass, and in Which each listed test with whether it passes
-     and each suggested one with where it stands. */
+  /* Tested by: a mark that counts the tests that pass; then each listed test, a twisty that opens to what it
+     checks and its statement as the docs show it, and each suggested one, a twisty that opens to where it
+     stands. */
   function testMarks(tests, challenges, byId) {
     const box = el('div'), total = tests.length + challenges.length;
     if (!total) { box.append(el('p', 'empty', 'No tests yet.')); return box; }
@@ -644,33 +662,44 @@
     t.title = 'Tested by: tests of it that pass, listed or suggested';
     t.append(sign('yes'), el('span', 'trailer', 'Tested by'), ' ', el('span', 'who', parts.join(' · ')));
     row.append(t);
-    const which = el('details', 'which');
-    which.open = total <= 3;
-    which.append(el('summary', null, `Which (${total})`));
-    if (tests.length) which.append(el('p', 'head', 'Listed tests'));
+    const list = el('div', 'tests-list');
+    // What it checks, in a line: its first line, cut at 90 characters. The twisty holds the rest, if there is more.
+    const gist = text => { const first = plain(String(text || '').split('\n')[0]); return first ? ' — ' + (first.length > 90 ? first.slice(0, 89) + '…' : first) : ''; };
+    const more = text => { const t = String(text || '').trim(); return t.includes('\n') || plain(t).length > 90; };
     tests.forEach(x => {
-      const t = el('div', 'test'), line = el('p', 'line');
-      line.append(el('span', x.result === 'passes' ? 'pass' : 'fail', TEST_RESULT[x.result] || x.result), ' · ',
-                  link(URLS.decl(x.test), shortName(x.test), 'mono'), x.challenge ? ' · suggested and met; listed by ' : ' · listed by ',
+      const stmt = el('div', 'lean'), line = el('p', 'line');
+      line.append(link(URLS.decl(x.test), x.test, 'mono'), x.challenge ? ' · suggested and met; listed by ' : ' · listed by ',
                   markWho(x.by), ', ' + date(x.at));
       if (x.url) line.append(' · ', ext(x.url, issueText(x.url)));
-      t.append(line);
-      if (x.text) t.append(md(x.text));
-      which.append(t);
+      const d = twisty('test', [el('span', x.result === 'passes' ? 'pass' : 'fail', TEST_RESULT[x.result] || x.result), ' · ',
+                                el('span', 'mono', shortName(x.test)), el('span', 'gist', gist(x.text))],
+                       more(x.text) ? md(x.text) : null, stmt, line);
+      // Its statement, as the docs show it, fetched the first time it is opened.
+      let asked = false;
+      d.addEventListener('toggle', async () => {
+        if (!d.open || asked) return;
+        asked = true;
+        const found = await TauData.decl(x.test), e = found && found.entry;
+        if (e && e.sig) stmt.append(signature(e.kw, e.sig, e.sigRefs || [], found.module.names || []));
+        else if (e && e.stmt) { const pre = el('pre'); pre.textContent = e.stmt; stmt.append(pre); }
+        else if (found) { const pre = el('pre'); pre.textContent = `${found.node.name} : ${found.node.brief}`; stmt.append(pre); }
+      });
+      list.append(d);
     });
-    if (challenges.length) which.append(el('p', 'head', 'Suggested tests'));
     challenges.forEach(v => {
-      const t = el('div', 'test' + (v.state === 'open' ? '' : ' closed')), line = el('p', 'line');
+      const line = el('p', 'line');
       line.append(v.state === 'open' ? 'Suggested by ' : `${STATE_WORDS[v.state] || v.state} · suggested by `, markWho(v.by), ', ' + date(v.at));
       if (v.url) line.append(' · ', ext(v.url, issueText(v.url)));
-      t.append(line);
-      if (v.text) t.append(md(v.text));
-      if (v.statement) { const pre = el('pre', 'small-code'); pre.textContent = v.statement; t.append(pre); }
-      if (v.catches) t.append(el('p', 'note', 'Would catch: ' + v.catches));
-      replies(t, v, byId);
-      which.append(t);
+      const pre = v.statement ? el('pre', 'small-code') : null;
+      if (pre) pre.textContent = v.statement;
+      const d = twisty('test suggested' + (v.state === 'open' ? '' : ' closed'),
+                       [el('span', 'suggested', v.state === 'open' ? 'suggested' : (STATE_WORDS[v.state] || v.state).toLowerCase()),
+                        el('span', 'gist', gist(v.text))],
+                       v.text ? md(v.text) : null, pre, v.catches ? el('p', 'note', 'Would catch: ' + v.catches) : null, line);
+      replies(d.lastChild, v, byId);
+      list.append(d);
     });
-    box.append(row, which);
+    box.append(row, list);
     return box;
   }
   /* A no or a suggestion (a question record): where it stands, who said it and when, what they said, the

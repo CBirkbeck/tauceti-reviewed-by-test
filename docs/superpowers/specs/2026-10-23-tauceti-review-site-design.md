@@ -318,17 +318,19 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      structure, …: a lemma by its keyword, else its kind) with **Yes** and **No**, "Read it in the API
      docs", and a line saying that either opens a short form and a no asks why; then, under small
      capitals, **Reviews** (a mark "✓ Correctly stated · 2 people · 1 AI" for the yeses of this
-     version, a mark "✗ Not correctly stated · 1 person" for the noes still open, and in **Who** a
-     mark for each answer: a person's filled, an AI agent's ringed and marked AI, a tick for a yes and
-     a cross for a no, one that no longer stands grey with "earlier version", "what it rests on has
-     changed" or what resolved it, an imported one "from the Mathlib probability store"; each links to
-     its issue and shows on hover why; then each no in full: where it stands, who said it and when,
+     version, a mark "✗ Not correctly stated · 1 person" for the noes still open, then a mark for each
+     answer: a person's filled, an AI agent's ringed and marked AI, a tick for a yes and a cross for a
+     no, one that no longer stands grey with "earlier version", "what it rests on has changed" or what
+     resolved it, an imported one "from the Mathlib probability store". A yes that gives reasons (an
+     AI agent's always do) is a twisty (asked for on 2026-10-24) that opens to them, typeset, and to
+     its issue; a bare yes links to its issue. Then each no in full: where it stands, who said it and when,
      why, the replies, its issue and what was decided on it), **What could be better** (a line asking
      whether it could be done better, with "Suggest an improvement", and each suggestion: where it
      stands, who made it and when, what it says, the replies and its issue), and **Tests** (a line
      asking for a property it should have, with "Suggest a test"; then a mark "✓ Tested by · 1 test
-     that passes · 1 suggested", and in **Which**
-     each listed test with whether it passes and each suggested one with where it stands);
+     that passes · 1 suggested", and each test a twisty (asked for the same day): a listed one says
+     whether it passes, which it is and what it checks, and opens to its statement as the docs show it
+     (fetched when first opened); a suggested one says where it stands and opens to the rest);
   5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
      dependency map (6.5), shown;
   6. the same neighbours as lists, in two columns, each ranked with its first dozen shown: built from
