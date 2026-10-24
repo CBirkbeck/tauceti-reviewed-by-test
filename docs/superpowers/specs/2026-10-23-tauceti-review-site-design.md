@@ -58,7 +58,7 @@ at the same address. It must:
 ## 4. The repository after the change
 
 ```
-.github/ISSUE_TEMPLATE/evidence-*.yml, config.yml   from `evidence-store init`
+.github/ISSUE_TEMPLATE/evidence-*.yml, config.yml   from `evidence-store init`, less You are, Written by, Agent
 .github/workflows/
   follow.yml           daily: pin Tau Ceti, extract its dataset, prune old datasets, then pages
   dataset.yml          one commit's dataset as a release (called by follow.yml, or by hand)
@@ -130,7 +130,9 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
 
 - **Forms and intake** are evidence-store's, set up by `evidence-store init`: review a declaration,
   report a problem, propose a test (a challenge), list a test, ask a question, name a result, and a
-  change of state. Intake turns an issue into a record keyed in the dataset of the commit the form
+  change of state. The forms leave out "You are", "Written by" and "Agent" (asked for on 2026-10-24):
+  only people fill them in, and intake records the account that opened the issue as a person, of
+  unknown involvement; AI agents submit from the command line with `evidence-store submit`. Intake turns an issue into a record keyed in the dataset of the commit the form
   names, answers on the issue, and starts `pages.yml`. A comment whose first line is a command
   changes a record's state (`/withdraw`, `/fixed [commit]`, `/intended`, `/invalid`,
   `/met <declaration>`, `/failed`, `/declined`, `/answered`, `/reopen`); so does closing or reopening
@@ -288,18 +290,22 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      name, else the docstring's first sentence, else the Lean name); the Lean name, with copy; links
      to Tau Ceti's API docs (`taucetiproject.org/docs/<Module path>.html#<name>`), to the source at
      the pinned commit, to the Voyager post and its pull requests;
-  2. Voyager's sentence, and the docstring, its maths rendered;
+  2. Voyager's sentence, and the docstring, its maths rendered: `$…$` as KaTeX renders it, and a
+     formula written as text with TeX's marks (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`, in a code span
+     or in a sentence) typeset too (`web/formulas.js`); Lean in a code span stays code;
   3. **In Lean,** what the docs show of it: the signature Lean prints (the dataset's `signature`
      facet: section variables included, every name a link, and on hover what it is), a definition's
      value folded (the docs' Equations), a structure's fields, and never a proof;
-  4. the **Review** card: the state and the counts ("Reviewed-by · 2 people · 1 AI"); the "Count AI
-     reviews" switch; "Read it in the API docs" and the buttons Review this, Report a problem, Suggest
-     a test, List a test, Ask a question; every thread: verdict, who (a person's account, or "AI ·
-     tool · model"), when, the axes checked, the reference, the text, its replies and changes of
-     state, and the changes of state it allows, as links to its issue with the command to type. A
-     review that does not apply now is greyed, saying "the declaration changed since" or "something
-     it rests on changed since"; an imported one says "from the Mathlib probability store" and has
-     no actions. Then the tests;
+  4. the **review box**, as the site had it in September (asked for on 2026-10-24): the buttons Review
+     this, Suggest a test, Report a problem, List a test, Ask a question and "Read it in the API
+     docs"; then, under small capitals, **Problems** and **Questions** (each where it stands, who
+     raised it and when, what they said, the replies, its issue and what was decided on it),
+     **Reviews** (a mark "✓ Reviewed-by · 2 people · 1 AI", and in **Who** a mark for each reviewer: a
+     person's ticked and filled, an AI agent's ringed and marked AI, one of an earlier version grey
+     with "earlier version" or "what it rests on has changed", an imported one "from the Mathlib
+     probability store"; each links to its issue and shows on hover what was compared and checked
+     and why) and **Tests** (a mark "✓ Tested by · 1 test that passes · 1 suggested", and in **Which**
+     each listed test with whether it passes and each suggested one with where it stands);
   5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
      dependency map (6.5), shown;
   6. the same neighbours as lists, in two columns, each ranked with its first dozen shown: built from
