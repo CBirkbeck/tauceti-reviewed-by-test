@@ -368,15 +368,21 @@ class Site:
                          "imp": round(self.g.importance[d.id], 2)})
         return sorted(rows, key=lambda x: (x["at"], x["decl"]), reverse=True)
 
+    def answerable(self, d: Decl) -> bool:
+        """Whether the site asks its question of ``d``: the library's own declarations, and those of the
+        packages outside it that the settings name (`review_outside`: Mathlib), by module prefix."""
+        return d.is_project or any(d.module == p or (d.module or "").startswith(p + ".")
+                                   for p in self.inp.settings.get("review_outside", []))
+
     def reviewed_rows(self) -> list[dict]:
-        """Every declaration of the library someone has answered for, yes (a review's acceptance) or no (its
-        problem), the latest answer first, with its answers counted as [people, AI agents]: the yeses of this
-        version, the noes still open, and the answers that no longer stand (a yes of an earlier version, a no
-        resolved). An answer withdrawn, or superseded by its answerer's later one, is left out."""
+        """Every declaration the site asks about that someone has answered for, yes (a review's acceptance)
+        or no (its problem), the latest answer first, with its answers counted as [people, AI agents]: the
+        yeses of this version, the noes still open, and the answers that no longer stand (a yes of an earlier
+        version, a no resolved). An answer withdrawn, or superseded by its answerer's later one, is left out."""
         rows = []
         for name in self.ev.by_decl:
             d = self.ds.by_name.get(name)
-            if d is None or not d.is_project:
+            if d is None or not self.answerable(d):
                 continue
             yes, no, earlier, last = [0, 0], [0, 0], [0, 0], ""
             for v in views.views_on(self.ev, name, "review"):
@@ -389,7 +395,8 @@ class Site:
                     (no if v["state"] == "open" else earlier)[k] += 1
                 last = max(last, v["at"])
             if last:
-                rows.append({"id": d.id, "name": name, "yes": yes, "no": no, "earlier": earlier, "at": last})
+                rows.append({"id": d.id, "name": name, "yes": yes, "no": no, "earlier": earlier, "at": last,
+                             **({} if d.is_project else {"from": (d.module or "").split(".")[0]})})
         return sorted(rows, key=lambda r: (r["at"], r["name"]), reverse=True)
 
     def activity(self) -> dict:
@@ -436,6 +443,7 @@ class Site:
                             "commit": ds.commit, "date": self.inp.commit_date, "toolchain": ds.toolchain},
                 "dataset": {"producer": ds.producer(), "spec": ds.meta.get("spec", "")},
                 "store": {"repo": s["repo"], "name": self.inp.store.name, "bulk": s["bulk_issue"]},
+                "review": {"outside": s.get("review_outside", [])},
                 "imports": [{"name": r["name"], "repo": r["repo"], "commit": r.get("commit"), "records": r["records"]}
                             for r in self.inp.imports],
                 "counts": counts, "areas": self.areas(),

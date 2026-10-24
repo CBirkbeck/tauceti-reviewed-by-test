@@ -386,8 +386,9 @@
     const nodes = new Map((await TauData.nodes(rows.map(r => r.id))).map(n => [n.id, n]));
     if (gen !== generation) return;
     const lib = meta.library.name, sum = pair => pair[0] + pair[1];
-    const lede = el('p', 'lede', `The declarations of ${lib} that someone has answered "is it correctly stated?" for, ` +
-      'the latest answer first. Open one to read it and its answers, and to answer it yourself.');
+    const outside = meta.review ? meta.review.outside : [];
+    const lede = el('p', 'lede', `The declarations of ${[lib, ...outside].join(' and of ')} that someone has answered ` +
+      '"is it correctly stated?" for, the latest answer first. Open one to read it and its answers, and to answer it yourself.');
     const summary = el('p', 'summary', [plural(rows.length, 'declaration'), `${count(rows.filter(r => sum(r.yes)).length)} with a yes`,
       `${count(rows.filter(r => sum(r.no)).length)} with a no still open`].join(' · '));
     const st = {answer: 'all', who: 'anyone', q: ''};
@@ -414,6 +415,7 @@
     // Its answers, beside it: ✓ for the yeses, ✗ for the noes, and the date of the latest.
     const tallies = r => {
       const box = el('span', 'answers');
+      if (r.from) box.append(el('span', 'badge', r.from));  // outside the library: Mathlib
       const part = (answer, pair) => {
         if (!of(pair)) return;
         const s = el('span', 'answer ' + answer);
@@ -451,6 +453,9 @@
     const row = named.find(r => r.decl === name);
     const modName = d.module ? d.module.name : ((await TauData.modules())[n.mod] || [''])[0];
     const home = modName.split('.')[0] || 'Lean';
+    // Outside the library, the site asks its question of the packages the settings name (Mathlib), read in
+    // Mathlib Explorer, which shows them in full.
+    const answerable = project || (meta.review ? meta.review.outside : []).some(p => modName === p || modName.startsWith(p + '.'));
     if (gen !== generation) return;
     const parts = [crumbs(project ? await moduleTrail(modName) : [[`Outside ${lib}`, null], [home, null]])];
     // Head: its kind, what it is called, its Lean name, where to read it.
@@ -506,7 +511,9 @@
     }
     // The review box.
     const records = project ? (e.records || []) : (up.records || []);
-    parts.push(reviewCard(meta, name, modName, project, records, e.tests || [], questionWord(n.kind, e.kw)));
+    const read = !answerable ? null : project ? {url: URLS.docs(meta, name, modName), label: 'Read it in the API docs ↗'}
+      : {url: URLS.explorer(name), label: 'Read it in Mathlib Explorer ↗', from: home};
+    parts.push(reviewCard(meta, name, read, records, e.tests || [], questionWord(n.kind, e.kw)));
     // The map, and the same as lists.
     const mapHost = el('div');
     if (project) {
@@ -545,18 +552,18 @@
      question: is it correctly stated? Yes, or no and why. Below it the answers, people counted apart from AI
      agents and each answerer a click away, each no in full; then what could be better, people's suggestions
      for it when it is correct; and what tests it, with a test to suggest. */
-  function reviewCard(meta, name, modName, project, records, tests, word) {
-    const card = el('section', 'review');
+  function reviewCard(meta, name, read, records, tests, word) {
+    const card = el('section', 'review'), open = !!read;
     card.id = 'review';
-    if (project) {
+    if (open) {
       const ask = el('div', 'actions');
       ask.append(el('span', 'ask', `Is this ${word} correctly stated?`));
       ANSWERS.forEach(([text, template, prefix, cls]) => ask.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
-      ask.append(ext(URLS.docs(meta, name, modName), 'Read it in the API docs ↗', 'btn docs'));
-      card.append(ask, el('p', 'how', 'Either answer opens a short form on GitHub, filled in; a no asks you why.'), aiOffer(meta, name));
+      ask.append(ext(read.url, read.label, 'btn docs'));
+      card.append(ask, el('p', 'how', 'Either answer opens a short form on GitHub, filled in; a no asks you why.'), aiOffer(meta, name, read.from));
     } else {
       card.append(hint(records.length ? `Reviews of ${name} are kept in the stores that review it; they show here as they are.`
-                                      : `Outside ${meta.library.name}: review it where it lives, such as the Mathlib probability store.`));
+                                      : `Outside ${meta.library.name}: review it where it lives.`));
     }
     const byId = new Map(records.map(v => [v.id, v]));
     const reviews = verdict => records.filter(v => v.kind === 'review' && v.verdict === verdict);
@@ -576,27 +583,29 @@
     };
     // What could be better: suggestions, on the store's question form, which count as neither yes nor no.
     const suggestions = reviews('question');
-    if (project || suggestions.length) {
+    if (open || suggestions.length) {
       card.append(el('p', 'sub', 'What could be better'));
-      if (project) card.append(offer('Correct, but could it be done better? More general, a better name or docstring, a cleaner statement.', SUGGEST));
+      if (open) card.append(offer('Correct, but could it be done better? More general, a better name or docstring, a cleaner statement.', SUGGEST));
       if (suggestions.length) card.append(...suggestions.map(v => report(v, byId)));
       else card.append(el('p', 'empty', 'No suggestions yet.'));
     }
     // Tests: those listed, those suggested, and a test to suggest, on the store's challenge form.
     const challenges = records.filter(v => v.kind === 'challenge' && v.state !== 'met');  // a met one is a listed test
-    if (project || tests.length || challenges.length) {
+    if (open || tests.length || challenges.length) {
       card.append(el('p', 'sub', 'Tests'));
-      if (project) card.append(offer('A property it should have, such as a value, an edge case or an agreement with another notion, for someone to prove?', SUGGEST_TEST));
+      if (open) card.append(offer('A property it should have, such as a value, an edge case or an agreement with another notion, for someone to prove?', SUGGEST_TEST));
       card.append(testMarks(tests, challenges, byId));
     }
     return card;
   }
   /* Instructions for an AI agent to review it as AI-REVIEWS.md says, for this declaration at this commit: copied
      with one click, and shown, to copy by hand where the browser will not. */
-  function aiOffer(meta, name) {
+  function aiOffer(meta, name, from) {
+    const at = from ? `, from the ${from} that ${meta.library.name} commit ${meta.library.commit} builds on`
+                    : ` at ${meta.library.name} commit ${meta.library.commit}`;
     const text = `Review ${name} for the ${meta.store.name} review site, following\n` +
       `https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md\n` +
-      `The site shows it at ${meta.library.name} commit ${meta.library.commit}: ${meta.site.url}#/d/${encodeURIComponent(name)}`;
+      `The site shows it${at}: ${meta.site.url}#/d/${encodeURIComponent(name)}`;
     const box = el('div', 'ai-offer'), line = el('div', 'offer'), btn = el('button', 'btn offer', 'Copy instructions for your AI');
     const prompt = el('pre', 'ai-prompt');
     btn.type = 'button';
@@ -661,7 +670,8 @@
     d.append(s, b);
     return d;
   }
-  /* One yes in the list of answers: its mark, which opens, when it gives reasons (an AI agent's always do), to
+  /* One yes in the list of answers: its mark, which opens, when it gives reasons (an agent gives them only when
+     they add to the answers already there), to
      show why: what it was compared with, what was checked, the Checks run; then its issue. A bare yes is just
      its mark, and a no is shown in full below. */
   function answerRow(v) {
@@ -864,7 +874,7 @@
     g2.append(el('h3', null, 'Results'), results);
     two.append(g1, g2);
     const direct = /[._]|^[A-Z]/.test(q.trim()) ? el('p', 'faint') : null;
-    if (direct) direct.append('Looking for a Lean name? ', link(URLS.decl(q.trim()), `Open ${q.trim()}`), ' directly.');
+    if (direct) direct.append('Looking for a Lean name, the library\'s or Mathlib\'s? ', link(URLS.decl(q.trim()), `Open ${q.trim()}`), ' directly.');
     show(el('h1', null, q ? `Search: ${q}` : 'Search'), status, two, direct);
     if (!q.trim()) { status.textContent = 'Type a name, part of one, or words from a docstring.'; two.remove(); return; }
     const mine = ++searchGen;
@@ -940,6 +950,7 @@
     const p = (...parts) => { const x = el('p'); x.append(...parts); return x; };
     const prose = (...ps) => { const box = el('div', 'prose'); box.append(...ps); return box; };
     const code = t => { const c = el('pre', 'small-code'); c.textContent = t; return c; };
+    const outside = meta.review ? meta.review.outside : [];
     setNav('help');
     show(el('h1', null, 'How to review'),
       el('p', 'lede', 'A review answers one question: is this declaration correctly stated? Yes, or no and why.'),
@@ -949,7 +960,10 @@
               'and shows on the page within minutes. No pull request.'),
             p('Correctly stated means that it says what it should: it is the intended notion, or states the intended result, as its ',
               'name, its docstring and the literature say. Not that its proof is right: Lean checks that.'),
-            p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first.')),
+            p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first.'),
+            ...(outside.length ? [p(`${outside.join(' and ')}'s declarations are answered for here too: open one from a declaration of ${lib} `,
+              `that uses it, or by its Lean name in Search. Its page links to Mathlib Explorer, which shows it in full, and its review box `,
+              `asks the same question, of the version ${lib} builds on.`)] : [])),
       section('What could be better', null, prose(
         p('Something can be correctly stated and still be done better: stated more generally, with a better name or docstring, more ',
           'cleanly, or with a lemma it should come with. Say so under ', el('b', null, 'What could be better'), ' in the review box: ',
@@ -968,7 +982,8 @@
           ext(`https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`, 'AI-REVIEWS.md'),
           `: it reads the declaration against its source, runs the Checks its roadmap gives it (the examples in ${lib} that carry their tags), `,
           "and files its answer with its reasons, which list each Check. Its answers are marked AI and counted apart from people's. ",
-          'To ask an agent for one, give it this:'),
+          'An agent always answers, but its reasons give only what the answers already there do not, such as a second source that ',
+          'states it as Lean does; with nothing to add, its yes has no reasons. To ask an agent for one, give it this:'),
         code(`Review TauCeti.Foo.bar for the Tau Ceti review site, following\nhttps://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`),
         p('Each declaration\'s review box has a button, ', el('b', null, 'Copy instructions for your AI'), ', that copies these, filled in ',
           'with the declaration and the commit the site shows.'),

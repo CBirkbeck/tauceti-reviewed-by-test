@@ -85,7 +85,7 @@ def home(browser, url, errors):
     page = visit(browser, url, "#/", errors)
     expect(page.locator("h1").inner_text() == "Review the mathematics in Fixture", "the home page")
     expect(page.locator(".stat").count() == 6 and page.locator("a.card").count() == 5, "its counts and its tiles")
-    expect(page.locator("a.stat[href='#/reviewed'] b").inner_text() == "10", "how many are reviewed, a click from the list of them")
+    expect(page.locator("a.stat[href='#/reviewed'] b").inner_text() == "11", "how many are reviewed, a click from the list of them")
     expect(page.locator(".section", has_text="Latest named").locator(".list > li").count() == 2, "the latest named")
     expect(page.locator(".section", has_text="Areas").locator("a.chip").count() == 3, "the areas")
 
@@ -235,8 +235,19 @@ def review(browser, url, errors):
     suggested.locator("summary").click()
     expect("Suggested by @example" in suggested.inner_text(), "which opens to who suggested it")
     page = visit(browser, url, "#/d/Int", errors)
-    expect("from the Test imports store" in page.locator(".review").inner_text(), "an imported review names its store")
-    expect(page.locator(".actions").count() == 0 and page.locator(".map").count() == 0, "no question and no map outside the library")
+    box = page.locator(".review")
+    expect("from the Test imports store" in box.inner_text(), "an imported review names its store")
+    expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts() == ["Yes", "No"] and page.locator(".map").count() == 0,
+           "outside the library, a package the settings name is asked about too (Mathlib on the site), with no map")
+    expect(box.locator(".actions a", has_text="Read it in Mathlib Explorer").get_attribute("href")
+           == "https://leantrustbuilders.github.io/mathlib-explorer/#/d/Int", "and read in Mathlib Explorer")
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    box.locator(".ai-offer button").click()
+    page.wait_for_function("document.querySelector('.ai-offer button').textContent.startsWith('Copied')")
+    expect("The site shows it, from the Init that Fixture commit B builds on: https://example.org/#/d/Int"
+           in box.locator(".ai-prompt").inner_text(), "its instructions for an AI agent say which version")
+    page = visit(browser, url, "#/d/Bool", errors)
+    expect(page.locator(".review .actions").count() == 0, "a package the settings do not name is not asked about")
 
 
 @check
@@ -244,14 +255,15 @@ def reviewed(browser, url, errors):
     page = visit(browser, url, "#/reviewed", errors)
     expect(page.locator("h1").inner_text() == "Reviewed" and page.locator(".nav a.on").inner_text() == "Reviewed", "the Reviewed page")
     items = page.locator(".list > li")
-    expect(items.count() == 10, "every declaration answered for")
+    expect(items.count() == 11, "every declaration answered for")
+    expect(page.locator(".list a[href='#/d/Int'] .answers .badge").inner_text() == "Init", "one outside the library, its package said")
     first = items.first
     expect(first.locator(".item-sub").inner_text() == "Fixture.triple_comm", "the latest answer first")
     expect(first.locator(".answer.yes").count() == 1 and first.locator(".answer.no").count() == 1, "with its yes and its no")
     page.click("[data-answer=no]")
     expect(page.locator(".list > li").count() == 1, "the noes still open")
     page.click("[data-answer=yes]")
-    expect(page.locator(".list > li").count() == 5, "the yeses")
+    expect(page.locator(".list > li").count() == 6, "the yeses")
     page.select_option("select[aria-label='Answered by']", "ai")
     expect(page.locator(".list .item-sub").all_inner_texts() == ["Fixture.triple"], "the AI agents' yeses")
     expect(page.locator(".list .answer.yes").text_content() == "✓1 AI", "counted as AI")

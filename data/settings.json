@@ -1,6 +1,7 @@
 {
  "repo": "CBirkbeck/tauceti-reviewed-by-test",
  "bulk_issue": 1,
+ "review_outside": ["Mathlib"],
  "tauceti": "e177885ee120f8074a7610c3e60571ab00b20004",
  "library": {
   "name": "Tau Ceti",

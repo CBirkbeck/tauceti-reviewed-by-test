@@ -167,6 +167,11 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   dataset cannot see, so the review is where they are recorded); and files its verdict with
   `evidence-store submit`, its reasons listing each Check and whether it passes. Without the right to
   label issues it comments on the bulk issue instead.
+- **Mathlib's declarations** (asked for on 2026-10-24): the site asks its question of the declarations of
+  the packages outside Tau Ceti that `review_outside` in the settings names (Mathlib), as Tau Ceti builds on
+  them. Their pages keep their links to Mathlib's docs and Mathlib Explorer, which shows them in full, and
+  get the same review box, the read button going to Mathlib Explorer; the Reviewed page lists them,
+  marked with their package. Intake already takes any declaration of the dataset.
 - **Imports:** the Mathlib probability store. Its records about declarations of this dataset (the
   Mathlib declarations Tau Ceti rests on) show here, marked with that store's name, without actions.
 
@@ -235,7 +240,7 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   | `activity.json` | the newest records, open problems, open challenges, the reviewers (people and agents), and the review queue of the named declarations |
   | `reviewed.json` | every declaration of the library answered for, the latest answer first: its id and name, its yeses of this version, its noes still open and its earlier answers, each as [people, AI agents], and the latest answer's date |
   | `modules.json` | every module a node belongs to: name, package, title, source path; the project's first, in the dataset's order, then the others |
-  | `upstream.json` | the record threads about declarations outside Tau Ceti (from the imported stores), by name |
+  | `upstream.json` | the record threads about declarations outside Tau Ceti (this store's, on Mathlib's, and the imported stores'), by name |
 
 - **Budget:** the build fails if `_site` exceeds 800 MB (GitHub Pages allows 1 GB). Sizes are
   measured on a real dataset before CI depends on them.
@@ -340,7 +345,7 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      answer: a person's filled, an AI agent's ringed and marked AI, a tick for a yes and a cross for a
      no, one that no longer stands grey with "earlier version", "what it rests on has changed" or what
      resolved it, an imported one "from the Mathlib probability store". A yes that gives reasons (an
-     AI agent's always do) is a twisty (asked for on 2026-10-24) that opens to them, typeset, and to
+     agent gives them only when they add to the answers already there, asked for on 2026-10-24) is a twisty (asked for on 2026-10-24) that opens to them, typeset, and to
      its issue; a bare yes links to its issue. Then each no in full: where it stands, who said it and when,
      why, the replies, its issue and what was decided on it), **What could be better** (a line asking
      whether it could be done better, with "Suggest an improvement", and each suggestion: where it

@@ -220,9 +220,17 @@ class PageFilesTests(unittest.TestCase):
         self.assertEqual(rows["Fixture.double"]["earlier"], [1, 0])            # a yes of an earlier version
         self.assertEqual((rows["Fixture.one"]["no"], rows["Fixture.one"]["earlier"]), ([0, 0], [1, 0]))  # a no resolved
         self.assertEqual(rows["Fixture.triple"]["id"], node_id("Fixture.triple"))
-        self.assertNotIn("Int", rows)                                          # the library's own only
-        m = data("meta.json")["counts"]
-        self.assertEqual((m["reviewed"], m["accepts"]), (len(rows), {"people": 5, "ai": 1}))
+        # Outside the library, a package the settings name (Mathlib on the site; Init.Data here), its package said.
+        self.assertEqual((rows["Int"]["yes"], rows["Int"]["from"]), ([1, 0], "Init"))
+        self.assertNotIn("from", rows["Fixture.triple"])
+        m = data("meta.json")
+        self.assertEqual((m["counts"]["reviewed"], m["counts"]["accepts"]), (len(rows), {"people": 6, "ai": 1}))
+        self.assertEqual(m["review"], {"outside": ["Init.Data"]})
+
+    def test_reviewed_outside_only_where_the_settings_say(self):
+        root = OUT / "inside-only"
+        fixture_site.build(root, settings={**fixture_site.SETTINGS, "review_outside": []})
+        self.assertNotIn("Int", {r["name"] for r in data("reviewed.json", root)})
 
     def test_a_cap_keeps_the_totals(self):
         root = OUT / "capped"

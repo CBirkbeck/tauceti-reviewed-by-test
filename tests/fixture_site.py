@@ -27,7 +27,7 @@ FIXTURES = HERE / "fixtures"
 DATASET = FIXTURES / "dataset-b"
 SOURCE = FIXTURES / "source-b"
 SETTINGS = {
-    "repo": "example/fixture-store", "bulk_issue": 1, "tauceti": "B",
+    "repo": "example/fixture-store", "bulk_issue": 1, "tauceti": "B", "review_outside": ["Init.Data"],
     "library": {"name": "Fixture", "repo": "test/fixture", "root": "Fixture", "docs": "https://example.org/docs"},
     "voyager": {"site": "https://zulip.example.org", "channel": "Tau Ceti", "topic": "new results",
                 "sender": "voyager@example.org"},
@@ -78,7 +78,7 @@ def imported_store(ds: Dataset, cache: Path) -> None:
     (cache / "imports.json").write_text(json.dumps([{"repo": "example/imports", "path": "evidence", "commit": "c0ffee"}]))
 
 
-def build(out: Path, budget_mb: int = 800, cap: int = 60) -> dict:
+def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None = None) -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="fixture-site-"))
     ds = Dataset.load(DATASET)
     store = Store.init(tmp / "evidence", {**default_config("example/fixture-store", "Fixture", "Fixture"),
@@ -87,8 +87,8 @@ def build(out: Path, budget_mb: int = 800, cap: int = 60) -> dict:
     store.add(extra_records(ds))
     store.add(voyager.named_records(ANNOUNCEMENTS, ds, store, SETTINGS["voyager"]))
     imported_store(ds, tmp / "imports")
-    return build_site.build(DATASET, tmp / "evidence", Path(out), SETTINGS, source=SOURCE, imports=tmp / "imports",
-                            budget_mb=budget_mb, cap=cap)
+    return build_site.build(DATASET, tmp / "evidence", Path(out), settings or SETTINGS, source=SOURCE,
+                            imports=tmp / "imports", budget_mb=budget_mb, cap=cap)
 
 
 if __name__ == "__main__":

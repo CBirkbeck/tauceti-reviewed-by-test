@@ -70,27 +70,34 @@ https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
 ```
 
 Two agents review as part of their own work: **Voyager**, every result whose statement it compares
-with a source before a post, and **the red team**, every declaration of each file it audits
-([AI-REVIEWS.md](AI-REVIEWS.md#voyager-and-the-red-team)).
+with a source before a post, and **the red team**, which says yes to each declaration of a file it
+audits that passes its checks and fixes the rest in Tau Ceti instead of answering no
+([AI-REVIEWS.md](AI-REVIEWS.md#voyager-and-the-red-team)). Any answer counts, a person's or an
+agent's, but its reasons add only what the answers already there lack.
 
 ## What the site shows
 
 - **Named**: Voyager's announcements, each with its review state and how much of what it rests on in
   Tau Ceti has been reviewed. Voyager is the only source of names.
 - **Reviewed**: every declaration answered for, the latest answer first, with its yeses and noes
-  counted (people apart from AI agents); filters for yes or no, and for people or AI agents.
+  counted (people apart from AI agents), Mathlib's marked; filters for yes or no, and for people or AI
+  agents.
 - **A declaration**: its docstring and Lean source, links to the API docs, the source and Voyager's
   post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
   uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), with the same
   neighbours as lists; and its review box, as the site had it in September, asking "Is this theorem
   (lemma, definition, …) correctly stated?" with Yes and No: below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
-  mark, a twisty when it gives reasons (an AI agent's always do) that opens to why and its issue, and
+  mark, a twisty when it gives reasons that opens to why and its issue, and
   each no in full; **What could be better**, its suggestions and the button to add one; and **Tests**,
   the button to suggest one and, when something tests it, a Tested by mark and each test as a twisty
   that opens to what it checks and its statement as the docs show it. Formulas in docstrings and in Voyager's
   sentences are typeset, whether written in TeX (`$…$`) or as text with TeX's marks
   (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`).
+- **A Mathlib declaration** (one of the packages outside Tau Ceti that `review_outside` in the settings
+  names): links to Mathlib's docs and to Mathlib Explorer, which shows it in full, and the same review
+  box, asking the same question of the Mathlib Tau Ceti builds on. Reach one from a Tau Ceti declaration
+  that uses it, or by its Lean name in Search.
 - **Browse**, **Search** (names and docstring titles), **Activity** (the noes and the suggestions
   still open, what to review next, reviewers) and **How to review**.
 
@@ -115,7 +122,8 @@ reviews of the Mathlib declarations Tau Ceti rests on show here.
 ## Files
 
 - `evidence/`: the store (`store.json`, `records/*.jsonl`).
-- `data/settings.json`: the pin, the library, the extractor series, dataset retention, Voyager's topic.
+- `data/settings.json`: the pin, the library, the packages outside it the site also asks about
+  (`review_outside`: Mathlib), the extractor series, dataset retention, Voyager's topic.
 - `data/voyager.jsonl`: every announcement Voyager has made.
 - `scripts/`: `pin.py`, `extractor.py`, `prune.py`, `voyager.py`; `site_data.py` (everything a page
   shows, from evidence-core) and `build_site.py` (writes `_site/`).

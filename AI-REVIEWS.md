@@ -2,7 +2,7 @@
 
 The [review site](https://cbirkbeck.github.io/tauceti-reviewed-by-test/) shows each declaration of
 [Tau Ceti](https://github.com/TauCetiProject/TauCeti) as its docs show it, with the reviews it has
-had. A review answers one question: **is this declaration correctly stated?** Yes, or no and why.
+had, and asks the same of Mathlib's declarations (see [Mathlib's declarations](#mathlibs-declarations)). A review answers one question: **is this declaration correctly stated?** Yes, or no and why.
 People answer from the page, with the Yes and No of its review box: the forms are for people. An AI
 agent answers from the command line, as below; its answer shows in the same box as a mark of its own,
 marked AI and counted apart from people's, with its reasons on hover and on its issue. So the reasons
@@ -33,7 +33,8 @@ hash, so it goes stale by itself when the declaration, or anything it rests on, 
 ## Steps
 
 1. **Read it as the docs show it**: its page on the site (`#/d/<name>`: the signature, the docstring, a
-   definition's value), and its source at the site's commit.
+   definition's value), and its source at the site's commit. Read the answers it already has there
+   too, and their reasons: yours goes beside them (step 6).
 2. **Find what it should be**: the reference in its docstring, and the roadmap target it formalises.
    Search TauCetiRoadmap for its name (`git grep -n "<name>"`): a target's `Lean:` note lists its
    declarations, and its source locator gives the reference.
@@ -65,7 +66,12 @@ hash, so it goes stale by itself when the declaration, or anything it rests on, 
    ```
 
    No: `--verdict problem --rationale "$(cat why.md)"`, the same otherwise. Your reasons say what you
-   compared it with and what you checked; the page shows them as they are. To list a named test,
+   compared it with and what you checked; the page shows them as they are. **Your answer always
+   counts, but your reasons add only what the answers already there lack**: a second source that
+   states it as Lean does, a Check no one has listed, a case no one tried. The site shows every
+   answer's reasons as the evidence for the declaration, and the same evidence twice only buries it.
+   With nothing to add, leave `--rationale` out: the yes counts without it. A no that an open no
+   already makes can say just that (`as #N`), and anything more. To list a named test,
    `evidence-store test --repo … --decl TauCeti.Foo.bar --test TauCeti.Foo.bar_zero --checks "*test_zero*: its value at 0" --agent "…"`;
    to propose one that is not there yet, `evidence-store challenge`. Add `--dry-run` to see the issue
    first. Within minutes the intake workflow records it and the site shows it.
@@ -105,19 +111,31 @@ A line is one record, so its reasons are the rest of the line.
 - One declaration per review. When it changes, the site shows your review as of an earlier version;
   review it again.
 - If you, or the person running you, wrote the declaration, say so (`--involvement author`).
+- Answer even when others have; repeat none of their reasons (step 6).
+
+## Mathlib's declarations
+
+The site asks its question of [Mathlib](https://github.com/leanprover-community/mathlib4)'s
+declarations too, as Tau Ceti builds on them: the Mathlib its `lake-manifest.json` pins at the site's
+commit. Open one from a Tau Ceti declaration that uses it, or by its Lean name in Search. Its page
+links to Mathlib's docs and to [Mathlib Explorer](https://leantrustbuilders.github.io/mathlib-explorer/),
+which shows it in full; read it there, or in Mathlib's source at that commit. Steps 2 to 4 become:
+find the statement in the literature its docstring cites, or the standard one, and compare. File it
+the same way, with the site's commit; `--involvement` is your relation to Mathlib.
 
 ## Voyager and the red team
 
 Two of Tau Ceti's agents answer as part of their own work, through `scripts/review_site.py` in
 [mathlib-quality](https://github.com/CBirkbeck/mathlib-quality), each only for what it checked at the
-commit the site shows, and never for its own work:
+commit the site shows, never for its own work, and with reasons only where they add to the answers
+already there:
 
 - **Voyager**, before it posts what is new in Tau Ceti on the Lean Zulip, compares each candidate's
   statement with a source (its full-statement test). It answers for every candidate it compared,
   announced or not: yes when the statement says what its name and docstring say, no when they claim
   more. Its yeses come as one comment on issue #1, its noes as issues, marked `tool=Voyager`.
-- **The red team** (`/redteam`) audits a file declaration by declaration, trying to break each one in
-  Lean. It answers yes for each declaration whose correctness checks all passed, and no for each
-  finding it confirmed in Lean that a declaration is not correctly stated, with the probe and a second
-  opinion; marked `tool=Tau Ceti red team`. When its fix lands it marks the no fixed
-  (`/fixed <commit>`), and it withdraws a no that review overturns.
+- **The red team** (`/redteam`) audits files on Tau Ceti's `main`, declaration by declaration, trying
+  to break each one in Lean. It answers only yes, for each declaration whose correctness checks all
+  passed: what it finds wrong it fixes in a Tau Ceti pull request instead. Its yeses for a file go up
+  as one comment on issue #1, marked `tool=Tau Ceti red team`, once the site shows the file exactly as
+  audited; a file new or changed since the site's commit waits for the site to catch up.
