@@ -477,12 +477,9 @@
     } else if (home === 'Mathlib') {
       links.append(ext(URLS.mathlib(name, modName), "Mathlib's docs ↗", 'badge'), ext(URLS.explorer(name), 'Mathlib Explorer ↗', 'badge'));
     }
+    // Voyager's sentence is not repeated here: it can say more than this declaration does (another theorem of
+    // the same pull request, say). Its post is a link above; the Named page lists the sentence.
     parts.push(kinds, h1, leanName, links.childNodes.length ? links : null);
-    if (row && row.text) {
-      const box = el('div', 'announce');
-      box.append(el('div', 'announce-label', 'Voyager announced it'), md(row.text, 'prose'));
-      parts.push(box);
-    }
     // The docstring, less what the title above already says: its first sentence when that is the title, its bold
     // opening when that only names what Voyager's title names.
     const doc = e.doc && (row ? afterLead(e.doc, row.name) : cut || !n.title ? e.doc : afterTitle(e.doc, n.title));

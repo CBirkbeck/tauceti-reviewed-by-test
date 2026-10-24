@@ -103,6 +103,8 @@ def named(browser, url, errors):
     page.click(".list > li a")
     settle(page, "decl:Fixture.IsDouble")
     expect(page.locator("h1").inner_text() == "Being double", "an item opens its declaration, titled by Voyager")
+    expect("is twice" not in page.locator("main").inner_text() and page.locator(".links a", has_text="Voyager's post").count() == 1,
+           "Voyager's sentence is not repeated on the page, its post a link away")
 
 
 @check

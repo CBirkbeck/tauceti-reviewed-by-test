@@ -314,7 +314,9 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      lists, past 160 characters, gives way to the Lean name); the Lean name, with copy; links
      to Tau Ceti's API docs (`taucetiproject.org/docs/<Module path>.html#<name>`), to the source at
      the pinned commit, to the Voyager post and its pull requests;
-  2. Voyager's sentence, and the docstring, less what the title already says (asked for on
+  2. the docstring (Voyager's sentence is not shown here, asked for on 2026-10-24: it can describe
+     more than the declaration, such as another theorem of the same pull request; its post is a link
+     in 1., and the Named page lists the sentence), less what the title already says (asked for on
      2026-10-24): its first sentence when that is the title, and under Voyager's name a bold opening
      that is a sentence or a heading of its own and only names it ("**Strassmann's theorem.** Let …"),
      but not one that goes on in its sentence or says more; its maths rendered: `$…$` as KaTeX renders it, and a
