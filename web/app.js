@@ -1,5 +1,4 @@
-/* Tau Ceti Review: the pages, laid out as Mathlib Explorer lays out its own (LeanTrustBuilders/
-   mathlib-explorer, static/app.js): a hash router (#/…) and one function per page. Everything shown
+/* Tau Ceti Review: the pages: a hash router (#/…) and one function per page. Everything shown
    comes from TauData (what the build wrote), laid out with TauRender and TauMap. */
 (function () {
   'use strict';
@@ -140,7 +139,7 @@
   }
   /* A ranked list of declarations: the first dozen, all the data keeps on a click, and a count of the rest.
      With `outside`, what is from Mathlib and Lean is a line of chips below it instead, Lean's notions named
-     as a mathematician would and its plumbing left out, as Mathlib Explorer shows its basic notions. */
+     as a mathematician would and its plumbing left out. */
   async function nodeList(ids, total, empty, outside) {
     const all = ids && ids.length ? await TauData.nodes(ids) : [];
     const chips = outside ? all.filter(n => !(n.flags & FLAG.PROJECT)) : [];
@@ -161,7 +160,7 @@
     if (ids && total > ids.length) box.append(el('p', 'faint small', `and ${plural(total - ids.length, 'more')} not listed`));
     return box;
   }
-  /* Mathlib Explorer's words for Lean's basic notions (static/app.js, BASIC_WORDS); '' is plumbing. */
+  /* Words for Lean's basic notions; '' is plumbing. */
   const BASIC_WORDS = {Eq: 'equality', Ne: '≠', Nat: 'natural numbers ℕ', Int: 'integers ℤ', Real: 'real numbers ℝ',
     Complex: 'complex numbers ℂ', Rat: 'rationals ℚ', HMul: 'multiplication', Mul: 'multiplication', HAdd: 'addition',
     Add: 'addition', HSub: 'subtraction', Sub: 'subtraction', HDiv: 'division', Div: 'division', HPow: 'powers', Pow: 'powers',
@@ -454,7 +453,7 @@
     const modName = d.module ? d.module.name : ((await TauData.modules())[n.mod] || [''])[0];
     const home = modName.split('.')[0] || 'Lean';
     // Outside the library, the site asks its question of the packages the settings name (Mathlib), read in
-    // Mathlib Explorer, which shows them in full.
+    // Mathlib's docs.
     const answerable = project || (meta.review ? meta.review.outside : []).some(p => modName === p || modName.startsWith(p + '.'));
     if (gen !== generation) return;
     const parts = [crumbs(project ? await moduleTrail(modName) : [[`Outside ${lib}`, null], [home, null]])];
@@ -480,7 +479,7 @@
       if (row && row.post) links.append(ext(row.post, "Voyager's post ↗", 'badge'));
       if (row) row.prs.forEach(p => links.append(ext(`https://github.com/${meta.library.repo}/pull/${p}`, `PR #${p} ↗`, 'badge')));
     } else if (home === 'Mathlib') {
-      links.append(ext(URLS.mathlib(name, modName), "Mathlib's docs ↗", 'badge'), ext(URLS.explorer(name), 'Mathlib Explorer ↗', 'badge'));
+      links.append(ext(URLS.mathlib(name, modName), "Mathlib's docs ↗", 'badge'));
     }
     // Voyager's sentence is not repeated here: it can say more than this declaration does (another theorem of
     // the same pull request, say). Its post is a link above; the Named page lists the sentence.
@@ -512,7 +511,7 @@
     // The review box.
     const records = project ? (e.records || []) : (up.records || []);
     const read = !answerable ? null : project ? {url: URLS.docs(meta, name, modName), label: 'Read it in the API docs ↗'}
-      : {url: URLS.explorer(name), label: 'Read it in Mathlib Explorer ↗', from: home};
+      : {url: URLS.mathlib(name, modName), label: "Read it in Mathlib's docs ↗", from: home};
     parts.push(reviewCard(meta, name, read, records, e.tests || [], questionWord(n.kind, e.kw)));
     // The map, and the same as lists.
     const mapHost = el('div');
@@ -542,7 +541,7 @@
     if (e.usedIn) lists.push(section('Used to prove', e.nUsedIn, await nodeList(e.usedIn, e.nUsedIn)));
     if (gen !== generation) return;
     if (lists.length) { const two = el('div', 'two'); two.append(...lists); parts.push(two); }
-    if (!project) parts.push(el('p', 'faint', `What it rests on is not followed outside ${lib}: Mathlib Explorer shows it.`));
+    if (!project) parts.push(el('p', 'faint', `What it rests on is not followed outside ${lib}.`));
     setNav('');
     show(...parts);
     if (project) TauMap.draw(mapHost, n, d.entry, {ai: () => ai, lib});
@@ -962,8 +961,8 @@
               'name, its docstring and the literature say. Not that its proof is right: Lean checks that.'),
             p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first.'),
             ...(outside.length ? [p(`${outside.join(' and ')}'s declarations are answered for here too: open one from a declaration of ${lib} `,
-              `that uses it, or by its Lean name in Search. Its page links to Mathlib Explorer, which shows it in full, and its review box `,
-              `asks the same question, of the version ${lib} builds on.`)] : [])),
+              `that uses it, or by its Lean name in Search. Its page links to Mathlib's docs, and its review box asks the same `,
+              `question, of the version ${lib} builds on.`)] : [])),
       section('What could be better', null, prose(
         p('Something can be correctly stated and still be done better: stated more generally, with a better name or docstring, more ',
           'cleanly, or with a lemma it should come with. Say so under ', el('b', null, 'What could be better'), ' in the review box: ',
@@ -998,8 +997,7 @@
           ext(`https://github.com/${meta.library.repo}/commit/${meta.library.commit}`, meta.library.commit.slice(0, 7)),
           ` (${meta.dataset.producer}), the evidence store `, ext(`https://github.com/${meta.store.repo}`, meta.store.repo),
           meta.imports.length ? ', and the stores it imports: ' : '.', ...meta.imports.flatMap((s, i) => [i ? ', ' : '', ext(`https://github.com/${s.repo}`, s.name)]),
-          meta.imports.length ? '.' : ''),
-        p('The look is Mathlib Explorer\'s, in the colours of the Tau Ceti Atlas.'))));
+          meta.imports.length ? '.' : ''))));
   };
 
   VIEWS.missing = async (what, gen, why) => {

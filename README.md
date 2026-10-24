@@ -95,8 +95,8 @@ agent's, but its reasons add only what the answers already there lack.
   sentences are typeset, whether written in TeX (`$…$`) or as text with TeX's marks
   (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`).
 - **A Mathlib declaration** (one of the packages outside Tau Ceti that `review_outside` in the settings
-  names): links to Mathlib's docs and to Mathlib Explorer, which shows it in full, and the same review
-  box, asking the same question of the Mathlib Tau Ceti builds on. Reach one from a Tau Ceti declaration
+  names): a link to Mathlib's docs, and the same review box, asking the same question of the Mathlib
+  Tau Ceti builds on. Reach one from a Tau Ceti declaration
   that uses it, or by its Lean name in Search.
 - **Browse**, **Search** (names and docstring titles), **Activity** (the noes and the suggestions
   still open, what to review next, reviewers) and **How to review**.
@@ -115,9 +115,7 @@ the Named page says whether AI agents' reviews count.
 | [Pages](.github/workflows/pages.yml) | after any of these | runs the tests, builds the site (`scripts/build_site.py`), checks it in a browser, and publishes it from `main` |
 
 The tools are pinned: evidence-core `v0.16.1`, evidence-store `v0.7.2` (`requirements.txt`), the
-extractor's 0.13 series (`data/settings.json`). The store imports the
-[Mathlib probability store](https://github.com/LeanTrustBuilders/mathlib-probability-evidence): its
-reviews of the Mathlib declarations Tau Ceti rests on show here.
+extractor's 0.13 series (`data/settings.json`). The store imports no other store.
 
 ## Files
 

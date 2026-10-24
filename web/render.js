@@ -1,6 +1,6 @@
 /* Tau Ceti Review: how things look. Elements, Markdown (the Atlas's TauMarkdown: source HTML stays
    text, mathematics becomes vetted MathML, and formulas written as text are typeset first, by
-   TauFormulas), kinds and review states as Mathlib Explorer marks them (a pill for the kind, a badge for
+   TauFormulas), kinds and review states as the pages mark them (a pill for the kind, a badge for
    the state), and links. */
 (function () {
   'use strict';
@@ -29,7 +29,7 @@
     return span;
   }
 
-  /* A kind is a colour: a notion blue, a result green, an instance purple (Mathlib Explorer's). */
+  /* A kind is a colour: a notion blue, a result green, an instance purple. */
   const KIND_WORD = {theorem: 'Theorem', definition: 'Definition', structure: 'Structure', class: 'Class',
                      inductive: 'Inductive type', instance: 'Instance', axiom: 'Axiom', opaque: 'Definition'};
   const kindClass = kind => ({theorem: 'result', axiom: 'result', instance: 'instance'})[kind] || 'concept';
@@ -54,7 +54,6 @@
     source: (meta, path, line) => `https://github.com/${meta.library.repo}/blob/${meta.library.commit}/${path}` +
       (line ? `#L${line[0]}-L${line[1]}` : ''),
     mathlib: (name, mod) => `https://leanprover-community.github.io/mathlib4_docs/${modulePath(mod)}.html#${anchor(name)}`,
-    explorer: name => `https://leantrustbuilders.github.io/mathlib-explorer/#/d/${anchor(name)}`,
     github: login => `https://github.com/${encodeURIComponent(login)}`,
     issues: meta => `https://github.com/${meta.store.repo}/issues`,
     bulk: meta => `https://github.com/${meta.store.repo}/issues/${meta.store.bulk}`,

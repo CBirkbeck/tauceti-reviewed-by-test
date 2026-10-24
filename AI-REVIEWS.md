@@ -118,8 +118,7 @@ A line is one record, so its reasons are the rest of the line.
 The site asks its question of [Mathlib](https://github.com/leanprover-community/mathlib4)'s
 declarations too, as Tau Ceti builds on them: the Mathlib its `lake-manifest.json` pins at the site's
 commit. Open one from a Tau Ceti declaration that uses it, or by its Lean name in Search. Its page
-links to Mathlib's docs and to [Mathlib Explorer](https://leantrustbuilders.github.io/mathlib-explorer/),
-which shows it in full; read it there, or in Mathlib's source at that commit. Steps 2 to 4 become:
+links to Mathlib's docs; read it there, or in Mathlib's source at that commit. Steps 2 to 4 become:
 find the statement in the literature its docstring cites, or the standard one, and compare. File it
 the same way, with the site's commit; `--involvement` is your relation to Mathlib.
 

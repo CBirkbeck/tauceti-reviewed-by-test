@@ -239,8 +239,8 @@ def review(browser, url, errors):
     expect("from the Test imports store" in box.inner_text(), "an imported review names its store")
     expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts() == ["Yes", "No"] and page.locator(".map").count() == 0,
            "outside the library, a package the settings name is asked about too (Mathlib on the site), with no map")
-    expect(box.locator(".actions a", has_text="Read it in Mathlib Explorer").get_attribute("href")
-           == "https://leantrustbuilders.github.io/mathlib-explorer/#/d/Int", "and read in Mathlib Explorer")
+    expect(box.locator(".actions a", has_text="Read it in Mathlib's docs").get_attribute("href")
+           == "https://leanprover-community.github.io/mathlib4_docs/Init/Data/Int/Basic.html#Int", "and read in Mathlib's docs")
     page.context.grant_permissions(["clipboard-read", "clipboard-write"])
     box.locator(".ai-offer button").click()
     page.wait_for_function("document.querySelector('.ai-offer button').textContent.startsWith('Copied')")

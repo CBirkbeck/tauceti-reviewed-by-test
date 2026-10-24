@@ -19,7 +19,7 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(c["library"], {"repo": "TauCetiProject/TauCeti", "root": "TauCeti"})
         self.assertEqual(c["datasets"], {"repo": "CBirkbeck/tauceti-reviewed-by-test",
                                          "tag": "dataset-{commit12}", "asset": "dataset.tar.gz"})
-        self.assertEqual(c["imports"], [{"repo": "LeanTrustBuilders/mathlib-probability-evidence"}])
+        self.assertEqual(c["imports"], [])
         self.assertEqual(c["maintainers"], ["CBirkbeck"])
 
     def test_the_migrated_records(self):

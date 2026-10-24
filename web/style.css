@@ -1,5 +1,5 @@
-/* Tau Ceti Review: Mathlib Explorer's page (LeanTrustBuilders/mathlib-explorer, static/style.css), its
-   layout and type, in the Tau Ceti Atlas's dark palette (tauceti-explorer, src/style.css), with a light
+/* Tau Ceti Review: one centred column under a sticky top bar, serif titles over a sans body, in the
+   Tau Ceti Atlas's dark palette (tauceti-explorer, src/style.css), with a light
    one to switch to. A kind is a colour (a notion blue, a result green, an instance purple), a review
    state a badge, and the gold Tau Ceti's own. */
 :root {

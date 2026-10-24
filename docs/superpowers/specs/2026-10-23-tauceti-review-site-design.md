@@ -17,7 +17,7 @@ at the same address. It must:
    declarations they stand for;
 4. lead with the **named results and notable definitions Voyager has announced** on the Lean Zulip:
    the declarations people are likely to care about, rather than API and steps of proofs;
-5. **look like Mathlib Explorer** (<https://leantrustbuilders.github.io/mathlib-explorer/>), in the
+5. **read like a library explorer**, one centred column of serif titles over a sans body, in the
    colours of the Tau Ceti Atlas (<https://cbirkbeck.github.io/tauceti-explorer/#view=all>).
 
 ## 2. Decisions, and why
@@ -25,13 +25,13 @@ at the same address. It must:
 | decision | why |
 |---|---|
 | The store, the pipeline and the site live in `CBirkbeck/tauceti-reviewed-by-test`. | A section of taucetiproject.org was considered first. Tau Ceti's `main` is behind a merge queue that refuses direct pushes, so intake could not write records there, and the site's Pages workflow takes 30 minutes to 5 hours and failed in half of its last ten finished runs, so reviews would appear hours late. The LeanTrustBuilders repositories are read-only for this account. Records are keyed by hashes, not by repository, so the store can move later. |
-| Everything behind the page is the LeanTrustBuilders suite: the extractor's datasets (S2), an evidence store (S3) with evidence-store's forms and intake, and evidence-core for everything computed. | The suite does what this repository's own scripts do, keyed by the meaning hash, and its stores import each other: the Mathlib probability store's reviews of the Mathlib declarations Tau Ceti uses show here. |
-| A front end of our own (the "A" approach), its data laid out as Mathlib Explorer's is. | Re-skinning referee-site, or extending the pilot's page, gives neither the Atlas's look nor navigation through the dependency graph; a whole-library referee-site is also near GitHub Pages' size limit for a library this size. |
+| Everything behind the page is the LeanTrustBuilders suite: the extractor's datasets (S2), an evidence store (S3) with evidence-store's forms and intake, and evidence-core for everything computed. | The suite does what this repository's own scripts do, keyed by the meaning hash, and its stores can import each other. |
+| A front end of our own (the "A" approach), its data sharded by name and by id. | Re-skinning referee-site, or extending the pilot's page, gives neither the Atlas's look nor navigation through the dependency graph; a whole-library referee-site is also near GitHub Pages' size limit for a library this size. |
 | Named results come from Voyager alone. | Voyager's announcements are checked to be named and new. The roadmaps' `STATUS.md` lists, which the current site also reads, name much that is neither. |
 | A workflow reads Voyager's topic with a Zulip key kept as an Actions secret. | The list keeps up with Voyager without anyone running anything. |
 | The front end computes nothing. | The suite's rule: statuses, threads, coverage and the graph summaries come from evidence-core; the page lays them out. |
 | The suite's tools are pinned to release tags. | So an upstream change cannot break the daily build unannounced; they are moved on deliberately. |
-| Mathlib Explorer's layout and type, dark by default in the Atlas's palette, with a light palette to switch to. | Asked for on 2026-10-23, after the first version (the Atlas's shell, rail and planets) went live: the page reads like the suite's other reader, and keeps Tau Ceti's colours. |
+| An explorer's layout and type, dark by default in the Atlas's palette, with a light palette to switch to. | Asked for on 2026-10-23, after the first version (the Atlas's shell, rail and planets) went live: the page reads like a library explorer, and keeps Tau Ceti's colours. |
 
 ## 3. What exists, and what is reused
 
@@ -43,15 +43,14 @@ at the same address. It must:
   - `evidence-core`: statuses, threads, coverage, the review queue, record views, `graphs`, `docs`,
     `source`;
   - `referee-site`: its ELK layout of dependency graphs (elkjs, vendored);
-  - `mathlib-explorer`: its sharded JSON and its use of `graphs` for 314,000 declarations.
 - **The pilot**, `LeanTrustBuilders/reviewed-by-pilot`: this repository's page rebuilt on the suite.
   - Reused: its dataset workflow, which has failed since 2026-10-21 because Tau Ceti's
     `scripts/lake-cache-get.sh` now runs `uvx`, which its runner lacks (fixed here by installing
     `uv`); its pinning rule; and its parser of Voyager's bullets, extended to today's docs addresses.
   - Not reused: its page (this repository's old one), its roadmap reader, `apply.py`, and its
     records, which are keyed under the hasher the suite dropped on 2026-09-28 (7.1).
-- **Mathlib Explorer's page** (`LeanTrustBuilders/mathlib-explorer`, `static/`, Apache-2.0): its
-  layout and type, its lists, and its words for Lean's basic notions.
+- **A library explorer's page** (Apache-2.0, credited in `web/vendor/NOTICE`): its layout and type,
+  its lists, and its words for Lean's basic notions.
 - **The Atlas** (`CBirkbeck/tauceti-explorer`): its dark palette, its `markdown.js` and its copy of
   KaTeX.
 
@@ -134,7 +133,7 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
  "datasets": {"repo": "CBirkbeck/tauceti-reviewed-by-test", "tag": "dataset-{commit12}", "asset": "dataset.tar.gz"},
  "claims": [],
  "maintainers": ["CBirkbeck"],
- "imports": [{"repo": "LeanTrustBuilders/mathlib-probability-evidence"}]
+ "imports": []
 }
 ```
 
@@ -169,11 +168,10 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   label issues it comments on the bulk issue instead.
 - **Mathlib's declarations** (asked for on 2026-10-24): the site asks its question of the declarations of
   the packages outside Tau Ceti that `review_outside` in the settings names (Mathlib), as Tau Ceti builds on
-  them. Their pages keep their links to Mathlib's docs and Mathlib Explorer, which shows them in full, and
-  get the same review box, the read button going to Mathlib Explorer; the Reviewed page lists them,
-  marked with their package. Intake already takes any declaration of the dataset.
-- **Imports:** the Mathlib probability store. Its records about declarations of this dataset (the
-  Mathlib declarations Tau Ceti rests on) show here, marked with that store's name, without actions.
+  them. Their pages keep their link to Mathlib's docs and get the same review box, the read button going
+  to Mathlib's docs; the Reviewed page lists them, marked with their package. Intake already takes any declaration of the dataset.
+- **Imports:** none. An imported store's records about declarations of this dataset would show here,
+  marked with that store's name, without actions.
 
 ### 5.3 Voyager's announcements: `voyager.yml`, `scripts/voyager.py`
 
@@ -235,7 +233,7 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   | `named.json` | one row per named declaration: each `named` record not withdrawn whose declaration is still in the dataset (by its name, or by its meaning hash when renamed; one whose statement changed stays named). Id, Lean name, Voyager's name, `what`, the sentence, area, when and where announced (post link, pull requests), review counts (people, AI), state and coverage under both policies |
   | `search.json` | one row per project declaration: name and kind, loaded at the first search; `titles.json` has their titles in the same order, loaded next, for searches by words |
   | `nodes/<k>.json` | every node by id, 2,048 per file: name, kind, project or Mathlib, module, title, whether named, state under both policies, and `built_from`, `about`, `proof_uses` (ids, most important first, at most 60 each): what the map draws without opening modules |
-  | `names/<k>.json` | name to id, sharded by the FNV-1a hash of the name, as Mathlib Explorer does |
+  | `names/<k>.json` | name to id, sharded by the FNV-1a hash of the name |
   | `m/<n>.json` | module number `n` (its place in the dataset's modules): its docstring, and for each of its declarations the docstring, the statement in Lean, whether it has a proof, its source range and keyword; `built_on`, `facts`, `examples`, `used_in` (ids, most important first, at most 60 each, with totals); its record threads, tests and open challenges; its announcement |
   | `activity.json` | the newest records, open problems, open challenges, the reviewers (people and agents), and the review queue of the named declarations |
   | `reviewed.json` | every declaration of the library answered for, the latest answer first: its id and name, its yeses of this version, its noes still open and its earlier answers, each as [people, AI agents], and the latest answer's date |
@@ -250,7 +248,7 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
 Static HTML, CSS and JavaScript, without a framework or a build step, as the Atlas is. Vendored:
 elkjs 0.9.3 (EPL-2.0, the copy referee-site vendors, loaded the first time a map is drawn); the
 Atlas's `markdown.js` with its KaTeX 0.16.28 (MIT): Markdown in which source HTML stays text, links
-are filtered, and `$…$` becomes vetted MathML; and Mathlib Explorer's three faces, Source Serif 4,
+are filtered, and `$…$` becomes vetted MathML; and three faces, Source Serif 4,
 Inter and JetBrains Mono (OFL-1.1, the latin, latin-ext and greek subsets), so that the page fetches
 nothing from elsewhere. Record texts come from anyone's issues, so every
 docstring and record text goes through it, never into the page as HTML. Pan and zoom are pointer
@@ -258,7 +256,7 @@ events (referee-site's code, Apache-2.0, with pinch added): no D3.
 
 ### 6.1 Look
 
-Mathlib Explorer's page: one centred column at most 1120 px wide under a sticky top bar; serif
+The page: one centred column at most 1120 px wide under a sticky top bar; serif
 headings and prose (Source Serif 4, else Georgia), a sans-serif for everything else (Inter), Lean in
 JetBrains Mono. Dark by default, in the Atlas's tokens; the ◐ button switches to a light palette and
 the browser remembers it.
@@ -273,7 +271,7 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
        states: covered #2f7a55  uncounted, stale #b4562f  problem #b0392a
 ```
 
-- **A kind is a colour**, as in Mathlib Explorer: a pill over a declaration's title (Definition,
+- **A kind is a colour**: a pill over a declaration's title (Definition,
   Theorem, Instance…), the left edge of each item in a list, the border of its box on the map. A named
   declaration has a gold badge, and a gold border on the map.
 - **A review state is a badge,** under the policy the reader chose (AI reviews counted or not): a dot
@@ -344,7 +342,7 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      version, a mark "✗ Not correctly stated · 1 person" for the noes still open, then a mark for each
      answer: a person's filled, an AI agent's ringed and marked AI, a tick for a yes and a cross for a
      no, one that no longer stands grey with "earlier version", "what it rests on has changed" or what
-     resolved it, an imported one "from the Mathlib probability store". A yes that gives reasons (an
+     resolved it, an imported one "from the <name> store". A yes that gives reasons (an
      agent gives them only when they add to the answers already there, asked for on 2026-10-24) is a twisty (asked for on 2026-10-24) that opens to them, typeset, and to
      its issue; a bare yes links to its issue. Then each no in full: where it stands, who said it and when,
      why, the replies, its issue and what was decided on it), **What could be better** (a line asking
@@ -357,14 +355,14 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
   5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
      dependency map (6.5), shown;
   6. the same neighbours as lists, in two columns, each ranked with its first dozen shown: built from
-     or about (what comes from Mathlib and Lean as a line of chips, named as Mathlib Explorer names
+     or about (what comes from Mathlib and Lean as a line of chips, named as a mathematician names
      Lean's basic notions), proof uses (routine steps counted, not listed), results about it, built on
      it, examples, used to prove. Each item: its title, what it states (its signature without its
      name, its implicit arguments and the arguments that only introduce a type, names by their last
      component, at most 140 characters: `[CommRing R] [IsRegularRing R] [IsDomain R] :
      IsIntegrallyClosed R`), its Lean name, and its review state when reviewed.
 - **A declaration outside Tau Ceti** (a Mathlib declaration reached from a map or a list): its kind,
-  links to Mathlib's docs and to Mathlib Explorer, the records about it from the imported stores (no
+  a link to Mathlib's docs, the records about it from the imported stores (no
   forms: they are its store's), and what in Tau Ceti rests on it; no map, since the dataset does not
   follow what it rests on.
 - **Module:** its docstring; its notions and its results in two columns, named ones first; its
@@ -471,7 +469,7 @@ Yes and No open `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/ne
 ## 10. Risks
 
 - **Size and memory** for about 196,000 declarations and 24 million edges (7.5 million meaning, 16
-  million proof). Mathlib Explorer builds 314,000 in CI with the same sharding; ours is measured on
+  million proof). The same sharding has been built for 314,000 in CI; ours is measured on
   the real dataset before CI depends on it, and the build enforces its budget.
 - **Tau Ceti moving to a toolchain the extractor has no release for.** The pin waits on the last
   commit before the move, and the page always names the commit it shows.
@@ -488,4 +486,3 @@ Yes and No open `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/ne
   review's commit at build time.
 - A link from taucetiproject.org's navigation, or the store moved into the TauCetiProject
   organization.
-- The Mathlib probability store importing this store instead of the pilot's: LeanTrustBuilders' call.
