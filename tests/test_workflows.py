@@ -4,6 +4,7 @@ from pathlib import Path
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+TEMPLATES = Path(__file__).resolve().parents[1] / ".github" / "ISSUE_TEMPLATE"
 
 
 def load(name: str) -> dict:
@@ -105,6 +106,45 @@ class PagesWorkflowTests(unittest.TestCase):
         intake = load("evidence-intake.yml")["jobs"]["intake"]
         self.assertEqual(next(s for s in steps(intake) if "evidence-store/intake" in s.get("uses", ""))["with"]["pages-workflow"],
                          "pages.yml")
+
+
+
+class FormTests(unittest.TestCase):
+    """The forms are evidence-store's, less what only an AI agent would answer: what is left must still
+    read as intake reads it, by label, and a form says nothing of who wrote it, so intake records a person."""
+
+    def templates(self):
+        for f in sorted(TEMPLATES.glob("evidence-*.yml")):
+            yield f.name, yaml.safe_load(f.read_text(encoding="utf-8"))
+
+    def test_each_field_is_one_intake_knows(self):
+        from evidence_store import forms
+        for name, t in self.templates():
+            kind = forms.kind_of(t["labels"])
+            self.assertIsNotNone(kind, name)
+            known = {f["label"]: f for f in forms.forms()[kind]["fields"]}
+            for f in (f for f in t["body"] if f["type"] != "markdown"):
+                label = f["attributes"]["label"]
+                self.assertIn(label, known, name)
+                self.assertEqual(f["id"], known[label]["id"], name)
+                if f["type"] == "dropdown":
+                    self.assertEqual(f["attributes"]["options"], [text for _, text in known[label]["options"]], name)
+
+    def test_no_form_asks_who_wrote_it(self):
+        for name, t in self.templates():
+            ids = {f.get("id") for f in t["body"]}
+            self.assertFalse(ids & {"involvement", "who", "agent"}, name)
+            self.assertNotIn("AI agent", yaml.safe_dump(t["body"], allow_unicode=True), name)
+
+    def test_a_review_from_the_form_is_a_persons(self):
+        from evidence_store import forms, intake
+        t = dict(self.templates())["evidence-review.yml"]
+        answers = {"decl": "Fixture.triple", "rationale": "Compared with its definition."}
+        body = "\n\n".join(f"### {f['attributes']['label']}\n\n{answers.get(f['id'], '_No response_')}"
+                           for f in t["body"] if f["type"] != "markdown")
+        read = forms.parse("review", body)
+        self.assertEqual(read, {**answers, "checked": {}})  # nothing ticked
+        self.assertEqual(intake.author_of({"login": "someone"}, None, read.get("involvement") or "unknown")["kind"], "person")
 
 
 if __name__ == "__main__":

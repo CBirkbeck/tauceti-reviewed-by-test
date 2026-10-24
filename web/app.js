@@ -406,9 +406,9 @@
                  el('p', 'lean-note', 'As the docs show it, with no proof. Hover over a name to see what it is; click it to open it.'));
       parts.push(sec);
     }
-    // The review card.
+    // The review box.
     const records = project ? (e.records || []) : (up.records || []);
-    parts.push(reviewCard(meta, n, name, modName, project, records, e.tests || []));
+    parts.push(reviewCard(meta, name, modName, project, records, e.tests || []));
     // The map, and the same as lists.
     const mapHost = el('div');
     if (project) {
@@ -443,52 +443,171 @@
     if (project) TauMap.draw(mapHost, n, d.entry, {ai: () => ai, lib});
   };
 
-  /* Where a declaration stands, the forms to review it, and every record about it. */
-  function reviewCard(meta, n, name, modName, project, records, tests) {
-    const card = el('section', 'review'), head = el('div', 'review-head');
+  /* The review box, as the site had it in September (scripts/build_site.py before the rebuild): a button
+     for each form, the problems and questions raised, its Reviewed-by marks, people counted apart from AI
+     agents and each reviewer a click away, and what tests it. */
+  function reviewCard(meta, name, modName, project, records, tests) {
+    const card = el('section', 'review');
     card.id = 'review';
-    head.append(el('h2', null, 'Review'), aiSwitch());
-    const counted = (agent) => records.filter(v => v.kind === 'review' && v.verdict === 'accept' && v.inForce && v.applies &&
-                                                 (v.by.kind === 'agent') === agent).length;
-    const people = counted(false), agents = counted(true), line = el('div', 'state-line');
-    line.append(stateBadge(stateOf(n), true),
-                el('span', null, people || agents ? `Reviewed-by · ${plural(people, 'person', 'people')} · ${agents} AI`
-                  : records.some(v => v.kind === 'review' && v.verdict === 'accept') ? 'No review of this version yet.' : 'Nobody has reviewed it yet.'));
-    card.append(head, line);
     if (project) {
-      const acts = el('div', 'review-actions'), forms = el('div', 'actions');
-      FORMS.forEach(([text, template, prefix, cls]) => forms.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
-      acts.append(ext(URLS.docs(meta, name, modName), 'Read it in the API docs ↗', 'btn docs-btn'), forms);
-      card.append(acts, hint('Each button opens a form on GitHub, filled in with this declaration and the commit shown here. ' +
-        `It is recorded under your account within minutes; nothing is written into ${meta.library.name}.`));
-    } else if (records.length) {
-      card.append(hint(`Reviews of ${name} are kept in the stores that review it; they show here as they are.`));
+      const acts = el('div', 'actions');
+      FORMS.forEach(([text, template, prefix, cls]) => acts.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
+      acts.append(ext(URLS.docs(meta, name, modName), 'Read it in the API docs ↗', 'btn'));
+      card.append(acts);
     } else {
-      card.append(hint(`Outside ${meta.library.name}: review it where it lives, such as the Mathlib probability store.`));
+      card.append(hint(records.length ? `Reviews of ${name} are kept in the stores that review it; they show here as they are.`
+                                      : `Outside ${meta.library.name}: review it where it lives, such as the Mathlib probability store.`));
     }
     const byId = new Map(records.map(v => [v.id, v]));
-    // Tests are listed below with whether they pass; Voyager's announcement heads the page.
-    const top = records.filter(v => v.kind !== 'comment' && v.kind !== 'test' && !(v.kind === 'named' && v.by.agent && v.by.agent.tool === 'Voyager'));
-    const order = v => (v.inForce && v.applies !== false ? 0 : 1);
-    top.sort((a, b) => order(a) - order(b) || (b.at || '').localeCompare(a.at || ''));
-    top.forEach(v => card.append(thread(v, byId)));
-    if (tests.length) {
-      const t = el('div', 'tests');
-      t.append(el('h3', null, 'Tests'));
-      tests.forEach(x => {
-        const row = el('div', 'test-line');
-        row.append(el('span', 'result ' + x.result, {passes: 'passes', sorry: 'with sorry', missing: 'missing'}[x.result]),
-                   link(URLS.decl(x.test), shortName(x.test), 'mono'));
-        if (x.text) row.append(' — ', mdInline(x.text));
-        const by = el('div', 'faint small');
-        by.append(x.challenge ? 'Suggested, and met; listed by ' : 'Listed by ', who(x.by), ' · ' + date(x.at));
-        if (x.url) by.append(' · ', ext(x.url, 'issue'));
-        row.append(by);
-        t.append(row);
-      });
-      card.append(t);
+    const reviews = verdict => records.filter(v => v.kind === 'review' && v.verdict === verdict);
+    // Voyager's announcement heads the page; anyone else's naming is said here.
+    records.filter(v => v.kind === 'named' && !(v.by.agent && v.by.agent.tool === 'Voyager')).forEach(v => {
+      const line = el('p', 'namedline');
+      line.append('Named ', el('strong', null, v.name), ' by ', markWho(v.by), ', ' + date(v.at));
+      if (v.url) line.append(' · ', ext(v.url, issueText(v.url)));
+      card.append(line);
+    });
+    for (const [title, verdict] of [['Problems', 'problem'], ['Questions', 'question']]) {
+      const vs = reviews(verdict);
+      if (vs.length) card.append(el('p', 'sub', title), ...vs.map(v => report(v, byId)));
     }
+    card.append(el('p', 'sub', 'Reviews'), marks(reviews('accept')));
+    const challenges = records.filter(v => v.kind === 'challenge' && v.state !== 'met');  // a met one is a listed test
+    if (project || tests.length || challenges.length) card.append(el('p', 'sub', 'Tests'), testMarks(tests, challenges, byId));
     return card;
+  }
+  /* Whether a record speaks for the declaration as it is now. */
+  const applies = v => v.inForce && v.applies !== false;
+  const tick = () => { const t = el('span', 'tick', '✓'); t.setAttribute('aria-hidden', 'true'); return t; };
+  const issueText = url => { const m = /\/issues\/(\d+)$/.exec(url || ''); return m ? 'Issue #' + m[1] : 'issue'; };
+  /* Who made a record, as a mark says it: @login, or the agent, AI, and the account it acted through. */
+  function markWho(by) {
+    const span = el('span', 'who');
+    if (by.kind === 'agent') {
+      const a = by.agent || {};
+      span.append([a.tool || 'An AI agent', a.model].filter(Boolean).join(', ') + ' ', el('span', 'ai', 'AI'));
+      if (by.login) span.append(' via @' + by.login);
+    } else span.append(by.login ? '@' + by.login : by.label || 'someone');
+    return span;
+  }
+  const MARK_NOTE = {stale: () => 'earlier version', 'stale-underneath': () => 'what it rests on has changed',
+                     renamed: v => 'as ' + v.renamedFrom, unavailable: () => 'did not build', orphaned: () => 'gone',
+                     incomparable: () => 'cannot be compared'};
+  /* One review, as its reviewer's mark: a link to its issue, what it says on hover, greyed when it was of an
+     earlier version. */
+  function mark(v) {
+    const cls = 'mark ' + (v.by.kind === 'agent' ? 'agent' : 'person') + (applies(v) ? '' : ' stale');
+    const m = v.url ? ext(v.url, null, cls) : el('span', cls);
+    m.append(tick(), markWho(v.by));
+    const note = !v.inForce ? (v.state === 'withdrawn' ? 'withdrawn' : 'superseded') : MARK_NOTE[v.status] && MARK_NOTE[v.status](v);
+    if (note) m.append(el('span', 'note', note));
+    if (v.source) m.append(el('span', 'note', `from the ${v.source.name} store`));
+    if ((v.replies || []).length) m.append(el('span', 'note', plural(v.replies.length, 'reply', 'replies')));
+    const checked = Object.entries(v.checked || {}).filter(([, s]) => s === 'checked').map(([axis]) => axis);
+    const ref = v.reference && (v.reference.text || v.reference.url);
+    m.title = ['Reviewed-by: it is the intended mathematical notion.', (v.hash ? `Version ${v.hash}, ` : '') + date(v.at) + '.',
+               statusNote(v), ref ? `Compared with ${ref}.` : '', checked.length ? `Checked: ${checked.join(', ')}.` : '',
+               (v.caveats || []).length ? 'Caveats: ' + v.caveats.map(c => typeof c === 'string' ? c : [c.category, c.text].filter(Boolean).join(': ')).join('; ') + '.' : '',
+               plain(v.text)].filter(Boolean).join(' ');
+    return m;
+  }
+  /* Reviewed-by: a mark that counts the reviews of this version, people apart from AI agents, and in Who
+     each reviewer's mark. */
+  function marks(reviews) {
+    const box = el('div');
+    if (!reviews.length) { box.append(el('p', 'empty', 'No reviews yet.')); return box; }
+    const now = reviews.filter(applies), people = now.filter(v => v.by.kind !== 'agent').length, agents = now.length - people;
+    const counts = [people ? plural(people, 'person', 'people') : '', agents ? `${agents} AI` : ''].filter(Boolean).join(' · ');
+    const earlier = reviews.length - now.length;
+    const tally = el('span', 'mark tally ' + (people ? 'person' : agents ? 'agent' : 'stale')), row = el('div', 'marks');
+    tally.title = 'Reviewed-by: it is the intended mathematical notion';
+    tally.append(tick(), el('span', 'trailer', 'Reviewed-by'), ' ', el('span', 'who', counts));
+    if (earlier) tally.append(counts ? ' · ' : '', el('span', 'note', earlier === 1 ? '1 on an earlier version' : `${earlier} on earlier versions`));
+    row.append(tally);
+    const whose = el('details', 'whose'), list = el('div', 'marks');
+    whose.open = reviews.length <= 3;
+    [...reviews].sort((a, b) => applies(b) - applies(a) || (b.at || '').localeCompare(a.at || '')).forEach(v => list.append(mark(v)));
+    whose.append(el('summary', null, `Who (${reviews.length})`), el('p', 'head', 'Reviewed-by'), list);
+    box.append(row, whose);
+    return box;
+  }
+  const TEST_RESULT = {passes: 'passes', sorry: 'has sorry', missing: 'missing at this commit'};
+  /* Tested by: a mark that counts the tests that pass, and in Which each listed test with whether it passes
+     and each suggested one with where it stands. */
+  function testMarks(tests, challenges, byId) {
+    const box = el('div'), total = tests.length + challenges.length;
+    if (!total) { box.append(el('p', 'empty', 'No tests yet: none is listed or suggested.')); return box; }
+    const passes = tests.filter(x => x.result === 'passes').length, failing = tests.length - passes;
+    const open = challenges.filter(v => v.state === 'open').length;
+    const parts = [passes ? (passes === 1 ? '1 test that passes' : `${passes} tests that pass`) : 'nothing that passes yet'];
+    if (failing) parts.push(`${failing} that ${failing === 1 ? 'does' : 'do'} not`);
+    if (open) parts.push(`${open} suggested`);
+    const tally = el('span', 'mark tally ' + (passes ? 'tested' : 'stale')), row = el('div', 'marks');
+    tally.title = 'Tested by: tests of it that pass, listed or suggested with the forms';
+    tally.append(tick(), el('span', 'trailer', 'Tested by'), ' ', el('span', 'who', parts.join(' · ')));
+    row.append(tally);
+    const which = el('details', 'which');
+    which.open = total <= 3;
+    which.append(el('summary', null, `Which (${total})`));
+    if (tests.length) which.append(el('p', 'head', 'Listed tests'));
+    tests.forEach(x => {
+      const t = el('div', 'test'), line = el('p', 'line');
+      line.append(el('span', x.result === 'passes' ? 'pass' : 'fail', TEST_RESULT[x.result] || x.result), ' · ',
+                  link(URLS.decl(x.test), shortName(x.test), 'mono'), x.challenge ? ' · suggested and met; listed by ' : ' · listed by ',
+                  markWho(x.by), ', ' + date(x.at));
+      if (x.url) line.append(' · ', ext(x.url, issueText(x.url)));
+      t.append(line);
+      if (x.text) t.append(md(x.text));
+      which.append(t);
+    });
+    if (challenges.length) which.append(el('p', 'head', 'Suggested tests'));
+    challenges.forEach(v => {
+      const t = el('div', 'test' + (v.state === 'open' ? '' : ' closed')), line = el('p', 'line');
+      line.append(v.state === 'open' ? 'Suggested by ' : `${STATE_WORDS[v.state] || v.state} · suggested by `, markWho(v.by), ', ' + date(v.at));
+      if (v.url) line.append(' · ', ext(v.url, issueText(v.url)));
+      t.append(line);
+      if (v.text) t.append(md(v.text));
+      if (v.statement) { const pre = el('pre', 'small-code'); pre.textContent = v.statement; t.append(pre); }
+      if (v.catches) t.append(el('p', 'note', 'Would catch: ' + v.catches));
+      replies(t, v, byId);
+      which.append(t);
+    });
+    box.append(row, which);
+    return box;
+  }
+  /* A problem or a question: where it stands, who raised it and when, what they said, the replies, and its
+     issue with what was decided on it. */
+  function report(v, byId) {
+    const open = v.state === 'open', question = v.verdict === 'question';
+    const box = el('div', 'report' + (question ? ' question' : '') + (open ? '' : ' closed')), head = el('p', 'head');
+    head.append(el('span', 'state', open ? 'Open' : STATE_WORDS[v.state] || 'Closed'), ' · ',
+                question ? 'asked by ' : (v.category ? v.category + ' · ' : '') + 'reported by ', markWho(v.by), ', ' + date(v.at));
+    const note = v.status !== 'current' && statusNote(v);
+    if (note) head.append(' · ', el('span', 'note', note));
+    if (v.source) head.append(` · from the ${v.source.name} store`);
+    box.append(head);
+    if (v.text) box.append(md(v.text));
+    if (v.fix) box.append(el('p', 'fix', 'Suggested fix'), md(v.fix));
+    replies(box, v, byId);
+    const foot = el('p', 'line');
+    if (v.url) foot.append(ext(v.url, issueText(v.url)));
+    (v.statuses || []).forEach(s => {
+      if (foot.childNodes.length) foot.append(' · ');
+      foot.append(`${STATE_WORDS[s.state] || s.state} by `, markWho(s.by), ', ' + date(s.at));
+      if (s.text) foot.append(': ', mdInline(s.text));
+    });
+    if (foot.childNodes.length) box.append(foot);
+    return box;
+  }
+  function replies(box, v, byId) {
+    for (const id of v.replies || []) {
+      const r = byId.get(id);
+      if (!r) continue;
+      const reply = el('div', 'reply'), head = el('p', 'line');
+      head.append(markWho(r.by), ', ' + date(r.at));
+      reply.append(head, md(r.text));
+      box.append(reply);
+    }
   }
 
   VIEWS.module = async (name, gen) => {
@@ -641,14 +760,15 @@
     setNav('help');
     show(el('h1', null, 'How to review'),
       el('p', 'lede', 'Leave a review, a problem, a test or a question. Each is a form on GitHub, filled in, and no pull request.'),
-      prose(p('Open a declaration and use the buttons in its Review card: each opens a form on GitHub, filled in with the declaration and the commit this page shows. ',
+      prose(p('Open a declaration and use the buttons in its review box: each opens a form on GitHub, filled in with the declaration and the commit this page shows. ',
               `Submit it, and the record is kept in this site's evidence store under your GitHub account, and shown here within minutes.`)),
       section('What each form records', null, prose(
-        p(el('b', null, 'Review this'), ': it is the intended mathematical notion, or states the intended result. Say what you compared it with and which ways it could go wrong you checked. A person need not say why; an AI agent must.'),
-        p(el('b', null, 'Report a problem'), ': it is wrong, and why. The problem stays open, and the declaration is flagged, until someone marks it fixed, intended, or not a problem.'),
+        p(el('b', null, 'Review this'), ': it is the intended mathematical notion, or states the intended result. Say what you compared it with and which ways it could go wrong you checked; saying why is optional.'),
         p(el('b', null, 'Suggest a test'), `: a property it should have, in words and if you can in Lean. It stays open until a declaration of ${lib} proves it.`),
+        p(el('b', null, 'Report a problem'), ': it is wrong, and why. The problem stays open, and the declaration is flagged, until someone marks it fixed, intended, or not a problem.'),
         p(el('b', null, 'List a test'), `: a declaration of ${lib} that already pins it down, and what it checks.`),
-        p(el('b', null, 'Ask a question'), ': anything you want its authors or reviewers to answer.'))),
+        p(el('b', null, 'Ask a question'), ': anything you want its authors or reviewers to answer.'),
+        p('The forms are for people: an AI agent reviews from the command line, as below.'))),
       section('Versions', null, prose(
         p("A review is pinned to the declaration as it was: to its meaning hash, which changes when the declaration changes or anything it rests on does. ",
           `A review of an earlier version stays, greyed: "the declaration has changed since", or "something it rests on has changed since". Nothing is written into ${lib}.`))),

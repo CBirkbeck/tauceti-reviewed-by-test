@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The browser check: serves a built site as GitHub Pages would and checks, in Chromium, what a
 reader does: the shell and its two themes, the old addresses, the home page, the Named page, search,
-a declaration, its review card, its dependency map, the other pages, and a phone. Without --site it
+a declaration, its review box, formulas typeset, its dependency map, the other pages, and a phone. Without --site it
 builds the fixture's site first (tests/fixture_site.py).
 
   python3 tests/validate_site.py [--site DIR | --url URL] [--only NAME,NAME] [--smoke]
@@ -93,6 +93,9 @@ def named(browser, url, errors):
     page = visit(browser, url, "#/named", errors)
     expect(page.locator(".list > li").count() == 2, "both announcements are listed")
     expect([h.split("\n")[0] for h in page.locator("main h2").all_inner_texts()] == ["Basic", "Uses"], "grouped by area")
+    page.check("#ai")
+    page.wait_for_function("TauReview.ready && document.querySelector('#ai') && document.querySelector('#ai').checked")
+    expect(page.evaluate("localStorage.getItem('tauceti-review:ai')") == "1", "counting AI reviews is kept")
     page.click("[data-what=definition]")
     expect(page.locator(".list > li").count() == 1 and "Being double" in page.locator(".list > li").inner_text(), "the definitions filter")
     page.click(".list > li a")
@@ -140,26 +143,45 @@ def declaration(browser, url, errors):
 @check
 def review(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
-    expect("1 person · 1 AI" in page.locator(".review .state-line").inner_text(), "people are counted apart from AI agents")
-    href = page.locator(".review .actions a", has_text="Review this").get_attribute("href")
+    box = page.locator(".review")
+    tally = box.locator(".mark.tally").first
+    expect(tally.locator(".trailer").inner_text() == "Reviewed-by" and tally.locator(".who").inner_text() == "1 person · 1 AI",
+           "people are counted apart from AI agents")
+    expect(box.locator("details.whose .mark.person").count() == 1 and box.locator("details.whose .mark.agent .ai").count() == 1,
+           "in Who, each reviewer's mark, the AI agent's marked")
+    expect(box.locator("details.whose .mark.agent").get_attribute("href") == "https://github.com/example/fixture-store/issues/11",
+           "a mark opens its review's issue")
+    href = box.locator(".actions a", has_text="Review this").get_attribute("href")
     expect(href.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in href
            and "decl=Fixture.triple" in href and "commit=B" in href, "Review this opens the form, filled in")
-    expect(page.locator(".review .actions a").count() == 5, "five forms")
-    expect(page.locator(".review a", has_text="Read it in the API docs").get_attribute("href")
-           == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review card links to the docs")
-    expect(page.locator(".review .tests .result.passes").count() == 1, "the listed test passes")
-    page.check("#ai")
-    page.wait_for_function("TauReview.ready && document.querySelector('#ai') && document.querySelector('#ai').checked")
-    expect(page.evaluate("localStorage.getItem('tauceti-review:ai')") == "1", "counting AI reviews is kept")
+    expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts()
+           == ["Review this", "Suggest a test", "Report a problem", "List a test", "Ask a question"], "a button for each form")
+    expect(box.locator(".actions a", has_text="Read it in the API docs").get_attribute("href")
+           == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review box links to the docs")
+    expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".which .pass").count() == 1, "Tested by: the listed test passes")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
-    expect("Something it rests on has changed since." in page.locator(".review").inner_text(), "stale underneath, said")
+    expect("what it rests on has changed" in page.locator(".review details.whose").inner_text(), "stale underneath, said")
     page = visit(browser, url, "#/d/Fixture.double", errors)
-    card = page.locator(".review").inner_text()
-    expect("The declaration has changed since." in card, "stale, said")
-    expect(page.locator(".verdict.challenge").count() == 1 and "Open" in card, "the open suggested test")
+    box = page.locator(".review")
+    expect(box.locator("details.whose .mark.stale").count() == 1 and "1 on an earlier version" in box.inner_text(),
+           "a review of an earlier version, greyed")
+    expect(box.locator(".which .test", has_text="Suggested by").count() == 1, "the open suggested test")
     page = visit(browser, url, "#/d/Int", errors)
-    expect("From the Test imports store" in page.locator(".review").inner_text(), "an imported review names its store")
+    expect("from the Test imports store" in page.locator(".review").inner_text(), "an imported review names its store")
     expect(page.locator(".actions").count() == 0 and page.locator(".map").count() == 0, "no forms and no map outside the library")
+
+
+@check
+def formulas(browser, url, errors):
+    page = visit(browser, url, "#/", errors)
+    doc = "The theta series `Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)` of `L : Submodule ℤ E` (`ZLattice.summable_thetaSeries`)."
+    said = "Θ_L(τ) = Σ_{v∈L} exp(πi‖v‖²τ) for a lattice L; both converge on ℍ (Serre, *A Course in Arithmetic*, VII §6)."
+    got = page.evaluate("""texts => texts.map(t => { const b = TauRender.md(t);
+        return {math: b.querySelectorAll('math').length, code: [...b.querySelectorAll('code')].map(c => c.textContent),
+                em: [...b.querySelectorAll('em')].map(e => e.textContent)}; })""", [doc, said])
+    expect(got[0]["math"] == 1 and got[0]["code"] == ["L : Submodule ℤ E", "ZLattice.summable_thetaSeries"],
+           "a docstring's formula typeset, its Lean left as code")
+    expect(got[1]["math"] == 1 and got[1]["em"] == ["A Course in Arithmetic"], "Voyager's formula typeset, its underscores not emphasis")
 
 
 @check
@@ -254,7 +276,8 @@ def smoke(browser, url, errors):
     for name in names:
         page = visit(browser, url, "#/d/" + name, errors)
         map_drawn(page)
-        expect(page.locator("h1").count() == 1 and page.locator(".review .actions a").count() == 5, f"{name}: its page and its forms")
+        expect(page.locator("h1").count() == 1 and page.locator(".review .actions a[href*='/issues/new?']").count() == 5,
+               f"{name}: its page and its forms")
         arrow = page.locator(".map .node .open:not(.opened)")
         if arrow.count():  # an arrow unfolds something, or says it found nothing
             before = page.locator(".map .node").count()

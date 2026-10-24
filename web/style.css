@@ -149,7 +149,6 @@ a.chip:hover { border-color: var(--accent); text-decoration: none; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 .btn.small { font-size: 13px; padding: 3px 9px; }
 .btn[aria-pressed=true] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-.btn.docs-btn { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); color: var(--accent); }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0 8px; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { padding: 6px 12px; border: 0; background: var(--surface); color: var(--muted); font-size: 14px; cursor: pointer; }
@@ -180,18 +179,56 @@ a.card:hover { border-color: var(--accent); text-decoration: none; }
 .b-done { background: var(--st-covered); } .b-ai { background: var(--st-uncounted); } .b-problem { background: var(--st-problem); }
 .coverage { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 14px; color: var(--muted); }
 
-/* The review card. */
-.review { margin: 1.6rem 0; padding: 16px 18px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.review-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
-.review-head h2 { margin: 0; }
-.review-head .switch { margin-left: auto; }
-.state-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 6px 0 12px; font-size: 14px; color: var(--muted); }
-.state-line .st { font-size: 14px; color: var(--ink); font-weight: 600; }
-.review-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.review .hint { margin: 8px 0 4px; }
+/* The review box, as the site had it in September: a button for each form, then Problems, Reviews and
+   Tests under small capitals, each review a mark (a tick in a pill), people's filled, AI agents' ringed,
+   one of an earlier version grey. */
+.review { margin: 1.6rem 0; padding: 14px 18px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+  --person: var(--result); --agent: var(--st-uncounted); --tested: var(--concept); }
+.review .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.review .actions .btn { font-size: 13.5px; padding: 5px 12px; border-radius: 6px; color: var(--muted); }
+.review .actions .btn:hover { color: var(--ink); }
+.review .actions .btn.primary { color: var(--accent-ink); padding: 5px 14px; }
+.review .actions .btn.warn { color: var(--st-problem); border-color: color-mix(in srgb, var(--st-problem) 40%, var(--line)); }
+.review .sub { margin: 16px 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.review .empty { margin: 4px 0; font-size: 14px; }
+.review details { margin: 2px 0 8px; }
+.review details > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.review .head { margin: 8px 0 2px; font-size: 12.5px; font-weight: 600; }
+.review .note { font-size: 11.5px; font-style: italic; color: var(--faint); }
+.marks { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 6px 0; }
+.mark { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 2px 10px 2px 3px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; color: var(--ink); }
+a.mark:hover { border-color: var(--accent); text-decoration: none; }
+.mark .who { min-width: 0; overflow-wrap: anywhere; }
+.mark .ai { font-size: 10.5px; letter-spacing: .06em; }
+.mark .trailer { font-weight: 600; }
+.mark.tally { padding-right: 12px; }
+.mark.tally .who { color: var(--muted); }
+.tick { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: 700; }
+.mark.person .tick { background: var(--person); color: var(--bg); }
+.mark.agent .tick { box-shadow: inset 0 0 0 1.5px var(--agent); color: var(--agent); }
+.mark.tested .tick { background: var(--tested); color: var(--bg); }
+.mark.stale { color: var(--faint); }
+.mark.stale .tick { background: none; box-shadow: inset 0 0 0 1.5px var(--faint); color: var(--faint); }
+.mark.stale .ai { color: var(--faint); }
+.test { padding: 6px 0 2px; border-top: 1px solid var(--line-soft); font-size: 13.5px; }
+.test.closed { opacity: .65; }
+.test .line, .report .line { margin: 3px 0; font-size: 12.5px; color: var(--muted); }
+.test .line .mono { font-size: 12.5px; }
+.test .md, .report .md { margin: 4px 0; }
+.pass { color: var(--result); font-weight: 600; }
+.fail { color: var(--st-problem); font-weight: 600; }
+.report { margin: 8px 0; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--st-problem) 45%, var(--line)); border-radius: 8px; font-size: 14px; }
+.report.question { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.report.closed { border-color: var(--line); color: var(--muted); }
+.report .head { margin: 0; font-size: 13px; font-weight: 400; color: var(--muted); }
+.report .state { font-weight: 700; color: var(--st-problem); }
+.report.question .state { color: var(--accent); }
+.report.closed .state { color: var(--muted); }
+.report .fix { margin: 10px 0 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.namedline { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+
+/* A record in full, as the Activity page lists them. */
 .thread { padding: 12px 0; border-top: 1px solid var(--line-soft); font-size: 14.5px; }
-.review .thread:first-of-type { margin-top: 8px; }
 .thread.old { opacity: .62; }
 .thread-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; color: var(--muted); font-size: 13.5px; }
 .thread-head a { color: var(--muted); }
@@ -218,13 +255,6 @@ a.card:hover { border-color: var(--accent); text-decoration: none; }
 .record-actions { margin-top: 6px; color: var(--faint); font-size: 12.5px; }
 .record-actions a { font-family: var(--mono); color: var(--muted); }
 .decl-link { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 13px; }
-.tests { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line-soft); }
-.tests h3 { margin: 4px 0 6px; font-size: 1rem; }
-.test-line { padding: 5px 0; font-size: 14px; }
-.test-line .mono { font-size: 13px; }
-.result { margin-right: 7px; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.result.passes { color: var(--bg); background: var(--result); }
-.result.sorry, .result.missing { color: #fff; background: var(--st-problem); }
 .records .thread:first-child { border-top: 0; }
 pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: var(--code); font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
@@ -286,7 +316,6 @@ pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; backgrou
   .nav { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; }
   .map-canvas { height: min(var(--h, 380px), 70vh); }
   .map-tools .hint { display: none; }
-  .review { padding: 14px 12px 10px; }
-  .review-head .switch { margin-left: 0; }
+  .review { padding: 12px 12px 8px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

@@ -24,11 +24,14 @@ filled in with the declaration and the commit the site shows:
 
 | button | records |
 |---|---|
-| **Review this** | an acceptance: it is the intended mathematical notion, or states the intended result. Saying why is optional for a person; an AI agent must |
-| **Report a problem** | what is wrong and why. It stays open, and the declaration is flagged, until it is marked fixed, intended or invalid |
+| **Review this** | an acceptance: it is the intended mathematical notion, or states the intended result. Saying why is optional |
 | **Suggest a test** | a property the declaration should have, in words and if possible in Lean. It stays open until a declaration of Tau Ceti proves it |
+| **Report a problem** | what is wrong and why. It stays open, and the declaration is flagged, until it is marked fixed, intended or invalid |
 | **List a test** | a declaration of Tau Ceti that already pins it down, and what it checks |
 | **Ask a question** | a question about it |
+
+The forms are for people: they do not ask who you are or who wrote them, and intake records the
+account that opened the issue as a person. AI agents review from the command line instead (below).
 
 Intake turns the issue into a record under the account that opened it, answers on the issue, and
 rebuilds the site within minutes. On a record's issue, a comment whose first line is a command changes
@@ -62,14 +65,17 @@ https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
 - **A declaration**: its docstring and Lean source, links to the API docs, the source and Voyager's
   post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
   uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), with the same
-  neighbours as lists; and its review panel: every review, problem, question and suggested test as
-  a thread, and the tests it passes.
+  neighbours as lists; and its review box, as the site had it in September: a button for each form,
+  the open problems and questions, a Reviewed-by mark counting people apart from AI agents with each
+  reviewer's mark in **Who** (its reasons on hover, its issue a click away), and a Tested by mark with
+  each test in **Which**. Formulas in docstrings and in Voyager's sentences are typeset, whether
+  written in TeX (`$…$`) or as text with TeX's marks (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`).
 - **Browse**, **Search** (names and docstring titles), **Activity** (open problems, open suggested
   tests, what to review next, reviewers) and **How to review**.
 
 Colour on a declaration means its review state: an open ring for not reviewed, white for reviewed,
 salmon for reviewed by AI agents only or on an earlier version, red for an open problem. A switch on
-the Named page and in a declaration's review card says whether AI agents' reviews count.
+the Named page says whether AI agents' reviews count.
 
 ## How it is built
 

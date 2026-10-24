@@ -1,6 +1,7 @@
 /* Tau Ceti Review: how things look. Elements, Markdown (the Atlas's TauMarkdown: source HTML stays
-   text, mathematics becomes vetted MathML), kinds and review states as Mathlib Explorer marks them
-   (a pill for the kind, a badge for the state), and links. */
+   text, mathematics becomes vetted MathML, and formulas written as text are typeset first, by
+   TauFormulas), kinds and review states as Mathlib Explorer marks them (a pill for the kind, a badge for
+   the state), and links. */
 (function () {
   'use strict';
 
@@ -15,12 +16,12 @@
   /* Markdown from a docstring or a record: always through TauMarkdown, never as HTML. */
   function md(text, cls) {
     const box = el('div', 'md' + (cls ? ' ' + cls : ''));
-    box.append(window.TauMarkdown.render(text || ''));
+    box.append(window.TauMarkdown.render(window.TauFormulas.typeset(text)));
     return box;
   }
   /* One paragraph's content, for a line of text. Inside a link (`bare`), its own links become text. */
   function mdInline(text, cls, bare) {
-    const frag = window.TauMarkdown.render(text || ''), span = el('span', 'md' + (cls ? ' ' + cls : ''));
+    const frag = window.TauMarkdown.render(window.TauFormulas.typeset(text)), span = el('span', 'md' + (cls ? ' ' + cls : ''));
     if (frag.childNodes.length === 1 && frag.firstChild.nodeName === 'P') {
       while (frag.firstChild.firstChild) span.append(frag.firstChild.firstChild);
     } else span.append(frag);
@@ -62,8 +63,8 @@
   };
   const FORMS = [
     ['Review this', 'evidence-review.yml', 'Review: ', 'primary'],
-    ['Report a problem', 'evidence-problem.yml', 'Problem: ', ''],
     ['Suggest a test', 'evidence-challenge.yml', 'Challenge: ', ''],
+    ['Report a problem', 'evidence-problem.yml', 'Problem: ', 'warn'],
     ['List a test', 'evidence-test.yml', 'Test: ', ''],
     ['Ask a question', 'evidence-question.yml', 'Question: ', ''],
   ];
