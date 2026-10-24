@@ -146,7 +146,7 @@ def declaration(browser, url, errors):
 def review(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     box = page.locator(".review")
-    expect(box.locator(".question").inner_text() == "Is this definition correctly stated?", "one question, naming what it asks about")
+    expect(box.locator(".ask").inner_text() == "Is this definition correctly stated?", "one question, naming what it asks about")
     expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts() == ["Yes", "No"], "and two answers")
     yes, no = (box.locator(".actions a", has_text=t).get_attribute("href") for t in ("Yes", "No"))
     expect(yes.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in yes
@@ -162,11 +162,17 @@ def review(browser, url, errors):
     expect(box.locator("details.whose .mark.agent").get_attribute("href") == "https://github.com/example/fixture-store/issues/11",
            "a mark opens its answer's issue")
     expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".which .pass").count() == 1, "Tested by: the listed test passes")
+    better = box.locator(".better a", has_text="Suggest an improvement").get_attribute("href")
+    expect("template=evidence-question.yml" in better and "decl=Fixture.triple" in better and "commit=B" in better,
+           "What could be better: a suggestion opens its form, filled in")
+    suggestion = box.locator(".report.question").inner_text()
+    expect("suggested by @someone" in suggestion and "any semiring" in suggestion and "Issue #15" in suggestion,
+           "and each suggestion shows, with who made it and its issue")
     expect(page.evaluate("[TauRender.questionWord('theorem', 'lemma'), TauRender.questionWord('structure', 'structure')]")
            == ["lemma", "structure"], "a lemma is asked about as a lemma")
     page = visit(browser, url, "#/d/Fixture.triple_comm", errors)
     box = page.locator(".review")
-    expect(box.locator(".question").inner_text() == "Is this theorem correctly stated?", "a theorem, as a theorem")
+    expect(box.locator(".ask").inner_text() == "Is this theorem correctly stated?", "a theorem, as a theorem")
     no = box.locator(".mark.tally.no")
     expect(no.locator(".trailer").inner_text() == "Not correctly stated" and no.locator(".who").inner_text() == "1 person",
            "a no still open, counted apart from the yes")
@@ -176,6 +182,7 @@ def review(browser, url, errors):
     expect("answered no by @someone" in report and "the definition, unfolded" in report and "Issue #14" in report,
            "the no in full: who, why, and its issue")
     expect(box.locator(".sub", has_text="Tests").count() == 0, "no Tests heading where nothing tests it")
+    expect("No suggestions yet." in box.inner_text(), "What could be better, with nothing suggested yet")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
     expect("what it rests on has changed" in page.locator(".review details.whose").inner_text(), "stale underneath, said")
     page = visit(browser, url, "#/d/Fixture.double", errors)
@@ -279,6 +286,8 @@ def other_pages(browser, url, errors):
     expect(page.locator("a.card").count() == 3, "Browse: a tile for each area")
     page = visit(browser, url, "#/activity", errors)
     expect("double n = n + n" in page.locator(".section", has_text="Suggested tests").inner_text(), "the open suggested test")
+    better = page.locator(".section", has=page.locator("h2", has_text="What could be better"))
+    expect("any semiring" in better.inner_text(), "the open suggestions")
     page = visit(browser, url, "#/help", errors)
     expect("Reviewed-by: TauCeti.Foo.bar" in page.inner_text("body"), "the bulk issue's lines")
     expect(page.locator("a[href='https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md']").count() == 1

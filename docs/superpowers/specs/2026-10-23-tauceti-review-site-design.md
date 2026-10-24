@@ -59,7 +59,8 @@ at the same address. It must:
 
 ```
 .github/ISSUE_TEMPLATE/evidence-*.yml, config.yml   from `evidence-store init`, less You are, Written by, Agent;
-                                                     the review and problem forms cut to yes and no
+                                                     the review and problem forms cut to yes and no,
+                                                     the question form recast as What could be better
 .github/workflows/
   follow.yml           daily: pin Tau Ceti, extract its dataset, prune old datasets, then pages
   dataset.yml          one commit's dataset as a release (called by follow.yml, or by hand)
@@ -137,7 +138,10 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   answers one question, "is it correctly stated?" (asked for on 2026-10-24): the review form is the
   yes (the declaration and the commit, filled in by the site, and an optional why) and the problem
   form the no (the same, and a why it will not submit without; with no "What is wrong", intake records
-  `other`). The site offers no other form. Intake turns an issue into a record keyed in the dataset of the commit the form
+  `other`). Under the question, "What could be better" (asked for the same day) takes suggestions for
+  a declaration that is correct but could be done better, on the question form recast for it (its
+  field keeps the label "Question", by which intake reads it): recorded as questions, open until dealt
+  with, neither yes nor no. The site offers no other form. Intake turns an issue into a record keyed in the dataset of the commit the form
   names, answers on the issue, and starts `pages.yml`. A comment whose first line is a command
   changes a record's state (`/withdraw`, `/fixed [commit]`, `/intended`, `/invalid`,
   `/met <declaration>`, `/failed`, `/declined`, `/answered`, `/reopen`); so does closing or reopening
@@ -316,7 +320,9 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      a cross for a no, one that no longer stands grey with "earlier version", "what it rests on has
      changed" or what resolved it, an imported one "from the Mathlib probability store"; each links to
      its issue and shows on hover why; then each no in full: where it stands, who said it and when,
-     why, the replies, its issue and what was decided on it), any **Questions**, and **Tests** when
+     why, the replies, its issue and what was decided on it), **What could be better** (a line asking
+     whether it could be done better, with "Suggest an improvement", and each suggestion: where it
+     stands, who made it and when, what it says, the replies and its issue), and **Tests** when
      something tests it (a mark "✓ Tested by · 1 test that passes · 1 suggested", and in **Which**
      each listed test with whether it passes and each suggested one with where it stands);
   5. **What it rests on, and what rests on it:** the coverage line of a named declaration, and the
@@ -337,11 +343,12 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
 - **Browse:** a tile for each area. **Area:** its named declarations and its modules.
 - **Search:** names and titles of every declaration, notions and results in two columns, named ones
   first.
-- **Activity:** the noes still open, any open questions and suggested tests, what to review next for the named
+- **Activity:** the noes and the suggestions still open, any open suggested tests, what to review next for the named
   results (the unreviewed declarations they rest on, those most of them share first), the newest
   records, and the reviewers.
-- **How to review:** the question and its two answers, what "correctly stated" means, versions, AI
-  agents (AI-REVIEWS.md and the bulk issue's lines), and the commands on an answer's issue.
+- **How to review:** the question and its two answers, what "correctly stated" means, What could be
+  better, versions, AI agents (AI-REVIEWS.md and the bulk issue's lines), and the commands on an
+  answer's issue.
 
 Yes and No open `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
 (`evidence-review.yml`, `evidence-problem.yml`) with the form's `decl` and `commit` fields filled in

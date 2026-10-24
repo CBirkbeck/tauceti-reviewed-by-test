@@ -68,6 +68,8 @@
     ['Yes', 'evidence-review.yml', 'Correctly stated: ', 'yes'],
     ['No', 'evidence-problem.yml', 'Not correctly stated: ', 'no'],
   ];
+  /* What could be better: a suggestion for a declaration that is correct, on the question form. */
+  const SUGGEST = ['Suggest an improvement', 'evidence-question.yml', 'What could be better: ', 'better'];
   /* What the question calls a declaration: a lemma is a lemma, else its kind's word. */
   const questionWord = (kind, kw) => kw === 'lemma' ? 'lemma' : (KIND_WORD[kind] || 'declaration').toLowerCase();
 
@@ -90,8 +92,8 @@
     return span;
   }
   /* A docstring's first sentence as plain text, for a label: its Markdown marks dropped. */
-  const plain = text => String(text || '').replace(/\*\*|__|`/g, '').replace(/(^|[^\w])[*_]([^*_]+)[*_](?!\w)/g, '$1$2')
-    .replace(/\$\$?([^$]+)\$\$?/g, '$1').trim();
+  const plain = text => String(text || '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*\*|__|`/g, '')
+    .replace(/(^|[^\w])[*_]([^*_]+)[*_](?!\w)/g, '$1$2').replace(/\$\$?([^$]+)\$\$?/g, '$1').trim();
   /* A declaration's last name component, or the last two when the last is short. */
   function shortName(name) {
     const parts = name.split('.');
@@ -101,5 +103,5 @@
   }
 
   window.TauRender = Object.freeze({el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT,
-                                    URLS, ANSWERS, questionWord, date, plural, who, shortName, modulePath, plain});
+                                    URLS, ANSWERS, SUGGEST, questionWord, date, plural, who, shortName, modulePath, plain});
 })();

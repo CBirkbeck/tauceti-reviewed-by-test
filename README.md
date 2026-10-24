@@ -28,10 +28,16 @@ the declaration and the commit the site shows:
 | **Yes** | `evidence-review.yml`: nothing more to fill in; why is optional | an acceptance: it says what it should, the intended notion or the intended result |
 | **No** | `evidence-problem.yml`: why, required | a problem, open until it is marked fixed, intended or invalid |
 
+Below the question, **What could be better** takes suggestions for a declaration that is correct but
+could be done better: more general, a better name or docstring, a cleaner statement. **Suggest an
+improvement** opens `evidence-question.yml`, recast for it (the suggestion required; GitHub labels
+the field "Question", the label intake reads it by). A suggestion is recorded as a question, open
+until it is dealt with, and counts as neither a yes nor a no.
+
 The forms are for people: they do not ask who you are or who wrote them, and intake records the
 account that opened the issue as a person. AI agents answer from the command line instead (below).
-The store's other forms (tests, challenges, questions, names) are still there for intake, but the site
-no longer offers them.
+The store's other forms (tests, challenges, names) are still there for intake, but the site no longer
+offers them.
 
 Intake turns the issue into a record under the account that opened it, answers on the issue, and
 rebuilds the site within minutes. On an answer's issue, a comment whose first line is a command
@@ -68,12 +74,13 @@ https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
   neighbours as lists; and its review box, as the site had it in September, asking "Is this theorem
   (lemma, definition, …) correctly stated?" with Yes and No: below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, each answer's mark
-  in **Who** (its reasons on hover, its issue a click away), each no in full, and, when something
-  tests it, a Tested by mark with each test in **Which**. Formulas in docstrings and in Voyager's
+  in **Who** (its reasons on hover, its issue a click away), each no in full; **What could be
+  better**, its suggestions and the button to add one; and, when something tests it, a Tested by
+  mark with each test in **Which**. Formulas in docstrings and in Voyager's
   sentences are typeset, whether written in TeX (`$…$`) or as text with TeX's marks
   (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`).
-- **Browse**, **Search** (names and docstring titles), **Activity** (the noes still open, what to
-  review next, reviewers) and **How to review**.
+- **Browse**, **Search** (names and docstring titles), **Activity** (the noes and the suggestions
+  still open, what to review next, reviewers) and **How to review**.
 
 Colour on a declaration means its review state: an open ring for not reviewed, white for reviewed,
 salmon for reviewed by AI agents only or on an earlier version, red for a no still open. A switch on

@@ -206,6 +206,7 @@ class PageFilesTests(unittest.TestCase):
     def test_activity(self):
         act = data("activity.json")
         self.assertEqual([v["decl"] for v in act["problems"]], ["Fixture.triple_comm"])
+        self.assertEqual([v["decl"] for v in act["questions"]], ["Fixture.triple"])  # what could be better
         self.assertEqual([v["decl"] for v in act["challenges"]], ["Fixture.double"])
         self.assertIn("Claude Code (claude-opus-5-5) via example", [r["label"] for r in act["reviewers"]])
 

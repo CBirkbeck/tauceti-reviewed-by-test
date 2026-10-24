@@ -145,6 +145,9 @@ class FormTests(unittest.TestCase):
         self.assertEqual(fields("evidence-problem.yml"), [("decl", True), ("commit", False), ("rationale", True)])
         self.assertEqual((forms["evidence-review.yml"]["labels"], forms["evidence-problem.yml"]["labels"]),
                          (["evidence:review"], ["evidence:problem"]))
+        # What could be better: a suggestion, on the question form, required.
+        self.assertEqual(fields("evidence-question.yml"), [("decl", True), ("commit", False), ("question", True)])
+        self.assertEqual(forms["evidence-question.yml"]["name"], "What could be better")
 
     def test_a_no_from_the_form_says_why(self):
         from evidence_store import forms

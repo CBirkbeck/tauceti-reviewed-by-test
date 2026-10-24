@@ -3,8 +3,8 @@
    comes from TauData (what the build wrote), laid out with TauRender and TauMap. */
 (function () {
   'use strict';
-  const {el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT, URLS, ANSWERS, questionWord, date,
-         plural, who, shortName, plain} = TauRender;
+  const {el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT, URLS, ANSWERS, SUGGEST, questionWord,
+         date, plural, who, shortName, plain} = TauRender;
   const {FLAG, STATES} = TauData;
   const $ = id => document.getElementById(id);
   const main = $('main');
@@ -177,7 +177,7 @@
 
   /* --- records -------------------------------------------------------------------------------------- */
   function verdictBadge(v) {
-    const words = {review: {accept: 'Correctly stated', problem: 'Not correctly stated', question: 'Question'}[v.verdict] || 'Review',
+    const words = {review: {accept: 'Correctly stated', problem: 'Not correctly stated', question: 'What could be better'}[v.verdict] || 'Review',
                    test: 'Test', challenge: 'Suggested test', named: 'Named', comment: 'Reply'};
     return el('span', 'verdict ' + (v.kind === 'review' ? v.verdict : v.kind), words[v.kind] || v.kind);
   }
@@ -513,13 +513,14 @@
 
   /* The review box, as the site had it in September (scripts/build_site.py before the rebuild), asking one
      question: is it correctly stated? Yes, or no and why. Below it the answers, people counted apart from AI
-     agents and each answerer a click away, each no in full; then any questions, and what tests it. */
+     agents and each answerer a click away, each no in full; then what could be better, people's suggestions
+     for it when it is correct; and what tests it. */
   function reviewCard(meta, name, modName, project, records, tests, word) {
     const card = el('section', 'review');
     card.id = 'review';
     if (project) {
       const ask = el('div', 'actions');
-      ask.append(el('span', 'question', `Is this ${word} correctly stated?`));
+      ask.append(el('span', 'ask', `Is this ${word} correctly stated?`));
       ANSWERS.forEach(([text, template, prefix, cls]) => ask.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
       ask.append(ext(URLS.docs(meta, name, modName), 'Read it in the API docs ↗', 'btn docs'));
       card.append(ask, el('p', 'how', 'Either answer opens a short form on GitHub, filled in; a no asks you why.'));
@@ -537,8 +538,19 @@
       card.append(line);
     });
     card.append(el('p', 'sub', 'Reviews'), answers(reviews('accept'), reviews('problem'), byId));
-    const questions = reviews('question');
-    if (questions.length) card.append(el('p', 'sub', 'Questions'), ...questions.map(v => report(v, byId)));
+    // What could be better: suggestions, on the store's question form, which count as neither yes nor no.
+    const suggestions = reviews('question');
+    if (project || suggestions.length) {
+      card.append(el('p', 'sub', 'What could be better'));
+      if (project) {
+        const line = el('div', 'better');
+        line.append(el('span', 'how', 'Correct, but could it be done better? More general, a better name or docstring, a cleaner statement.'),
+                    ext(URLS.form(meta, SUGGEST[1], SUGGEST[2], name), SUGGEST[0], 'btn ' + SUGGEST[3]));
+        card.append(line);
+      }
+      if (suggestions.length) card.append(...suggestions.map(v => report(v, byId)));
+      else card.append(el('p', 'empty', 'No suggestions yet.'));
+    }
     const challenges = records.filter(v => v.kind === 'challenge' && v.state !== 'met');  // a met one is a listed test
     if (tests.length || challenges.length) card.append(el('p', 'sub', 'Tests'), testMarks(tests, challenges, byId));
     return card;
@@ -655,13 +667,13 @@
     box.append(row, which);
     return box;
   }
-  /* A no or a question: where it stands, who said it and when, why, the replies, and its issue with what was
-     decided on it. */
+  /* A no or a suggestion (a question record): where it stands, who said it and when, what they said, the
+     replies, and its issue with what was decided on it. */
   function report(v, byId) {
     const open = v.state === 'open', question = v.verdict === 'question';
     const box = el('div', 'report' + (question ? ' question' : '') + (open ? '' : ' closed')), head = el('p', 'head');
-    head.append(el('span', 'state', open ? 'Open' : STATE_WORDS[v.state] || 'Closed'), ' · ',
-                question ? 'asked by ' : (v.category && v.category !== 'other' ? v.category + ' · ' : '') + 'answered no by ',
+    head.append(el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? 'Closed' : STATE_WORDS[v.state] || 'Closed'), ' · ',
+                question ? 'suggested by ' : (v.category && v.category !== 'other' ? v.category + ' · ' : '') + 'answered no by ',
                 markWho(v.by), ', ' + date(v.at));
     const note = v.status !== 'current' && statusNote(v);
     if (note) head.append(' · ', el('span', 'note', note));
@@ -816,14 +828,14 @@
     const reviewers = el('div', 'chips');
     act.reviewers.forEach(r => reviewers.append(el('span', 'chip' + (r.kind === 'agent' ? ' agent' : ''), `${r.label} · ${r.n}`)));
     const stats = el('div', 'stats');
-    [[act.problems.length, 'no, still open'], [act.questions.length, 'open questions'], [act.challenges.length, 'suggested tests open'],
+    [[act.problems.length, 'no, still open'], [act.questions.length, 'suggestions open'], [act.challenges.length, 'suggested tests open'],
      [act.reviewers.length, 'reviewers']].forEach(([n, t]) => { const s = el('div', 'stat'); s.append(el('b', null, count(n)), el('span', null, t)); stats.append(s); });
     if (gen !== generation) return;
     setNav('activity');
     show(el('h1', null, 'Activity'),
       el('p', 'lede', `Everything recorded about ${meta.library.name}, newest first, and what is still open.`), stats,
       section('Answered no, still open', act.problems.length, recordList(act.problems, 'None.')),
-      act.questions.length ? section('Open questions', act.questions.length, recordList(act.questions, '')) : null,
+      section('What could be better, still open', act.questions.length, recordList(act.questions, 'No suggestions open.')),
       act.challenges.length ? section('Suggested tests, still open', act.challenges.length, recordList(act.challenges, '')) : null,
       section('What to review next', null, hint(`Unreviewed declarations of ${meta.library.name} that named results rest on, those most of them share first.`),
               queue.length ? queueList : el('p', 'faint', 'Nothing yet.')),
@@ -848,6 +860,11 @@
             p('Correctly stated means that it says what it should: it is the intended notion, or states the intended result, as its ',
               'name, its docstring and the literature say. Not that its proof is right: Lean checks that.'),
             p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first.')),
+      section('What could be better', null, prose(
+        p('Something can be correctly stated and still be done better: stated more generally, with a better name or docstring, more ',
+          'cleanly, or with a lemma it should come with. Say so under ', el('b', null, 'What could be better'), ' in the review box: ',
+          el('b', null, 'Suggest an improvement'), ' opens a short form on GitHub, filled in. A suggestion is neither a yes nor a no. ',
+          'Replies are comments on its issue, and you or a maintainer close it when it is dealt with.'))),
       section('Versions', null, prose(
         p("An answer is pinned to the declaration as it was: to its meaning hash, which changes when the declaration changes or anything it rests on does. ",
           `A yes about an earlier version stays, greyed: "the declaration has changed since", or "something it rests on has changed since". Nothing is written into ${lib}.`))),

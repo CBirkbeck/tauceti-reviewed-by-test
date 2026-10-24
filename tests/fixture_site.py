@@ -2,8 +2,8 @@
 """A small site built from the suite's fixture (tests/fixtures, from LeanTrustBuilders/specs and
 LeanTrustBuilders/extractor, Apache-2.0): the declarations of its version B and their sources, the
 records of the suite's conformance vectors (made against version A), Voyager's announcements of two of
-its declarations, an AI agent's review, a no still open, a listed test, a proposed test, and a review of
-an upstream declaration in a store this one imports. The unit tests and the browser check read it.
+its declarations, an AI agent's review, a no still open, a suggestion of what could be better, a listed
+test, a proposed test, and a review of an upstream declaration in a store this one imports. The unit tests and the browser check read it.
 
   python3 tests/fixture_site.py OUT
 """
@@ -48,8 +48,8 @@ SOMEONE = {"kind": "person", "identity": {"kind": "github", "id": "someone"}}
 
 
 def extra_records(ds: Dataset) -> list[dict]:
-    """What the vectors lack: an AI agent's review, a no still open (as the form records one), a listed
-    test, a proposed test."""
+    """What the vectors lack: an AI agent's review, a no still open (as the form records one), a
+    suggestion (the question form's record), a listed test, a proposed test."""
     key = lambda name: rec.subject_from_decl(ds.by_name[name], ds)
     issue = lambda n: {"kind": "issue", "ref": f"example/fixture-store#{n}"}
     return [
@@ -58,6 +58,9 @@ def extra_records(ds: Dataset) -> list[dict]:
         {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple_comm"), "verdict": "problem",
          "category": "other", "rubric": "ltb-rubric/1", "by": SOMEONE, "at": "2026-10-23T09:00:00Z", "origin": issue(14),
          "text": "Its name says commutativity, but it states `triple b = b + b + b`: the definition, unfolded."},
+        {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple"), "verdict": "question", "by": SOMEONE,
+         "text": "It could be stated for any semiring: `n + n + n` makes sense there.", "at": "2026-10-23T10:00:00Z",
+         "origin": issue(15)},
         {"schema": rec.SCHEMA, "kind": "test", "subject": key("Fixture.triple"), "test": key("Fixture.triple_two"),
          "text": "its value at 2", "by": PERSON, "at": "2026-10-22T11:00:00Z", "origin": issue(12)},
         {"schema": rec.SCHEMA, "kind": "challenge", "subject": key("Fixture.double"),
