@@ -199,6 +199,18 @@ a.stat span { color: var(--accent); }
 .review .actions .btn.no:hover { background: color-mix(in srgb, var(--no) 14%, var(--surface)); }
 .review .actions .btn.docs { margin-left: auto; }
 .review .how { margin: 6px 0 0; font-size: 12.5px; color: var(--faint); }
+.review form.unfold { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.review form.unfold[hidden], .review .sent-note[hidden] { display: none; }
+.review form.unfold label { font-size: 13px; color: var(--ink-soft); }
+.review form.unfold textarea { width: 100%; resize: vertical; background: var(--surface); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 7px 10px; font: 14px/1.5 var(--sans); }
+.review form.unfold textarea.mono { font-family: var(--mono); font-size: 13px; }
+.review .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.review .form-actions .btn { font-size: 13.5px; padding: 5px 12px; border-radius: 6px; }
+.review .btn.send { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.review .btn.send:disabled { opacity: .5; cursor: not-allowed; }
+.review .sent-note { margin: 6px 0; font-size: 13px; color: var(--ink-soft); }
+.review .actions .btn.yes[aria-expanded="true"] { background: color-mix(in srgb, var(--result) 14%, var(--surface)); }
+.review .actions .btn.no[aria-expanded="true"] { background: color-mix(in srgb, var(--no) 14%, var(--surface)); }
 .review .offer { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 2px 0 6px; }
 .review .offer .how { margin: 0; font-size: 13.5px; color: var(--muted); }
 .review .offer .btn { font-size: 13px; padding: 4px 11px; border-radius: 6px; color: var(--accent);
@@ -338,7 +350,13 @@ pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; backgrou
 .map .open:focus { outline: none; }
 
 /* Hover over a name. */
-.tip { position: fixed; z-index: 50; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, .3); font-size: 13.5px; pointer-events: none; }
+.tip { position: fixed; z-index: 50; max-width: min(480px, calc(100vw - 16px)); max-height: 70vh; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, .3); font-size: 13.5px; }
+.tip .lean { margin-top: 6px; }
+.tip .lean pre { padding: 6px 9px; font-size: 12.5px; }
+.tip .lean pre + pre { border-top: 1px dashed var(--line); }
+.tip .t-link { display: inline-block; margin-top: 5px; font-size: 13px; }
+.var { font-style: italic; cursor: help; border-radius: 3px; }
+.var.hit { background: var(--hit); }
 .tip .t-name { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .tip .t-title { font-family: var(--serif); font-size: 15px; margin-top: 2px; }
 .tip .t-stmt { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; overflow-wrap: anywhere; }

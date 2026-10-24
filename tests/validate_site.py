@@ -154,8 +154,21 @@ def declaration(browser, url, errors):
     expect(page.locator(".lean details").count() == 0 and "omega" not in page.inner_text("main"), "no proof")
     expect(page.locator("h2", has_text="What it is about").count() == 0, "what a theorem is about is the map's, not a list")
     ref.hover()
-    page.wait_for_selector("#tip:not([hidden])")
-    expect("Fixture.triple · Definition" in page.locator("#tip").inner_text(), "a name says what it is on hover")
+    page.wait_for_selector(".tip")
+    card = page.locator(".tip").first
+    expect("Fixture.triple · Definition" in card.inner_text() and "def Fixture.triple (n : Nat) : Nat" in card.locator(".lean pre").first.inner_text(),
+           "a name's card on hover: what it is, and its signature")
+    inner = card.locator("a.ref[data-name]").first
+    inner_name = inner.get_attribute("data-name")
+    inner.hover()
+    page.wait_for_function("document.querySelectorAll('.tip').length === 2")
+    expect(inner_name in page.locator(".tip").nth(1).inner_text(), "a name in the card opens its own card on top")
+    page.mouse.move(2, 2)
+    page.wait_for_function("document.querySelectorAll('.tip').length === 0")
+    page.locator(".lean .var[data-var=n]").first.hover()
+    page.wait_for_selector(".tip")
+    expect("n : Nat" in page.locator(".tip").first.inner_text() and page.locator("main .lean .var.hit").count() == 3,
+           "a variable's card is its type, and its uses light up")
 
 
 @check
@@ -163,11 +176,26 @@ def review(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     box = page.locator(".review")
     expect(box.locator(".ask").inner_text() == "Is this definition correctly stated?", "one question, naming what it asks about")
-    expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts() == ["Yes", "No"], "and two answers")
-    yes, no = (box.locator(".actions a", has_text=t).get_attribute("href") for t in ("Yes", "No"))
+    expect(box.locator(".actions button").all_inner_texts() == ["Yes", "No"], "and two answers")
+    page.evaluate("window.__opened = []; window.open = u => { window.__opened.push(u); return null; }")
+    opened = lambda: page.evaluate("window.__opened[window.__opened.length - 1]")
+    shown = box.locator("form.unfold:visible")
+    box.locator(".actions button", has_text="Yes").click()
+    expect(shown.count() == 1 and shown.locator("button.send").is_enabled(), "yes unfolds its form in the box, a reason optional")
+    shown.locator("textarea").fill("Checked against Stacks.")
+    shown.locator("button.send").click()
+    yes = opened()
     expect(yes.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in yes
-           and "decl=Fixture.triple" in yes and "commit=B" in yes, "yes opens the review form, filled in")
-    expect("template=evidence-problem.yml" in no and "decl=Fixture.triple" in no and "commit=B" in no, "no opens the form that asks why")
+           and "decl=Fixture.triple" in yes and "commit=B" in yes and "rationale=Checked+against+Stacks." in yes
+           and shown.count() == 0 and box.locator(".sent-note:visible").count() == 1,
+           "Send opens the review form on GitHub, filled in with the reason too, and says so")
+    box.locator(".actions button", has_text="No").click()
+    expect(shown.locator("button.send").is_disabled(), "no unfolds the form that asks why, and will not send without it")
+    shown.locator("textarea").fill("It is the wrong object.")
+    shown.locator("button.send").click()
+    no = opened()
+    expect("template=evidence-problem.yml" in no and "decl=Fixture.triple" in no and "rationale=It+is+the+wrong+object." in no,
+           "and opens the problem form on GitHub, filled in")
     expect(box.locator(".actions a", has_text="Read it in the API docs").get_attribute("href")
            == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review box links to the docs")
     tally = box.locator(".mark.tally.yes")
@@ -188,12 +216,19 @@ def review(browser, url, errors):
     test.locator("summary").click()
     page.wait_for_function("document.querySelector('.tests-list details.test .lean pre')")
     expect("= 6" in test.locator(".lean pre").inner_text(), "which opens to its statement, as the docs show it")
-    better = box.locator(".offer a", has_text="Suggest an improvement").get_attribute("href")
-    expect("template=evidence-question.yml" in better and "decl=Fixture.triple" in better and "commit=B" in better,
-           "What could be better: a suggestion opens its form, filled in")
-    test = box.locator(".offer a", has_text="Suggest a test").get_attribute("href")
-    expect("template=evidence-challenge.yml" in test and "decl=Fixture.triple" in test and "commit=B" in test,
-           "Tests: a test to suggest opens its form, filled in")
+    box.locator(".offer button", has_text="Suggest an improvement").click()
+    shown.locator("textarea").fill("State it for any semiring.")
+    shown.locator("button.send").click()
+    better = opened()
+    expect("template=evidence-question.yml" in better and "decl=Fixture.triple" in better and "question=State+it+for+any+semiring." in better,
+           "What could be better: a suggestion unfolds its form, and Send opens it on GitHub, filled in")
+    box.locator(".offer button", has_text="Suggest a test").click()
+    expect(shown.locator("textarea").count() == 3, "a test asks what it should satisfy, its Lean statement and what it would catch")
+    shown.locator("textarea").first.fill("its value at 0")
+    shown.locator("button.send").click()
+    test = opened()
+    expect("template=evidence-challenge.yml" in test and "decl=Fixture.triple" in test and "property=its+value+at+0" in test,
+           "Tests: a test to suggest unfolds its form, and Send opens it on GitHub, filled in")
     suggestion = box.locator(".report.question").inner_text()
     expect("suggested by @someone" in suggestion and "any semiring" in suggestion and "Issue #15" in suggestion,
            "and each suggestion shows, with who made it and its issue")
@@ -220,7 +255,7 @@ def review(browser, url, errors):
     expect("answered no by @someone" in report and "the definition, unfolded" in report and "Issue #14" in report,
            "the no in full: who, why, and its issue")
     expect(box.locator(".sub", has_text="Tests").count() == 1 and "No tests yet." in box.inner_text()
-           and box.locator(".offer a", has_text="Suggest a test").count() == 1, "Tests, with a test to suggest, where nothing tests it yet")
+           and box.locator(".offer button", has_text="Suggest a test").count() == 1, "Tests, with a test to suggest, where nothing tests it yet")
     expect("No suggestions yet." in box.inner_text(), "What could be better, with nothing suggested yet")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
     expect("what it rests on has changed" in page.locator(".review .answers-list").inner_text(), "stale underneath, said")
@@ -235,7 +270,7 @@ def review(browser, url, errors):
     page = visit(browser, url, "#/d/Int", errors)
     box = page.locator(".review")
     expect("from the Test imports store" in box.inner_text(), "an imported review names its store")
-    expect(box.locator(".actions a[href*='/issues/new?']").all_inner_texts() == ["Yes", "No"] and page.locator(".map").count() == 0,
+    expect(box.locator(".actions button").all_inner_texts() == ["Yes", "No"] and page.locator(".map").count() == 0,
            "outside the library, a package the settings name is asked about too (Mathlib on the site), with no map")
     expect(box.locator(".actions a", has_text="Read it in Mathlib's docs").get_attribute("href")
            == "https://leanprover-community.github.io/mathlib4_docs/Init/Data/Int/Basic.html#Int", "and read in Mathlib's docs")
@@ -377,7 +412,7 @@ def smoke(browser, url, errors):
     for name in names:
         page = visit(browser, url, "#/d/" + name, errors)
         map_drawn(page)
-        expect(page.locator("h1").count() == 1 and page.locator(".review .actions a[href*='/issues/new?']").count() == 2,
+        expect(page.locator("h1").count() == 1 and page.locator(".review .actions button").count() == 2,
                f"{name}: its page and its question's two answers")
         arrow = page.locator(".map .node .open:not(.opened)")
         if arrow.count():  # an arrow unfolds something, or says it found nothing

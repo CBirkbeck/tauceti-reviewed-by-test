@@ -250,6 +250,88 @@
       at = b;
     });
     if (at < cps.length) pre.append(cps.slice(at).join(''));
+    pre.sig = {text, refs, names};
+    markVars(pre, text);
+    return pre;
+  }
+  /* The variables a signature binds, `(n m : ℕ)`, `{x : α}`, `⦃x : α⦄`, `[inst : C]`, each with where its type
+     is in the text (code points), read from the binders before the colon that starts the conclusion. */
+  const CLOSE = {'(': ')', '{': '}', '⦃': '⦄', '[': ']'}, CLOSERS = new Set(Object.values(CLOSE));
+  function binders(text) {
+    const cps = Array.from(text), found = [];
+    for (let i = 0; i < cps.length; i++) {
+      if (cps[i] === ':' && cps[i - 1] === ' ' && cps[i + 1] === ' ') break;
+      if (!(cps[i] in CLOSE)) continue;
+      let depth = 0, j = i;
+      for (; j < cps.length; j++) {
+        if (cps[j] in CLOSE) depth++;
+        else if (CLOSERS.has(cps[j]) && --depth === 0) break;
+      }
+      let colon = -1, end = j;
+      for (let k = i + 1, d = 0; k < j; k++) {
+        if (cps[k] in CLOSE) d++;
+        else if (CLOSERS.has(cps[k])) d--;
+        else if (d === 0 && cps[k] === ':' && cps[k + 1] === '=' && colon > 0) { end = k; break; }
+        else if (d === 0 && cps[k] === ':' && cps[k + 1] !== '=' && colon < 0) colon = k;
+      }
+      if (colon > 0) {
+        const a = colon + (cps[colon + 1] === ' ' ? 2 : 1);
+        cps.slice(i + 1, colon).join('').trim().split(/\s+/).filter(x => IDENT_ONLY.test(x))
+          .forEach(name => found.push({name, a, b: end}));
+      }
+      i = j;
+    }
+    return found;
+  }
+  const IDENT = /[\p{L}_][\p{L}\p{N}_'!?\u2080-\u209c]*/gu, IDENT_ONLY = /^[\p{L}_][\p{L}\p{N}_'!?\u2080-\u209c]*$/u;
+  /* Each use of a bound variable as a span to hover: it shows the variable's type and its other uses. */
+  function markVars(pre, text) {
+    const vars = new Map(binders(text).map(v => [v.name, v]));
+    if (!vars.size) return;
+    const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT), nodes = [];
+    while (walker.nextNode()) if (!walker.currentNode.parentElement.closest('a, .kw')) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const s = node.nodeValue, frag = document.createDocumentFragment();
+      let at = 0;
+      for (const m of s.matchAll(IDENT)) {
+        const v = vars.get(m[0]);
+        if (!v) continue;
+        if (m.index > at) frag.append(s.slice(at, m.index));
+        const span = el('span', 'var', m[0]);
+        Object.assign(span.dataset, {var: m[0], a: v.a, b: v.b});
+        frag.append(span);
+        at = m.index + m[0].length;
+      }
+      if (!at) return;
+      if (at < s.length) frag.append(s.slice(at));
+      node.replaceWith(frag);
+    });
+  }
+  /* A piece of a signature, its names linked: a variable's type. */
+  function sigSlice(src, a, b) {
+    const text = Array.from(src.text).slice(a, b).join('').trimEnd();
+    return signature(null, text, src.refs.filter(r => r[0] >= a && r[1] <= b).map(r => [r[0] - a, r[1] - a, r[2]]), src.names);
+  }
+  /* A definition's value, a structure's fields or an inductive type's constructors, as the source has them,
+     the names of what it rests on linked: by full name, else by last component when only one fits. */
+  async function valueBlock(rest, n) {
+    const deps = await TauData.nodes((n.m || []).concat(n.p || []));
+    const byName = new Set(deps.map(x => x.name)), byLast = new Map();
+    deps.forEach(x => { const last = x.name.slice(x.name.lastIndexOf('.') + 1); byLast.set(last, byLast.has(last) && byLast.get(last) !== x.name ? null : x.name); });
+    const pre = el('pre');
+    let at = 0;
+    for (const m of rest.matchAll(/[\p{L}_][\p{L}\p{N}_'!?\u2080-\u209c.]*/gu)) {
+      const word = m[0].replace(/\.+$/, ''), dot = word.lastIndexOf('.');
+      let target = byName.has(word) ? word : null, from = m.index, text = word;
+      if (!target && byLast.get(word.slice(dot + 1))) { target = byLast.get(word.slice(dot + 1)); from = m.index + dot + 1; text = word.slice(dot + 1); }
+      if (!target) continue;
+      if (from > at) pre.append(rest.slice(at, from));
+      const l = link(URLS.decl(target), text, 'ref');
+      l.dataset.name = target;
+      pre.append(l);
+      at = from + text.length;
+    }
+    if (at < rest.length) pre.append(rest.slice(at));
     return pre;
   }
 
@@ -467,16 +549,15 @@
       else { const pre = el('pre'); pre.textContent = e.stmt; lean.append(pre); }
       if (e.rest) {
         const what = n.kind === 'inductive' ? 'Constructors' : (n.kind === 'structure' || n.kind === 'class') ? 'Fields' : 'Definition';
-        const det = el('details'), body = el('pre');
+        const det = el('details'), body = await valueBlock(e.rest, n);
         det.open = what !== 'Definition';
-        body.textContent = e.rest;
         det.append(el('summary', null, what), body);
         lean.append(det);
       }
       if (e.cut && d.module) { const c = el('div', 'cut'); c.append('The text goes on: ', ext(URLS.source(meta, d.module.path, e.line), 'read it in the source')); lean.append(c); }
       const sec = el('section', 'section');
       sec.append(el('h3', null, 'In Lean'), lean,
-                 el('p', 'lean-note', 'As the docs show it, with no proof. Hover over a name to see what it is; click it to open it.'));
+                 el('p', 'lean-note', 'As the docs show it, with no proof. Hover over a name to see what it is, then over the names in its card; hover over a variable to see its type. Click a name to open it.'));
       parts.push(sec);
     }
     // The review box.
@@ -527,9 +608,12 @@
     if (open) {
       const ask = el('div', 'actions');
       ask.append(el('span', 'ask', `Is this ${word} correctly stated?`));
-      ANSWERS.forEach(([text, template, prefix, cls]) => ask.append(ext(URLS.form(meta, template, prefix, name), text, 'btn ' + cls)));
+      const answers = ANSWERS.map(a => formFor(meta, name, a));
+      answers.forEach(f => ask.append(f.button));
       ask.append(ext(read.url, read.label, 'btn docs'));
-      card.append(ask, el('p', 'how', 'Either answer opens a short form on GitHub, filled in; a no asks you why.'), aiOffer(meta, name, read.from));
+      card.append(ask, ...answers.flatMap(f => [f.form, f.note]),
+                  el('p', 'how', 'Yes and No open a short form here; a no asks you why. Send takes it to GitHub, filled in, where one click files it.'),
+                  aiOffer(meta, name, read.from));
     } else {
       card.append(hint(records.length ? `Reviews of ${name} are kept in the stores that review it; they show here as they are.`
                                       : `Outside ${meta.library.name}: review it where it lives.`));
@@ -545,10 +629,11 @@
     });
     card.append(el('p', 'sub', 'Reviews'), answers(reviews('accept'), reviews('problem'), byId));
     // A line offering a form: what it is for, and its button.
-    const offer = (text, [label, template, prefix, cls]) => {
-      const line = el('div', 'offer');
-      line.append(el('span', 'how', text), ext(URLS.form(meta, template, prefix, name), label, 'btn ' + cls));
-      return line;
+    const offer = (text, spec) => {
+      const f = formFor(meta, name, spec), line = el('div', 'offer'), frag = document.createDocumentFragment();
+      line.append(el('span', 'how', text), f.button);
+      frag.append(line, f.form, f.note);
+      return frag;
     };
     // What could be better: suggestions, on the store's question form, which count as neither yes nor no.
     const suggestions = reviews('question');
@@ -566,6 +651,68 @@
       card.append(testMarks(tests, challenges, byId));
     }
     return card;
+  }
+  /* A short form that unfolds in the review box: what each one asks for, by its template, and Send, which opens it
+     on GitHub filled in with the declaration, the commit and what was written, for one click to file it. */
+  const FIELDS = {
+    'evidence-review.yml': [{id: 'rationale', label: 'Why? (optional)', hint: 'What you compared it with, what you checked.'}],
+    'evidence-problem.yml': [{id: 'rationale', label: 'Why is it not correctly stated?', hint: 'A case it gets wrong, a counterexample, or what it should say.', required: true}],
+    'evidence-question.yml': [{id: 'question', label: 'What could be better?', hint: 'More general, a better name or docstring, a cleaner statement.', required: true}],
+    'evidence-challenge.yml': [{id: 'property', label: 'What it should satisfy', hint: 'A value, an edge case, an agreement with another notion.', required: true},
+                               {id: 'statement', label: 'As a Lean statement (optional)', mono: true},
+                               {id: 'catches', label: 'What it would catch (optional)'}],
+  };
+  let formSeq = 0;
+  function formFor(meta, name, [label, template, prefix, cls]) {
+    const id = 'form-' + (++formSeq), button = el('button', 'btn ' + cls, label), form = el('form', 'unfold');
+    const note = el('p', 'sent-note', 'Opened on GitHub, filled in: submit it there, and it shows here within minutes.');
+    button.type = 'button';
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', id);
+    form.id = id;
+    form.hidden = note.hidden = true;
+    const fields = FIELDS[template].map(f => {
+      const t = el('textarea', f.mono ? 'mono' : null), l = el('label', null, f.label);
+      t.id = `${id}-${f.id}`;
+      t.rows = f.mono ? 2 : 3;
+      if (f.hint) t.placeholder = f.hint;
+      l.htmlFor = t.id;
+      form.append(l, t);
+      return [f, t];
+    });
+    const send = el('button', 'btn send', 'Send on GitHub ↗'), cancel = el('button', 'btn', 'Cancel'), row = el('div', 'form-actions');
+    send.type = 'submit';
+    cancel.type = 'button';
+    row.append(cancel, send);
+    form.append(row);
+    const sync = () => { send.disabled = fields.some(([f, t]) => f.required && !t.value.trim()); };
+    const shut = () => { form.hidden = true; button.setAttribute('aria-expanded', 'false'); };
+    button.addEventListener('click', () => {
+      const opening = form.hidden, box = button.closest('.review');
+      // One form open at a time in a review box.
+      box.querySelectorAll('form.unfold').forEach(x => { x.hidden = true; });
+      box.querySelectorAll('[aria-controls^="form-"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+      box.querySelectorAll('.sent-note').forEach(x => { x.hidden = true; });
+      if (!opening) return;
+      form.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+      sync();
+      fields[0][1].focus();
+    });
+    form.addEventListener('input', sync);
+    cancel.addEventListener('click', () => { form.reset(); shut(); });
+    form.addEventListener('submit', ev => {
+      ev.preventDefault();
+      sync();
+      if (send.disabled) return;
+      const values = {};
+      fields.forEach(([f, t]) => { if (t.value.trim()) values[f.id] = t.value.trim(); });
+      window.open(URLS.form(meta, template, prefix, name, values), '_blank', 'noopener');
+      form.reset();
+      shut();
+      note.hidden = false;
+    });
+    return {button, form, note};
   }
   /* Instructions for an AI agent to review it as AI-REVIEWS.md says, for this declaration at this commit: copied
      with one click, and shown, to copy by hand where the browser will not. */
@@ -923,10 +1070,11 @@
     setNav('help');
     show(el('h1', null, 'How to review'),
       el('p', 'lede', 'A review answers one question: is this declaration correctly stated? Yes, or no and why.'),
-      prose(p('Open a declaration: its review box asks the question. ', el('b', null, 'Yes'), ' opens a short form on GitHub, filled in ',
-              'with the declaration and the commit this page shows: submit it. ', el('b', null, 'No'), ' opens one that asks why, ',
-              `and will not submit without it. Your answer is kept in this site's evidence store under your GitHub account, `,
-              'and shows on the page within minutes. No pull request.'),
+      prose(p('Open a declaration: its review box asks the question. ', el('b', null, 'Yes'), ' opens a short form in the box, a reason ',
+              'optional; ', el('b', null, 'No'), ' opens one that asks why, and will not send without it. ', el('b', null, 'Send'),
+              ' opens it on GitHub, filled in with the declaration, the commit this page shows and what you wrote: submit it there. ',
+              `Your answer is kept in this site's evidence store under your GitHub account, and shows on the page within minutes. `,
+              'No pull request.'),
             p('Correctly stated means that it says what it should: it is the intended notion, or states the intended result, as its ',
               'name, its docstring and the literature say. Not that its proof is right: Lean checks that.'),
             p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first.'),
@@ -936,11 +1084,11 @@
       section('What could be better', null, prose(
         p('Something can be correctly stated and still be done better: stated more generally, with a better name or docstring, more ',
           'cleanly, or with a lemma it should come with. Say so under ', el('b', null, 'What could be better'), ' in the review box: ',
-          el('b', null, 'Suggest an improvement'), ' opens a short form on GitHub, filled in. A suggestion is neither a yes nor a no. ',
+          el('b', null, 'Suggest an improvement'), ' opens a short form in the box, and Send takes it to GitHub, filled in. A suggestion is neither a yes nor a no. ',
           'Replies are comments on its issue, and you or a maintainer close it when it is dealt with.'))),
       section('Tests', null, prose(
-        p('Under ', el('b', null, 'Tests'), ' in the review box, ', el('b', null, 'Suggest a test'), ' opens a short form on GitHub, filled ',
-          'in: a property the declaration should have, such as a value, an edge case or an agreement with another notion, in words and ',
+        p('Under ', el('b', null, 'Tests'), ' in the review box, ', el('b', null, 'Suggest a test'), ' opens a short form in the box, ',
+          'which Send takes to GitHub, filled in: a property the declaration should have, such as a value, an edge case or an agreement with another notion, in words and ',
           `if you can in Lean. It stays open until a declaration of ${lib} proves it; the page then lists that declaration as a test, `,
           'and checks at every commit that it still passes.'))),
       section('Versions', null, prose(
@@ -984,32 +1132,81 @@
       lib.date ? ` (${date(lib.date)})` : '', ` · built ${date(meta.built)} by the `, ext('https://github.com/LeanTrustBuilders', 'LeanTrustBuilders'),
       ' tools · reviews kept in ', ext(`https://github.com/${meta.store.repo}`, meta.store.repo), ' · ', link('#/help', 'How to review'));
   }
-  const tip = $('tip');
-  let tipFor = null;
-  document.addEventListener('mouseover', async ev => {
-    const a = ev.target.closest ? ev.target.closest('a.ref[data-name]') : null;
-    if (!a || a === tipFor) return;
-    tipFor = a;
-    const id = await TauData.idOf(a.dataset.name), n = id == null ? null : await TauData.node(id);
-    if (tipFor !== a || !n) return;
-    const lib = (await TauData.meta()).library.name, project = !!(n.flags & FLAG.PROJECT);
-    tip.replaceChildren(el('div', 't-name', `${n.name} · ${KIND_WORD[n.kind] || 'Declaration'}${project ? '' : ' · outside ' + lib}`));
-    if (n.title) { const t = el('div', 't-title'); t.append(mdInline(n.title)); tip.append(t); }
-    if (n.brief) tip.append(el('div', 't-stmt', n.brief));
-    if (project) { const s = el('div'); s.append(stateBadge(stateOf(n), true)); tip.append(s); }
-    const r = a.getBoundingClientRect();
-    tip.hidden = false;
-    tip.style.left = Math.max(8, Math.min(r.left, innerWidth - tip.offsetWidth - 8)) + 'px';
-    tip.style.top = (r.bottom + 8 + tip.offsetHeight > innerHeight ? r.top - tip.offsetHeight - 8 : r.bottom + 8) + 'px';
+  /* A name's card on hover: what it is, its signature with its names linked, a definition's value. A name in
+     a card opens its own card on top, and so on; a variable's card is its type. Without Lean: the cards show
+     what the docs and the source say, not what Lean elaborates. */
+  const cards = [];   // the open cards, outermost first
+  let closer = null, opening = 0;
+  function closeCards(depth) {
+    while (cards.length > depth) cards.pop().remove();
+    if (!depth) document.querySelectorAll('.var.hit').forEach(x => x.classList.remove('hit'));
+  }
+  const scheduleClose = () => { clearTimeout(closer); closer = setTimeout(() => closeCards(0), 350); };
+  async function nameCard(name) {
+    const [meta, d] = await Promise.all([TauData.meta(), TauData.decl(name)]);
+    if (!d) return null;
+    const n = d.node, e = d.entry || {}, project = !!(n.flags & FLAG.PROJECT);
+    const card = el('div', 'tip');
+    card.append(el('div', 't-name', `${n.name} · ${KIND_WORD[n.kind] || 'Declaration'}${project ? '' : ' · outside ' + meta.library.name}`));
+    if (n.title) { const t = el('div', 't-title'); t.append(mdInline(n.title)); card.append(t); }
+    if (project && e.sig) {
+      const lean = el('div', 'lean');
+      lean.append(signature(e.kw, e.sig, e.sigRefs || [], d.module.names || []));
+      if (e.rest) lean.append(await valueBlock(e.rest, n));
+      card.append(lean);
+      const s = el('div'); s.append(stateBadge(stateOf(n), true)); card.append(s);
+    } else {
+      if (n.brief) card.append(el('div', 't-stmt', n.brief));
+      const mod = ((await TauData.modules())[n.mod] || [''])[0];
+      if (mod.split('.')[0] === 'Mathlib') card.append(ext(URLS.mathlib(name, mod), "Mathlib's docs ↗", 't-link'));
+    }
+    return card;
+  }
+  function varCard(span) {
+    const pre = span.closest('pre');
+    if (!pre || !pre.sig) return null;
+    const card = el('div', 'tip'), lean = el('div', 'lean'), type = sigSlice(pre.sig, +span.dataset.a, +span.dataset.b);
+    type.prepend(span.dataset.var + ' : ');
+    lean.append(type);
+    card.append(el('div', 't-name', `${span.dataset.var} · variable`), lean);
+    return card;
+  }
+  async function openCard(anchor) {
+    clearTimeout(closer);
+    const mine = ++opening, inCard = anchor.closest('.tip'), depth = inCard ? cards.indexOf(inCard) + 1 : 0;
+    const card = anchor.matches('.var') ? varCard(anchor) : await nameCard(anchor.dataset.name);
+    if (mine !== opening || !card || !anchor.isConnected) return;
+    closeCards(depth);
+    document.querySelectorAll('.var.hit').forEach(x => x.classList.remove('hit'));
+    if (anchor.matches('.var')) anchor.closest('pre').querySelectorAll(`.var[data-var="${CSS.escape(anchor.dataset.var)}"]`).forEach(x => x.classList.add('hit'));
+    card.addEventListener('mouseenter', () => clearTimeout(closer));
+    card.addEventListener('mouseleave', scheduleClose);
+    card.style.zIndex = 50 + depth;
+    document.body.append(card);
+    const r = anchor.getBoundingClientRect();
+    card.style.left = Math.max(8, Math.min(r.left, innerWidth - card.offsetWidth - 8)) + 'px';
+    card.style.top = (r.bottom + 8 + card.offsetHeight > innerHeight ? Math.max(8, r.top - card.offsetHeight - 8) : r.bottom + 8) + 'px';
+    cards.push(card);
+  }
+  const HOVER = 'a.ref[data-name], .var';
+  document.addEventListener('mouseover', ev => {
+    const a = ev.target.closest ? ev.target.closest(HOVER) : null;
+    if (a && !(ev.relatedTarget && a.contains(ev.relatedTarget))) openCard(a);
   });
-  document.addEventListener('mouseout', ev => { if (tipFor && !tipFor.contains(ev.relatedTarget)) { tip.hidden = true; tipFor = null; } });
+  document.addEventListener('mouseout', ev => {
+    const a = ev.target.closest ? ev.target.closest(HOVER + ', .tip') : null;
+    if (a && !(ev.relatedTarget && a.contains(ev.relatedTarget))) scheduleClose();
+  });
+  document.addEventListener('focusin', ev => { if (ev.target.matches && ev.target.matches('a.ref[data-name]')) openCard(ev.target); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeCards(0); });
+  addEventListener('scroll', () => closeCards(0), {passive: true});
 
   /* --- wiring --------------------------------------------------------------------------------------- */
   async function route() {
     const r = parse(location.hash);
     if (location.hash && !location.hash.startsWith('#/') && r[0] !== 'missing') history.replaceState(null, '', address(r));
     current = r.join(':');
-    tip.hidden = true; tipFor = null;
+    closeCards(0);
     const gen = ++generation;
     ready = false;
     try {

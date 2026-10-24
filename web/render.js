@@ -57,8 +57,8 @@
     github: login => `https://github.com/${encodeURIComponent(login)}`,
     issues: meta => `https://github.com/${meta.store.repo}/issues`,
     bulk: meta => `https://github.com/${meta.store.repo}/issues/${meta.store.bulk}`,
-    form: (meta, template, title, name) => `https://github.com/${meta.store.repo}/issues/new?` +
-      new URLSearchParams({template, title: title + name, decl: name, commit: meta.library.commit}).toString(),
+    form: (meta, template, title, name, fields = {}) => `https://github.com/${meta.store.repo}/issues/new?` +
+      new URLSearchParams({template, title: title + name, decl: name, commit: meta.library.commit, ...fields}).toString(),
     decl: name => '#/d/' + encodeURIComponent(name),
   };
   /* The one question a review answers, and its two answers: yes opens the review form, no the problem

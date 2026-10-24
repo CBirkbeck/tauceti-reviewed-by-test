@@ -330,7 +330,9 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      formula written as text with TeX's marks (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`, in a code span
      or in a sentence) typeset too (`web/formulas.js`); Lean in a code span stays code;
   3. **In Lean,** what the docs show of it: the signature Lean prints (the dataset's `signature`
-     facet: section variables included, every name a link, and on hover what it is), a definition's
+     facet: section variables included, every name a link, and on hover its card: what it is, its signature with
+     its names linked and a definition's value with its names linked, so that a name in a card opens its own card in
+     turn, and a variable's type, its uses lit up; all from the site's data, no Lean, asked for on 2026-10-24), a definition's
      value folded (the docs' Equations), a structure's fields, and never a proof;
   4. the **review box**, as the site had it in September (asked for on 2026-10-24), asking one
      question (asked for the same day): "Is this theorem correctly stated?" (lemma, definition,

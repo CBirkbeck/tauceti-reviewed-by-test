@@ -82,11 +82,14 @@ agent's, but its reasons add only what the answers already there lack.
 - **Reviewed**: every declaration answered for, the latest answer first, with its yeses and noes
   counted (people apart from AI agents), Mathlib's marked; filters for yes or no, and for people or AI
   agents.
-- **A declaration**: its docstring and Lean source, links to the API docs, the source and Voyager's
+- **A declaration**: its docstring and Lean source (hover over a name for its card: what it is, its signature
+  with its names linked, a definition's value; a name in a card opens its own card, and so on; a
+  variable shows its type and lights up its uses), links to the API docs, the source and Voyager's
   post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
   uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), then as lists how
   it is proved, what is built on it, its examples and what it is used to prove; and its review box, as the site had it in September, asking "Is this theorem
-  (lemma, definition, …) correctly stated?" with Yes and No: below, a Correctly stated mark counting
+  (lemma, definition, …) correctly stated?" with Yes and No, each opening a short form in the box (Send opens
+  it on GitHub, filled in, for one click to file it): below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
   mark, a twisty when it gives reasons that opens to why and its issue, and
   each no in full; **What could be better**, its suggestions and the button to add one; and **Tests**,
