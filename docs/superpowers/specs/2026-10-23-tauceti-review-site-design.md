@@ -308,8 +308,10 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      lists, past 160 characters, gives way to the Lean name); the Lean name, with copy; links
      to Tau Ceti's API docs (`taucetiproject.org/docs/<Module path>.html#<name>`), to the source at
      the pinned commit, to the Voyager post and its pull requests;
-  2. Voyager's sentence, and the docstring, less the first sentence when that is the title, so that
-     nothing is said twice (asked for on 2026-10-24), its maths rendered: `$…$` as KaTeX renders it, and a
+  2. Voyager's sentence, and the docstring, less what the title already says (asked for on
+     2026-10-24): its first sentence when that is the title, and under Voyager's name a bold opening
+     that is a sentence or a heading of its own and only names it ("**Strassmann's theorem.** Let …"),
+     but not one that goes on in its sentence or says more; its maths rendered: `$…$` as KaTeX renders it, and a
      formula written as text with TeX's marks (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`, in a code span
      or in a sentence) typeset too (`web/formulas.js`); Lean in a code span stays code;
   3. **In Lean,** what the docs show of it: the signature Lean prints (the dataset's `signature`

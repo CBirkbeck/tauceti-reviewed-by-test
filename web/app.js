@@ -250,6 +250,20 @@
     return doc.slice(i).replace(/^\s+/, '');
   }
 
+  /* A docstring less its bold opening, when the opening is a sentence or a heading of its own and only says the
+     title, or part of it: "**Strassmann's theorem.** Let f be …" under "Strassmann's theorem" goes on from "Let
+     f be …", "**Molien's formula**: the image …" from "The image …". An opening that its sentence goes on from
+     ("**X**, in Baker's form.") or that says more than the title stays. */
+  function afterLead(doc, title) {
+    const m = /^\s*\*\*([^*]+?)\*\*(?:(\.)|(:))?(?=\s|$)/.exec(doc);
+    if (!m || !(m[2] || m[3] || /\.$/.test(m[1]))) return doc;
+    const words = t => ' ' + plain(t).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/^(the|a|an) /, '') + ' ';
+    const lead = words(m[1]);
+    if (lead.trim().split(' ').length < 2 || !words(title).includes(lead)) return doc;
+    const rest = doc.slice(m[0].length).replace(/^\s+/, '');
+    return m[3] ? rest.charAt(0).toUpperCase() + rest.slice(1) : rest;
+  }
+
   /* A signature as the docs show it: the keyword, then each name a link to its declaration (hover over
      it to see what it is), `names` the module's table of them. Positions are code points (S2), hence
      Array.from. */
@@ -469,8 +483,9 @@
       box.append(el('div', 'announce-label', 'Voyager announced it'), md(row.text, 'prose'));
       parts.push(box);
     }
-    // The docstring, less the sentence the title above already says.
-    const doc = e.doc && (row || cut || !n.title ? e.doc : afterTitle(e.doc, n.title));
+    // The docstring, less what the title above already says: its first sentence when that is the title, its bold
+    // opening when that only names what Voyager's title names.
+    const doc = e.doc && (row ? afterLead(e.doc, row.name) : cut || !n.title ? e.doc : afterTitle(e.doc, n.title));
     if (doc && doc.trim()) parts.push(md(doc, 'prose'));
     if (e.sig || e.stmt) {
       // What the docs show: the signature Lean prints, section variables included, its names linked; a
@@ -1055,7 +1070,7 @@
     get ready() { return ready; },
     route: () => current,
     mapNodes: () => [...document.querySelectorAll('.map .node[data-name]')].map(g => g.dataset.name),
-    afterTitle,
+    afterTitle, afterLead,
     fnv: TauData.fnv,
   });
 })();

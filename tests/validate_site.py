@@ -127,6 +127,18 @@ def declaration(browser, url, errors):
     expect(page.evaluate("[TauReview.afterTitle('First, wrapped\\nhere. Then more.', 'First, wrapped here.'), "
                          "TauReview.afterTitle('# A heading\\nText.', 'Text.'), TauReview.afterTitle('Only this.', 'Only this.')]")
            == ["Then more.", "# A heading\nText.", ""], "below a title, the docstring goes on from its second sentence")
+    leads = page.evaluate("""[
+      ["**Strassmann's theorem.** Let f be.", "Strassmann's theorem"],
+      ["**Molien's formula**: the image.", "Molien's formula"],
+      ["**Invariance of domain.** Let M.", "Brouwer's invariance of domain"],
+      ["**Max-flow/min-cut theorem.** For c.", "The max-flow min-cut theorem"],
+      ["**The Lindemann–Weierstrass theorem**, in Baker's form.", "The Lindemann–Weierstrass theorem"],
+      ["**The cyclic Hasse norm theorem, placewise.** For L.", "The Hasse norm theorem"],
+      ["**Construction B** of a code.", "Construction B"],
+    ].map(([doc, title]) => TauReview.afterLead(doc, title))""")
+    expect(leads == ["Let f be.", "The image.", "Let M.", "For c.", "**The Lindemann–Weierstrass theorem**, in Baker's form.",
+                     "**The cyclic Hasse norm theorem, placewise.** For L.", "**Construction B** of a code."],
+           "under Voyager's title, a bold opening that only names it goes, and one that says more stays")
     hrefs = page.eval_on_selector_all(".links a", "as => as.map(a => a.href)")
     expect("https://example.org/docs/Fixture/Basic.html#Fixture.triple" in hrefs, "the API docs")
     expect("https://github.com/test/fixture/blob/B/Fixture/Basic.lean#L15-L16" in hrefs, "the source at the pin")
