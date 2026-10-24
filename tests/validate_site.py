@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The browser check: serves a built site as GitHub Pages would and checks, in Chromium, what a
 reader does: the shell and its two themes, the old addresses, the home page, the Named page, search,
-a declaration, its review box, its dependency map, the other pages, and a phone. Without --site it
+a declaration, its review card, its dependency map, the other pages, and a phone. Without --site it
 builds the fixture's site first (tests/fixture_site.py).
 
   python3 tests/validate_site.py [--site DIR | --url URL] [--only NAME,NAME] [--smoke]
@@ -93,9 +93,6 @@ def named(browser, url, errors):
     page = visit(browser, url, "#/named", errors)
     expect(page.locator(".list > li").count() == 2, "both announcements are listed")
     expect([h.split("\n")[0] for h in page.locator("main h2").all_inner_texts()] == ["Basic", "Uses"], "grouped by area")
-    page.check("#ai")
-    page.wait_for_function("TauReview.ready && document.querySelector('#ai') && document.querySelector('#ai').checked")
-    expect(page.evaluate("localStorage.getItem('tauceti-review:ai')") == "1", "counting AI reviews is kept")
     page.click("[data-what=definition]")
     expect(page.locator(".list > li").count() == 1 and "Being double" in page.locator(".list > li").inner_text(), "the definitions filter")
     page.click(".list > li a")
@@ -143,38 +140,26 @@ def declaration(browser, url, errors):
 @check
 def review(browser, url, errors):
     page = visit(browser, url, "#/d/Fixture.triple", errors)
-    lean, box = page.locator(".statement-grid .lean").bounding_box(), page.locator(".statement-grid .review-box").bounding_box()
-    expect(box["x"] >= lean["x"] + lean["width"] and box["y"] < lean["y"] + lean["height"], "the review box sits to the right of the statement")
-    expect(page.locator(".review-box .rb-count").inner_text() == "1 person · 1 AI", "people are counted apart from AI agents")
-    expect(page.locator(".review-box button:visible").count() == 1 and page.locator(".review-box a.btn:visible").count() == 0
-           and not page.locator(".rb-choose").is_visible(), "one button, and no forms until it is pressed")
-    fold = page.locator(".review-box details.ai-fold")
-    expect(fold.count() == 1 and "Claude Code" in fold.locator("summary").inner_text()
-           and not fold.locator("text=Compared with its definition").is_visible(), "an AI review, folded to its verdict")
-    fold.locator("summary").click()
-    expect(fold.locator("text=Compared with its definition").is_visible(), "its reasons, a click away")
-    page.click(".review-box .rb-go")
-    expect(page.locator(".rb-choose").is_visible() and not page.locator(".rb-go").is_visible(), "the button opens the choice")
-    href = page.locator(".rb-choose a", has_text="Yes, it’s right").get_attribute("href")
+    expect("1 person · 1 AI" in page.locator(".review .state-line").inner_text(), "people are counted apart from AI agents")
+    href = page.locator(".review .actions a", has_text="Review this").get_attribute("href")
     expect(href.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in href
-           and "decl=Fixture.triple" in href and "commit=B" in href, "Yes opens the review form, filled in")
-    templates = [page.locator(".rb-choose a", has_text=t).get_attribute("href").split("template=")[1].split("&")[0]
-                 for t in ("Something’s wrong", "Suggest a test", "Ask a question")]
-    expect(templates == ["evidence-problem.yml", "evidence-challenge.yml", "evidence-question.yml"], "the other choices, each its form")
-    expect(page.locator(".rb-choose a", has_text="Read it in the docs").get_attribute("href")
-           == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review box links to the docs")
-    page.click(".rb-shut")
-    expect(page.locator(".rb-go").is_visible() and not page.locator(".rb-choose").is_visible(), "Not now closes it")
-    expect(page.locator(".review-box .tests .result.passes").count() == 1, "the listed test passes")
+           and "decl=Fixture.triple" in href and "commit=B" in href, "Review this opens the form, filled in")
+    expect(page.locator(".review .actions a").count() == 5, "five forms")
+    expect(page.locator(".review a", has_text="Read it in the API docs").get_attribute("href")
+           == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review card links to the docs")
+    expect(page.locator(".review .tests .result.passes").count() == 1, "the listed test passes")
+    page.check("#ai")
+    page.wait_for_function("TauReview.ready && document.querySelector('#ai') && document.querySelector('#ai').checked")
+    expect(page.evaluate("localStorage.getItem('tauceti-review:ai')") == "1", "counting AI reviews is kept")
     page = visit(browser, url, "#/d/Fixture.double_zero", errors)
-    expect("Something it rests on has changed since." in page.locator(".review-box").inner_text(), "stale underneath, said")
+    expect("Something it rests on has changed since." in page.locator(".review").inner_text(), "stale underneath, said")
     page = visit(browser, url, "#/d/Fixture.double", errors)
-    card = page.locator(".review-box").inner_text()
+    card = page.locator(".review").inner_text()
     expect("The declaration has changed since." in card, "stale, said")
     expect(page.locator(".verdict.challenge").count() == 1 and "Open" in card, "the open suggested test")
     page = visit(browser, url, "#/d/Int", errors)
-    expect("From the Test imports store" in page.locator(".review-box").inner_text(), "an imported review names its store")
-    expect(page.locator(".rb-go").count() == 0 and page.locator(".map").count() == 0, "no button and no map outside the library")
+    expect("From the Test imports store" in page.locator(".review").inner_text(), "an imported review names its store")
+    expect(page.locator(".actions").count() == 0 and page.locator(".map").count() == 0, "no forms and no map outside the library")
 
 
 @check
@@ -235,6 +220,7 @@ def other_pages(browser, url, errors):
     page = visit(browser, url, "#/activity", errors)
     expect("double n = n + n" in page.locator(".section", has_text="Suggested tests").inner_text(), "the open suggested test")
     page = visit(browser, url, "#/help", errors)
+    expect("Reviewed-by: TauCeti.Foo.bar" in page.inner_text("body"), "the bulk issue's lines")
     expect(page.locator("a[href='https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md']").count() == 1
            and "Review TauCeti.Foo.bar for the Tau Ceti review site" in page.inner_text("body"), "how to ask an AI agent for a review")
 
@@ -268,7 +254,7 @@ def smoke(browser, url, errors):
     for name in names:
         page = visit(browser, url, "#/d/" + name, errors)
         map_drawn(page)
-        expect(page.locator("h1").count() == 1 and page.locator(".review-box .rb-go").count() == 1, f"{name}: its page and its review button")
+        expect(page.locator("h1").count() == 1 and page.locator(".review .actions a").count() == 5, f"{name}: its page and its forms")
         arrow = page.locator(".map .node .open:not(.opened)")
         if arrow.count():  # an arrow unfolds something, or says it found nothing
             before = page.locator(".map .node").count()

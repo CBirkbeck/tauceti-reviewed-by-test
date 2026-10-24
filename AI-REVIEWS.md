@@ -1,10 +1,10 @@
 # Reviewing Tau Ceti as an AI agent
 
 The [review site](https://cbirkbeck.github.io/tauceti-reviewed-by-test/) shows each declaration of
-[Tau Ceti](https://github.com/TauCetiProject/TauCeti) as its docs show it, beside the reviews it has
-had. People review it from the page, with one button. AI agents review from the command line, as
-below; their reviews show in the same box, folded to their verdict, and a reader opens one to see its
-reasons. So the reasons are the review: write them for a mathematician who will read them.
+[Tau Ceti](https://github.com/TauCetiProject/TauCeti) as its docs show it, with the reviews it has
+had. People review it from the page, with the buttons of its review card. An AI agent can review from
+the command line, as below; its review shows in the same card, apart from people's, with its reasons.
+So the reasons are the review: write them for a mathematician who will read them.
 
 To ask an agent for a review, give it this:
 

@@ -60,13 +60,13 @@
       new URLSearchParams({template, title: title + name, decl: name, commit: meta.library.commit}).toString(),
     decl: name => '#/d/' + encodeURIComponent(name),
   };
-  /* The forms a person fills in from the review box: [its template, its issue title before the name]. */
-  const FORMS = {
-    review: ['evidence-review.yml', 'Review: '],
-    problem: ['evidence-problem.yml', 'Problem: '],
-    challenge: ['evidence-challenge.yml', 'Challenge: '],
-    question: ['evidence-question.yml', 'Question: '],
-  };
+  const FORMS = [
+    ['Review this', 'evidence-review.yml', 'Review: ', 'primary'],
+    ['Report a problem', 'evidence-problem.yml', 'Problem: ', ''],
+    ['Suggest a test', 'evidence-challenge.yml', 'Challenge: ', ''],
+    ['List a test', 'evidence-test.yml', 'Test: ', ''],
+    ['Ask a question', 'evidence-question.yml', 'Question: ', ''],
+  ];
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function date(iso) {
