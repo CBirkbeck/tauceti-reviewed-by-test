@@ -28,5 +28,9 @@
  "site": {
   "title": "Tau Ceti Review",
   "url": "https://cbirkbeck.github.io/tauceti-reviewed-by-test/"
+ },
+ "signin": {
+  "client_id": "Iv23lij5SsHpRaq0Wglg",
+  "exchange": "https://tauceti-review-signin.cd-birkbeck.workers.dev/token"
  }
 }
