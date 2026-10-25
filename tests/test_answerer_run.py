@@ -15,7 +15,7 @@ from evidence_core import records as rec  # noqa: E402
 from answerer.items import open_items  # noqa: E402
 from answerer.model import Outcome  # noqa: E402
 from answerer.post import Poster  # noqa: E402
-from answerer.run import Config, answer  # noqa: E402
+from answerer.run import REPLY_LIMIT, Config, answer  # noqa: E402
 from answerer.state import State  # noqa: E402
 
 
@@ -79,6 +79,14 @@ class RunTests(unittest.TestCase):
         self.assertTrue(b[1].split("\n")[1] == "/answered")
         self.assertAlmostEqual(self.state.spent("2026-10-25"), 3.0)
         self.assertEqual(self.state.items[self.items[0].id]["verdict"], "intended")
+
+    def test_a_long_reply_is_cut_at_a_paragraph(self):
+        first = "It is the junk value at 0, which the theorems built on it exclude by assuming `0 < n`."
+        long = first + "\n\n" + "\n\n".join(["More evidence, at length. " * 12] * 8)
+        self.go([Outcome(verdict("intended", reply=long), 1.0, "m", None, 1), Outcome(verdict("answered"), 1.0, "m", None, 1)])
+        body = self.bodies()[0][1].split("/intended\n\n", 1)[1]
+        self.assertLessEqual(len(body), REPLY_LIMIT)
+        self.assertTrue(body.startswith(first) and body.endswith("\n\n…"))
 
     def test_handled_items_are_not_answered_again(self):
         self.go([Outcome(verdict("intended"), 1.0, "m", None, 1), Outcome(verdict("answered"), 1.0, "m", None, 1)])

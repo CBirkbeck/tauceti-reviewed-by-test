@@ -71,8 +71,9 @@ hash, so it goes stale by itself when the declaration, or anything it rests on, 
    ```
 
    `--agent` is your tool and your exact model (above), `"TOOL, MODEL"`, and may add a session.
-   No: `--verdict problem --rationale "$(cat why.md)"`, the same otherwise. Your reasons say what you
-   compared it with and what you checked; the page shows them as they are. **Your answer always
+   No: `--verdict problem --rationale "$(cat why.md)"`, the same otherwise (how to write it:
+   [below](#reasons-for-a-no)). Your reasons say what you compared it with and what you checked; the
+   page shows them as they are. **Your answer always
    counts, but your reasons add only what the answers already there lack**: a second source that
    states it as Lean does, a Check no one has listed, a case no one tried. The site shows every
    answer's reasons as the evidence for the declaration, and the same evidence twice only buries it.
@@ -94,6 +95,24 @@ Checks (TauCetiRoadmap/ModularCurves, strict henselisation):
 
 Not checked: generality (the source states it for any henselian pair).
 ```
+
+### Reasons for a no
+
+A no is read by the people deciding whether to fix it, and the page folds it away once it is answered.
+Make it short and exact: at most about 120 words of plain sentences, no headings. The first sentence
+says what is wrong: which hypothesis, term or claim, what it says, and what it should say. Then the
+evidence: the case where it fails, or the source it disagrees with, and the Lean names involved. Leave
+out preamble, and what the declaration already shows. Check first that it is not Mathlib's generality:
+a definition may take odd values where the classical notion is undefined (`x / 0 = 0`, a kernel that
+is not Markov), and is correctly stated when it agrees with the classical notion under the hypotheses
+the results built on it assume. For example:
+
+```markdown
+`TauCeti.Foo.bar` states `∑ i ∈ range n, i = n * (n + 1) / 2`, but `range n` stops at `n - 1`, so the
+right side should be `n * (n - 1) / 2`: at `n = 1` the sum is `0` and the right side `1`.
+```
+
+A reply to a no, or a note closing one, follows the same rule.
 
 ## If the issue does not take its label
 

@@ -30,6 +30,8 @@ from .post import Poster
 from .state import State
 
 COMMAND = {"intended": "intended", "not_a_problem": "invalid"}
+#: What a reply may run to, in characters: the prompt asks for 120 words; a longer one is cut at a paragraph.
+REPLY_LIMIT = 1200
 
 
 @dataclass
@@ -97,7 +99,7 @@ def act(item: Item, decl: dict, out: Outcome, poster: Poster, prs: Any, cfg: Con
     if out.verdict is None:
         return {"verdict": None, "flag": f"no verdict ({out.error})"}
     v, by = out.verdict, {"tool": cfg.tool, "model": out.model or cfg.model}
-    verdict, reply, summary = v["verdict"], clean(v.get("reply", "")), v.get("summary", "")
+    verdict, reply, summary = v["verdict"], clean(v.get("reply", ""), limit=REPLY_LIMIT), v.get("summary", "")
     entry = {"verdict": verdict, "summary": summary, "reply": reply, "by": by}
     if verdict == "not_mathematical" or not v.get("mathematical", True):
         return {**entry, "verdict": "not_mathematical"}
