@@ -169,7 +169,8 @@
     if (v.source) box.append(el('div', 'from', `From the ${v.source.name} store`));
     const note = statusNote(v);
     if (note) box.append(el('div', 'status-note', note));
-    if (v.state && !['stands', 'open'].includes(v.state)) box.append(el('div', 'state-word', STATE_WORDS[v.state] || v.state));
+    if (v.state && !['stands', 'open'].includes(v.state))
+      box.append(el('div', 'state-word' + (resolved(v) ? ' resolved' : ''), (resolved(v) ? '✓ ' : '') + (STATE_WORDS[v.state] || v.state)));
     else if (v.state === 'open' && v.kind !== 'review' || (v.kind === 'review' && v.verdict !== 'accept' && v.state === 'open')) box.append(el('div', 'state-word open', 'Open'));
     if (v.kind === 'named') box.append(el('div', 'named-name', v.name));
     if (v.kind === 'test' && v.test) box.append(link(URLS.decl(v.test), v.test, 'mono small'));
@@ -879,6 +880,10 @@
      of this version, a no still open. */
   const applies = v => v.inForce && v.applies !== false;
   const stands = v => v.verdict === 'problem' ? v.state === 'open' : applies(v);
+  /* A no decided in the declaration's favour: fixed since, behaving as intended, or not a problem. Its mark is
+     a green tick, as a yes's is, saying which (asked for on 2026-10-25). */
+  const RESOLVED = new Set(['fixed', 'intended', 'invalid']);
+  const resolved = v => v.verdict === 'problem' && RESOLVED.has(v.state);
   const sign = answer => { const t = el('span', 'tick', answer === 'no' ? '✗' : '✓'); t.setAttribute('aria-hidden', 'true'); return t; };
   const issueText = url => { const m = /\/issues\/(\d+)$/.exec(url || ''); return m ? 'Issue #' + m[1] : 'issue'; };
   /* Who made a record, as a mark says it: @login, or the agent, AI, and the account it acted through. */
@@ -894,21 +899,22 @@
   const MARK_NOTE = {stale: () => 'earlier version', 'stale-underneath': () => 'what it rests on has changed',
                      renamed: v => 'as ' + v.renamedFrom, unavailable: () => 'did not build', orphaned: () => 'gone',
                      incomparable: () => 'cannot be compared'};
-  /* One answer, as its answerer's mark: a tick for a yes, a cross for a no, a link to its issue (unless it
-     heads a twisty, which holds the link), greyed when it no longer stands (a yes of an earlier version, a no
-     resolved). */
+  /* One answer, as its answerer's mark: a green tick for a yes, and for a no since fixed (or found to be no
+     problem), a cross for a no still open, a link to its issue (unless it heads a twisty, which holds the
+     link), greyed when it no longer stands (a yes of an earlier version). */
   function mark(v, heading) {
-    const answer = v.verdict === 'problem' ? 'no' : 'yes';
-    const cls = `mark ${answer} ` + (v.by.kind === 'agent' ? 'agent' : 'person') + (stands(v) ? '' : ' stale');
+    const settled = resolved(v), answer = v.verdict === 'problem' && !settled ? 'no' : 'yes';
+    const cls = `mark ${answer} ` + (v.by.kind === 'agent' ? 'agent' : 'person') + (settled ? ' resolved' : stands(v) ? '' : ' stale');
     const m = v.url && !heading ? ext(v.url, null, cls) : el('span', cls);
     m.append(sign(answer), markWho(v.by));
     const note = !v.inForce && v.state === 'withdrawn' ? 'withdrawn'
-      : answer === 'no' && v.state !== 'open' ? (STATE_WORDS[v.state] || v.state).toLowerCase()
+      : v.verdict === 'problem' && v.state !== 'open' ? (STATE_WORDS[v.state] || v.state).toLowerCase()
       : !v.inForce ? 'superseded' : MARK_NOTE[v.status] && MARK_NOTE[v.status](v);
     if (note) m.append(el('span', 'note', note));
     if (v.source) m.append(el('span', 'note', `from the ${v.source.name} store`));
     if ((v.replies || []).length) m.append(el('span', 'note', plural(v.replies.length, 'reply', 'replies')));
-    m.title = [answer === 'no' ? 'No: it is not correctly stated.' : 'Yes: it is correctly stated.',
+    m.title = [settled ? `Answered no; ${(STATE_WORDS[v.state] || v.state).toLowerCase()} since.`
+               : answer === 'no' ? 'No: it is not correctly stated.' : 'Yes: it is correctly stated.',
                (v.hash ? `Version ${v.hash}, ` : '') + date(v.at) + '.', statusNote(v)].filter(Boolean).join(' ');
     return m;
   }
@@ -959,7 +965,8 @@
     if (!yes.length && !no.length) { box.append(el('p', 'empty', 'No answers yet.')); return box; }
     const row = el('div', 'marks');
     if (yes.length) row.append(tally('yes', 'Correctly stated', yes, k => k === 1 ? '1 on an earlier version' : `${k} on earlier versions`));
-    if (no.length) row.append(tally('no', 'Not correctly stated', no, k => `${k} resolved`));
+    // The cross only while a no is open: one fixed (or found to be no problem) is a green tick below.
+    if (no.some(stands)) row.append(tally('no', 'Not correctly stated', no, k => `${k} resolved`));
     const list = el('div', 'answers-list');
     [...yes, ...no].sort((a, b) => stands(b) - stands(a) || (b.at || '').localeCompare(a.at || '')).forEach(v => list.append(answerRow(v)));
     box.append(row, list, ...no.map(v => report(v, byId)));
@@ -1025,7 +1032,7 @@
      twisty: where it stands, who said it, and its first line, opening to the rest. */
   function report(v, byId) {
     const open = v.state === 'open', question = v.verdict === 'question';
-    const cls = 'report' + (question ? ' question' : '') + (open ? '' : ' closed');
+    const cls = 'report' + (question ? ' question' : '') + (open ? '' : ' closed') + (resolved(v) ? ' resolved' : '');
     const head = [el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? 'Closed' : STATE_WORDS[v.state] || 'Closed'), ' · ',
                   question ? 'suggested by ' : (v.category && v.category !== 'other' ? v.category + ' · ' : '') + 'answered no by ',
                   markWho(v.by), ', ' + date(v.at)];

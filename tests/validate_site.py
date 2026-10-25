@@ -250,6 +250,9 @@ def review(browser, url, errors):
            "the yeses, people counted apart from AI agents")
     expect(box.locator(".answers-list .mark.person").count() == 1 and box.locator(".answers-list .mark.agent .ai").count() == 1,
            "each answer's mark, the AI agent's marked")
+    green = page.evaluate("""() => { const q = s => getComputedStyle(document.querySelector(s));
+      return [q('.answers-list .mark.person .tick').backgroundColor, q('.answers-list .mark.agent .tick').color]; }""")
+    expect(green[0] == green[1], f"a yes is a green tick, a person's filled, an AI agent's outlined ({green})")
     why = box.locator(".answers-list details.why", has=page.locator(".mark.agent"))
     expect(why.count() == 1 and not why.evaluate("d => d.open"), "the AI agent's reasons, a closed twisty")
     expect(box.locator(".answers-list .mark.stale").count() == 0 and "withdrawn" not in box.locator(".answers-list").inner_text()
@@ -625,6 +628,11 @@ def other_pages(browser, url, errors):
     expect(fold.locator(".resolution", has_text="Behaves as intended").locator(".md p").count() == 2
            and fold.locator(".resolution .md p").first.is_visible(), "which opens to why, in full")
     page = visit(browser, url, "#/d/Fixture.one", errors)
+    box = page.locator(".review")
+    settled = box.locator(".answers-list .mark.yes.resolved")
+    expect(settled.count() == 1 and "behaves as intended" in settled.inner_text() and settled.locator(".tick").inner_text() == "✓"
+           and box.locator(".answers-list .mark.no").count() == 0 and box.locator(".mark.tally.no").count() == 0,
+           "a no decided in its favour is a green tick, saying how, and no cross is left")
     report = page.locator(".review details.report.twisty.closed")
     expect(report.locator("summary .state").inner_text() == "Behaves as intended" and not report.evaluate("d => d.open"),
            "a no answered, folded into a line saying how it stands")

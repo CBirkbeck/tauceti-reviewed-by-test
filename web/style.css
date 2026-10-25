@@ -187,7 +187,7 @@ a.stat span { color: var(--accent); }
    Reviews and Tests under small capitals, each answer a mark (a tick or a cross in a pill), people's
    filled, AI agents' ringed, one that no longer stands grey; each no in full. */
 .review { margin: 1.6rem 0; padding: 14px 18px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
-  --person: var(--result); --agent: var(--st-uncounted); --tested: var(--concept); --no: var(--st-problem); }
+  --person: var(--result); --agent: var(--result); --tested: var(--concept); --no: var(--st-problem); }
 .review .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .review .ask { margin-right: 6px; font-family: var(--serif); font-size: 1.12rem; font-weight: 600; color: var(--ink); }
 .review .actions .btn { font-size: 13.5px; padding: 5px 12px; border-radius: 6px; color: var(--muted); }
@@ -280,6 +280,8 @@ details.twisty > summary:hover .gist { color: var(--ink); }
 .report .state { font-weight: 700; color: var(--st-problem); }
 .report.question .state { color: var(--accent); }
 .report.closed .state { color: var(--muted); }
+.report.resolved .state { color: var(--result); }
+.report.resolved .state::before { content: "✓ "; }
 .report .fix { margin: 10px 0 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 /* A no or a suggestion once answered: folded, its line saying where it stands, who said it, and what. Opened, what
    was decided stays legible (below), so the fold is not dimmed as a closed twisty is. */
@@ -307,6 +309,7 @@ details.twisty > summary:hover .gist { color: var(--ink); }
 .status-note { margin-top: 5px; color: var(--st-uncounted); font-size: 13px; }
 .state-word { margin-top: 5px; color: var(--st-covered); font-size: 13px; font-weight: 600; }
 .state-word.open { color: var(--st-problem); }
+.state-word.resolved { color: var(--result); }
 .named-name { margin-top: 4px; font-family: var(--serif); font-weight: 600; }
 .thread .md { margin-top: 6px; }
 .thread pre.small-code { margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: var(--code); font: 12.5px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
