@@ -306,7 +306,8 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
 ### 6.4 Pages
 
 - **Home:** what the site is; the counts (declarations, named, reviewed (a link to Reviewed), yeses
-  by people and by AI agents, noes still open); tiles for Named, Reviewed, Browse, Activity and How to
+  by people and by AI agents, noes still open (a link to them on Activity, `#/activity/open`, asked for
+  on 2026-10-25)); tiles for Named, Reviewed, Browse, Activity and How to
   review; the eight latest named; the areas.
 - **Named:** Voyager's announcements grouped by area, each with Voyager's name and sentence, the Lean
   name, its review state, a coverage bar (how much of what it rests on in Tau Ceti has been reviewed)
@@ -348,7 +349,8 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      resolved it, an imported one "from the <name> store". A yes that gives reasons (an
      agent gives them only when they add to the answers already there, asked for on 2026-10-24) is a twisty (asked for on 2026-10-24) that opens to them, typeset, and to
      its issue; a bare yes links to its issue. Then each no in full: where it stands, who said it and when,
-     why, the replies, its issue and what was decided on it), **What could be better** (a line asking
+     why, the replies, its issue and what was decided on it; once answered (a reply or a decision), folded
+     into a twisty showing where it stands, who said it and its first line (asked for on 2026-10-25), **What could be better** (a line asking
      whether it could be done better, with "Suggest an improvement", and each suggestion: where it
      stands, who made it and when, what it says, the replies and its issue), and **Tests** (a line
      asking for a property it should have, with "Suggest a test"; then a mark "✓ Tested by · 1 test
