@@ -61,11 +61,17 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(cs.normal("noncomputable def A.b.{u} (x : ℕ) : ℕ"), cs.normal("A.b.{u} (x : ℕ) : ℕ"))
 
     def test_two_notations_written_out(self):
-        site = "S.thm (C : V) (a : A) : (fun₀ | C => a) ∈ S.part C"
-        self.assertEqual(cs.bare(cs.normal(cs.written_out(site))), cs.bare(cs.normal("theorem S.thm (C : V) (a : A) :Finsupp.single C a ∈ part C")))
-        site = "P.ext {X Y : Pointed} {f g : (X ⟹ Y).X} : f = g"
-        self.assertEqual(cs.bare(cs.normal(cs.written_out(site))),
-                         cs.bare(cs.normal("theorem P.ext {X Y : Pointed} {f g : ((CategoryTheory.ihom X).obj Y).X} :f = g")))
+        same = [("S.thm (C : V) (a : A) : (fun₀ | C => a) ∈ S.part C", "theorem S.thm (C : V) (a : A) :Finsupp.single C a ∈ part C"),
+                ("T.t (i : Fin m) : f = MonoidAlgebra.single (Multiplicative.ofAdd fun₀ | { down := i } => -1) 1",
+                 "theorem T.t (i : Fin m) :f = MonoidAlgebra.single (Multiplicative.ofAdd (Finsupp.single { down := i } (-1))) 1"),
+                ("P.ext {X Y : Pointed} {f g : (X ⟹ Y).X} : f = g",
+                 "theorem P.ext {X Y : Pointed} {f g : ((CategoryTheory.ihom X).obj Y).X} :f = g"),
+                ("S.iso (M : S) : M.over X ⟹ S.unit R ≅ N", "def S.iso (M : S) :(CategoryTheory.ihom (M.over X)).obj (unit R) ≅ N")]
+        for site, docs in same:
+            self.assertEqual(cs.notation_free(site), cs.notation_free(docs), site)
+        # Anything else that differs still does.
+        self.assertNotEqual(cs.notation_free("S.thm (C : V) (a : A) : (fun₀ | C => a) ∈ S.part C"),
+                            cs.notation_free("theorem S.thm (C : V) (a : A) :Finsupp.single a C ∈ part C"))
 
     def test_what_was_lost_is_a_difference(self):
         self.assertNotEqual(cs.normal(DOCS), cs.normal(WRONG))

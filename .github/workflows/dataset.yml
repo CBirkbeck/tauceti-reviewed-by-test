@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  issues: write  # the issue that says why a dataset was not published
 
 concurrency:
   group: dataset-${{ inputs.commit || 'pinned' }}

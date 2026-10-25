@@ -15,7 +15,7 @@ on:
 
 permissions:
   contents: write
-  issues: read
+  issues: write  # the dataset's check opens an issue when it stops a dataset
   pages: write
   id-token: write
 

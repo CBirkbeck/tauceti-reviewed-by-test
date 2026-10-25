@@ -71,35 +71,35 @@ def untyped(text: str) -> str | None:
 
 
 #: Notation a docs page may write out: a docs page is built from its module's imports alone, the dataset
-#: with the whole library loaded, which has Mathlib's notation for these everywhere (reviewed 2026-10-25,
-#: data/signature-exceptions.json). Rewritten the docs' way before comparing; any other difference stands.
-NOTATION = [
-    # `fun₀ | i => a` is `Finsupp.single i a` (one arm; with more, `Finsupp.update`, which stays a difference).
-    (re.compile(r"fun₀ \| ([^|=]+?) => ((?:[^()|]|\([^()]*\))+?)(?=\)|$| ∈| ⊗| =| ≤| <| \+)"), r"Finsupp.single \1 \2"),
-    # `X ⟹ Y` is `(CategoryTheory.ihom X).obj Y`.
-    (re.compile(r"(\S+) ⟹ (\S+?)(?=\)|$|\s)"), r"(CategoryTheory.ihom \1).obj \2"),
-]
+#: with the whole library loaded, which has Mathlib's notation for these everywhere: `fun₀ | i => a` for
+#: `Finsupp.single i a`, `X ⟹ Y` for `(CategoryTheory.ihom X).obj Y` (reviewed 2026-10-25). Where a
+#: signature has one, it is compared token by token with these notations' own words set aside; the
+#: names, variables and symbols left must be the docs', in order.
+NOTATION_SIGNS = ("fun₀", "⟹")
+NOTATION_WORDS = {"fun₀", "|", "=>", "single", "⟹", "ihom", "obj", "(", ")", "."}
+TOKEN = re.compile(rf"=>|:=|{IDENT}|\d+|\S")
 
 
-def bare(text: str) -> str:
-    return text.replace("(", "").replace(")", "")
-
-
-def written_out(text: str) -> str:
-    for pattern, replacement in NOTATION:
-        text = pattern.sub(replacement, text)
-    return text
-
-
-def normal(text: str) -> str:
-    """A header as compared: no keyword, universes, namespaces or spacing."""
+def headless(text: str) -> str:
+    """A header without its modifiers and keyword (`noncomputable def`)."""
     words = text.split(None, 3)
     k = 0
     while k < len(words) - 1 and words[k] in MODIFIERS:
         k += 1
     if k < len(words) and words[k] in KEYWORDS:
-        text = text.split(None, k + 1)[k + 1] if len(words) > k + 1 else ""
-    return re.sub(r"\s+", "", PREFIX.sub("", UNIVERSES.sub("", text)))
+        return text.split(None, k + 1)[k + 1] if len(words) > k + 1 else ""
+    return text
+
+
+def notation_free(text: str) -> list[str]:
+    """A header's tokens, namespaces and universes aside, without the two notations' own words."""
+    text = PREFIX.sub("", UNIVERSES.sub("", headless(text)))
+    return [x for x in TOKEN.findall(text) if x not in NOTATION_WORDS]
+
+
+def normal(text: str) -> str:
+    """A header as compared: no keyword, universes, namespaces or spacing."""
+    return re.sub(r"\s+", "", PREFIX.sub("", UNIVERSES.sub("", headless(text))))
 
 
 class Headers(HTMLParser):
@@ -251,10 +251,7 @@ def check(dataset: Path, settings: dict, store: Path, voyager: Path, source: Pat
         ours, docs = normal(sigs[name]), normal(theirs)
         if ours == docs:
             continue
-        # Only where one of those notations is written; parentheses aside, as the notation and the
-        # application it stands for need different ones.
-        if any(sym in sigs[name] for sym in ("fun₀", "⟹")) and \
-                bare(normal(written_out(" ".join(sigs[name].split())))) == bare(docs):
+        if any(s in sigs[name] for s in NOTATION_SIGNS) and notation_free(sigs[name]) == notation_free(theirs):
             out["notation"].append(name)
             continue
         if allowed.get(name) == (ours, docs):
