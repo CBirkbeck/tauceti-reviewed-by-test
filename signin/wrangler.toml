@@ -10,6 +10,6 @@ workers_dev = true
 
 [vars]
 # The GitHub App's client ID: not secret, as every sign-in address carries it.
-CLIENT_ID = ""
+CLIENT_ID = "Iv23lij5SsHpRaq0Wglg"
 # The sites whose pages may ask, comma-separated.
 ALLOWED_ORIGINS = "https://cbirkbeck.github.io"
