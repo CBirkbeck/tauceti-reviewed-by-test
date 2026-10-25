@@ -105,6 +105,30 @@ So that an answer is filed from the page, the site signs its readers in with Git
 The token is kept in the reader's browser (`localStorage`) until it ends or they sign out, and on no
 server.
 
+## The answerer
+
+Every hour, on the server, the review answerer (`answerer/`) takes the open noes and the open
+suggestions and questions, at most six a run, and has Claude Fable 5.1, through the API, check each
+against the library's source and Lean. Mathlib's style of stating definitions more generally than
+the classical notion counts as intended: a definition is right when it agrees with the classical one
+under the hypotheses its results assume. Then:
+
+- a question is answered, and closed as answered;
+- a no that is not an error is closed as intended, or as not a problem;
+- a no that is right about a docstring gets a pull request to Tau Ceti changing only that docstring,
+  and is closed as fixed, at the merge commit, once it merges;
+- a no that is right about the Lean, or anything it cannot settle, stays open, listed in the issue
+  "Answerer: needs a person".
+
+Its reply is recorded with the item, so the site shows under each no why it was closed, and the
+Activity page lists the noes answered. It answers only mathematics, and what an item says cannot make
+it do anything else: its tools only read the library and Mathlib and run small Lean checks sealed off
+(`bubblewrap`: no network, no home directory), the code (not the model) decides what to post, and
+what it posts is cleaned of marks, links elsewhere, mentions and commands. It spends at most $20 a
+day. The design: `docs/superpowers/specs/2026-10-25-review-answerer-design.md`. On the server:
+`systemctl --user status tauceti-answerer.timer`, its log with `journalctl --user -u tauceti-answerer`,
+and `python -m answerer run --dry-run` to see what it would do.
+
 ## What the site shows
 
 - **Named**: Voyager's announcements, each with its review state and how much of what it rests on in
@@ -163,6 +187,7 @@ extractor's 0.13 series (`data/settings.json`). The store imports no other store
 - `web/`: the front end (`index.html`, `style.css`, `data.js`, `render.js`, `map.js`, `signin.js`,
   `app.js`) and `vendor/` (elkjs, KaTeX, the Atlas's `markdown.js`; see `web/vendor/NOTICE`).
 - `signin/`: the sign-in helper (`worker.js`, `wrangler.toml`) and its tests.
+- `answerer/`: the review answerer (above), its prompt (`prompt.md`) and its systemd units.
 - `tests/`: unit tests, the suite's fixture (`tests/fixtures`, see its NOTICE), `fixture_site.py`, and
   the browser check `validate_site.py`.
 

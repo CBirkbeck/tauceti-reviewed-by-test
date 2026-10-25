@@ -1,0 +1,15 @@
+[Unit]
+Description=Tau Ceti review answerer: the open noes and questions on the review site, answered
+Documentation=https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/docs/superpowers/specs/2026-10-25-review-answerer-design.md
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/tauceti-answerer/review
+Environment=PATH=%h/tauceti-answerer/venv/bin:%h/.elan/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=LANG=C.UTF-8
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/tauceti-answerer/venv/bin/python -m answerer run
+TimeoutStartSec=55min
+Nice=10
+MemoryMax=24G
