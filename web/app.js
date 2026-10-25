@@ -664,7 +664,12 @@
       if (!TauSignin.configured(meta)) {
         how.replaceChildren('Yes and No open a short form here; a no asks you why. Send takes it to GitHub, filled in, where one click files it.');
       } else if (!s) {
-        how.replaceChildren('Sign in with GitHub and Yes files your answer in one click; No asks you why. Answers are filed under your GitHub account.');
+        // Answering on GitHub comes first; signing in is for whoever answers several (asked for on 2026-10-25).
+        const go = el('button', 'btn link', 'Sign in with GitHub');
+        go.type = 'button';
+        go.addEventListener('click', () => TauSignin.signIn(meta, null).catch(e => how.append(` Not signed in: ${e.message}.`)));
+        how.replaceChildren('Yes and No open a short form here; a no asks you why. Send takes it to GitHub, filled in, where one ',
+                            'click files it. Reviewing several declarations? ', go, ' once, and each answer is filed from here in one click.');
       } else {
         const out = el('button', 'btn link', 'Sign out');
         out.type = 'button';
@@ -679,11 +684,11 @@
     draw();
     return how;
   }
-  /* A short form that unfolds in the review box, by its template: what it asks for, and Send. Signed in with GitHub
-     (web/signin.js), Send files it from here, under the reader's account, and Yes needs no form at all: one click
-     files it, with Undo, and Add why for a reason. Signed out, Send signs in first, then files it. And it can always
-     open on GitHub instead, filled in with the declaration, the commit and what was written, for one click there to
-     file it: the only way where the site has no sign-in. */
+  /* A short form that unfolds in the review box, by its template: what it asks for, and Send, which opens it on
+     GitHub, filled in with the declaration, the commit and what was written, for one click there to file it. Signing
+     in with GitHub (web/signin.js) is offered under it, for whoever reviews several declarations: signed in, Send files
+     it from here, under the reader's account, and Yes needs no form at all: one click files it, with Undo, and Add why
+     for a reason; it can still open on GitHub instead. */
   const FIELDS = {
     'evidence-review.yml': [{id: 'rationale', label: 'Why? (optional)', hint: 'What you compared it with, what you checked.'}],
     'evidence-problem.yml': [{id: 'rationale', label: 'Why is it not correctly stated?', hint: 'A case it gets wrong, a counterexample, or what it should say.', required: true}],
@@ -700,13 +705,13 @@
   function formFor(meta, name, [label, template, cls]) {
     const signin = TauSignin.configured(meta), oneClick = signin && template === 'evidence-review.yml';
     const id = 'form-' + (++formSeq), button = el('button', 'btn ' + cls, label), form = el('form', 'unfold');
-    const prompt = el('div', 'unfold prompt'), note = el('div', 'sent-note');
+    const note = el('div', 'sent-note');
     const btn = (text, klass, type = 'button') => { const b = el('button', 'btn' + (klass ? ' ' + klass : ''), text); b.type = type; return b; };
     button.type = 'button';
     button.setAttribute('aria-expanded', 'false');
     button.setAttribute('aria-controls', id);
     form.id = id;
-    form.hidden = prompt.hidden = note.hidden = true;
+    form.hidden = note.hidden = true;
     note.setAttribute('role', 'status');
     const fields = FIELDS[template].map(f => {
       const t = el('textarea', f.mono ? 'mono' : null), l = el('label', null, f.label);
@@ -718,15 +723,20 @@
       return [f, t, l];
     });
     // After a yes, Add why: the same form, the reason now the point of it.
-    let whyWanted = false, busy = false, filed = null;
+    let whyWanted = false, busy = false, filed = null, gh = null;
     const again = el('p', 'again', 'This files your yes again, with why: it takes the place of the first.');
     again.hidden = true;
     const send = btn('', 'send', 'submit'), cancel = btn('Cancel'), row = el('div', 'form-actions');
     row.append(cancel, send);
-    form.append(again, row);
+    // Signed out, Send goes to GitHub; signing in is offered for whoever answers several declarations.
+    const offer = el('p', 'signin-offer');
+    form.append(again, row, offer);
     const values = () => Object.fromEntries(fields.filter(([, t]) => t.value.trim()).map(([f, t]) => [f.id, t.value.trim()]));
     const sync = () => {
-      send.textContent = !signin ? 'Send on GitHub ↗' : TauSignin.session() ? 'Send' : 'Sign in with GitHub and send';
+      const signedIn = signin && !!TauSignin.session();
+      send.textContent = signedIn ? 'Send' : 'Send on GitHub ↗';
+      offer.hidden = !signin || signedIn;
+      if (gh) gh.hidden = !signedIn;
       send.disabled = busy || fields.some(([f, t]) => (f.required || whyWanted) && !t.value.trim());
       fields.forEach(([f, , l]) => { l.textContent = whyWanted ? 'Why is it correctly stated?' : f.label; });
       again.hidden = !whyWanted;
@@ -744,7 +754,7 @@
       button.setAttribute('aria-expanded', 'true');
       if (what === form) { sync(); fields[0][1].focus(); }
     }
-    const shut = () => { form.hidden = prompt.hidden = true; whyWanted = false; button.setAttribute('aria-expanded', 'false'); };
+    const shut = () => { form.hidden = true; whyWanted = false; button.setAttribute('aria-expanded', 'false'); };
     const say = (...content) => { note.replaceChildren(...content); note.hidden = false; };
     const onGitHub = v => {
       window.open(URLS.form(meta, template, name, v), '_blank', 'noopener');
@@ -812,19 +822,19 @@
     }
     button.addEventListener('click', () => {
       if (busy) return;
-      if (!(form.hidden && prompt.hidden)) return closeAll();
+      if (!form.hidden) return closeAll();
       if (oneClick && filed) { closeAll(); note.hidden = false; return; }  // filed already: say so again, not twice
       if (oneClick && TauSignin.session()) { closeAll(); return deliver({}); }
-      unfold(oneClick ? prompt : form);
+      unfold(form);
     });
-    if (oneClick) {
-      const go = btn('Sign in with GitHub', 'send'), no = btn('Cancel'), actions = el('div', 'form-actions');
-      go.addEventListener('click', () => begin({}));
-      no.addEventListener('click', shut);
-      actions.append(toGitHub('or answer on GitHub ↗', () => ({})), no, go);
-      prompt.append(el('p', null, 'Sign in with GitHub once, and Yes files your answer from here in one click, under your GitHub account.'), actions);
+    if (signin) {
+      const go = btn('Sign in with GitHub', 'link');
+      go.addEventListener('click', () => begin(values()));
+      offer.append('Reviewing several declarations? ', go, ' once, and this answer and each one after it is filed from here in ',
+                   'one click.');
+      gh = toGitHub('or send it on GitHub ↗', values);
+      row.prepend(gh);
     }
-    if (signin) row.prepend(toGitHub('or send it on GitHub ↗', values));
     form.addEventListener('input', sync);
     cancel.addEventListener('click', () => { form.reset(); shut(); });
     form.addEventListener('submit', ev => {
@@ -832,21 +842,20 @@
       sync();
       if (send.disabled) return;
       const v = values();
-      if (!signin) onGitHub(v);
-      else if (TauSignin.session()) deliver(v);
-      else begin(v);
+      if (signin && TauSignin.session()) deliver(v);
+      else onGitHub(v);
     });
     // Back from signing in: file what was written, or say why not and give it back to send another way.
     live.push({name, template, resume(v, error) {
       v = v || {};
       fields.forEach(([f, t]) => { t.value = v[f.id] || ''; });
       if (error) {
-        unfold(oneClick && !Object.keys(v).length ? prompt : form);
+        unfold(form);
         say(error + ' ', toGitHub('Send it on GitHub instead ↗', () => v));
       } else deliver(v);
       note.scrollIntoView({block: 'center'});
     }});
-    return {button, parts: oneClick ? [prompt, form, note] : [form, note]};
+    return {button, parts: [form, note]};
   }
   /* Instructions for an AI agent to review it as AI-REVIEWS.md says, for this declaration at this commit: copied
      with one click, and shown, to copy by hand where the browser will not. */
@@ -1235,18 +1244,19 @@
     const code = t => { const c = el('pre', 'small-code'); c.textContent = t; return c; };
     const outside = meta.review ? meta.review.outside : [];
     const signin = TauSignin.configured(meta);
-    const sends = signin ? 'Send files it from the page, or opens it on GitHub, filled in' : 'Send takes it to GitHub, filled in';
+    const sends = signin ? 'Send takes it to GitHub, filled in, or, signed in, files it from the page' : 'Send takes it to GitHub, filled in';
     setNav('help');
     show(el('h1', null, 'How to review'),
       el('p', 'lede', 'A review answers one question: is this declaration correctly stated? Yes, or no and why.'),
       prose(signin
-              ? p('Open a declaration: its review box asks the question. Sign in with GitHub once, and ', el('b', null, 'Yes'),
-                  ' files your answer from the page in one click, with Undo, and Add why to give a reason; ', el('b', null, 'No'),
-                  ' opens a short form that asks why, and will not send without it. Signing in lets the page file issues on ',
+              ? p('Open a declaration: its review box asks the question. ', el('b', null, 'Yes'), ' opens a short form in the box, a reason ',
+                  'optional; ', el('b', null, 'No'), ' opens one that asks why, and will not send without it. ', el('b', null, 'Send'),
+                  ' opens it on GitHub, filled in with the declaration, the commit this page shows and what you wrote: submit it there. ',
+                  'Reviewing several declarations? Sign in with GitHub once, from any review box, and each answer is filed from the page ',
+                  'in one click: Yes at once, with Undo, and Add why to give a reason. Signing in lets the page file issues on ',
                   ext(URLS.issues(meta), meta.store.repo), ' under your account, and nothing else, for eight hours; it is kept in your ',
-                  'browser alone. Rather not sign in? Each form opens on GitHub instead, filled in with the declaration, the commit this ',
-                  `page shows and what you wrote: submit it there. Your answer is kept in this site's evidence store under your GitHub `,
-                  'account, and shows on the page within minutes. No pull request.')
+                  `browser alone. Either way your answer is kept in this site's evidence store under your GitHub account, and shows on `,
+                  'the page within minutes. No pull request.')
               : p('Open a declaration: its review box asks the question. ', el('b', null, 'Yes'), ' opens a short form in the box, a reason ',
                   'optional; ', el('b', null, 'No'), ' opens one that asks why, and will not send without it. ', el('b', null, 'Send'),
                   ' opens it on GitHub, filled in with the declaration, the commit this page shows and what you wrote: submit it there. ',

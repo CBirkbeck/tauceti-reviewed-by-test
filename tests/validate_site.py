@@ -400,7 +400,7 @@ def signin(browser, url, errors):
         fake["gh"] = FakeGitHub(page, url)
     page = visit(browser, url, "#/d/Fixture.triple", errors, before=before)
     gh, box = fake["gh"], page.locator(".review")
-    note, prompt, shown = box.locator(".sent-note:visible"), box.locator(".unfold.prompt"), box.locator("form.unfold:visible")
+    note, shown = box.locator(".sent-note:visible"), box.locator("form.unfold:visible")
     opened = lambda: page.evaluate("window.__opened[window.__opened.length - 1]")
     kept = lambda: page.evaluate("JSON.parse(localStorage.getItem('tauceti-review:github') || 'null')")
     said = lambda pattern: page.wait_for_function(  # in the note showing: each form has its own
@@ -421,16 +421,20 @@ def signin(browser, url, errors):
                f"{name}: the site writes an issue as the form does")
     expect(sorted(site_forms) == ["evidence-challenge.yml", "evidence-problem.yml", "evidence-question.yml", "evidence-review.yml"],
            "each form the review box fills in")
-    # Signed out: Yes asks to sign in, or to answer on GitHub as before.
-    expect(box.locator("p.how").inner_text().startswith("Sign in with GitHub and Yes files your answer in one click"), "signed out, said")
+    # Signed out: an answer goes to GitHub, filled in; signing in is offered to whoever reviews several.
+    how = box.locator("p.how").inner_text()
+    expect(how.startswith("Yes and No open a short form here") and "Reviewing several declarations?" in how
+           and box.locator("p.how button", has_text="Sign in with GitHub").count() == 1, "signed out, said: GitHub first, signing in for several")
     box.locator(".actions button", has_text="Yes").click()
-    expect(prompt.is_visible() and prompt.locator("button.send").inner_text() == "Sign in with GitHub" and shown.count() == 0,
-           "signed out, Yes asks to sign in first")
-    prompt.locator("button", has_text="or answer on GitHub").click()
+    offer = shown.locator(".signin-offer")
+    expect(shown.count() == 1 and shown.locator("button.send").inner_text() == "Send on GitHub ↗"
+           and offer.is_visible() and "Reviewing several declarations?" in offer.inner_text()
+           and shown.locator("button", has_text="or send it on GitHub").is_hidden(), "signed out, Yes opens its form, and Send goes to GitHub")
+    shown.locator("button.send").click()
     expect(on_github(opened(), "review") == ("Correctly stated: Fixture.triple", "evidence:review", {"decl": "Fixture.triple", "commit": "B"})
-           and note.inner_text().startswith("Opened on GitHub"), "or answers on GitHub, filled in")
+           and note.inner_text().startswith("Opened on GitHub"), "and answers on GitHub, filled in")
     box.locator(".actions button", has_text="Yes").click()
-    via_github(prompt.locator("button", has_text="Sign in with GitHub"))
+    via_github(shown.locator(".signin-offer button", has_text="Sign in with GitHub"))
     # GitHub sends the reader back; the page signs in, and files the yes it was given.
     said("Filed")
     a = gh.authorized[0]
@@ -455,7 +459,7 @@ def signin(browser, url, errors):
     # Signed in, Yes is one click.
     box.locator(".actions button", has_text="Yes").click()
     said("issue #41")
-    expect(len(gh.issues) == 2 and shown.count() == 0 and not prompt.is_visible(), "signed in, Yes files at once, with no form")
+    expect(len(gh.issues) == 2 and shown.count() == 0, "signed in, Yes files at once, with no form")
     box.locator(".actions button", has_text="Yes").click()
     expect(len(gh.issues) == 2 and note.count() == 1, "and again says so, filing nothing twice")
     note.locator("button", has_text="Add why").click()
@@ -509,13 +513,13 @@ def signin(browser, url, errors):
     expect(issue(6, "problem")[2]["rationale"] == "Off by two." and len(gh.authorized) == 2, "signed in again, the no is filed")
     # Sign out.
     box.locator("p.how button", has_text="Sign out").click()
-    expect(kept() is None and box.locator("p.how").inner_text().startswith("Sign in with GitHub"), "Sign out forgets the sign-in")
+    expect(kept() is None and box.locator("p.how").inner_text().startswith("Yes and No open a short form here"), "Sign out forgets the sign-in")
     # GitHub not given access: back with the answer, and another way to send it.
     gh.deny = True
     box.locator(".actions button", has_text="Yes").click()
-    via_github(prompt.locator("button", has_text="Sign in with GitHub"))
+    via_github(shown.locator(".signin-offer button", has_text="Sign in with GitHub"))
     said("not given access")
-    expect(prompt.is_visible() and note.locator("button", has_text="Send it on GitHub instead").count() == 1
+    expect(shown.count() == 1 and note.locator("button", has_text="Send it on GitHub instead").count() == 1
            and len(gh.exchanged) == 2 and len(gh.issues) == 7, "denied: said, nothing filed, and GitHub's form offered")
     # A reply GitHub did not send (no sign-in under way here, or another state) is not used.
     page.goto(url + "?code=forged&state=forged#/d/Fixture.triple", wait_until="load")
@@ -525,7 +529,7 @@ def signin(browser, url, errors):
     page.evaluate("localStorage.setItem('tauceti-review:github', JSON.stringify({token: 'ghu_old', login: 'tester', expires: Date.now() - 1}))")
     page.reload(wait_until="load")
     settle(page, "decl:Fixture.triple")
-    expect(page.locator(".review p.how").inner_text().startswith("Sign in with GitHub"), "an ended sign-in shows as signed out")
+    expect(page.locator(".review p.how").inner_text().startswith("Yes and No open a short form here"), "an ended sign-in shows as signed out")
     errors[:] = [e for e in errors if "status of 401" not in e]  # the browser's own line for the 401 above, asked for
 
 

@@ -20,12 +20,12 @@ forms, and evidence-core for everything computed from them. The design:
 ## Reviewing
 
 A review answers one question: **is this declaration correctly stated?** Open a declaration on the site:
-its review box asks the question, with two buttons. Signed in with GitHub (below), **Yes** files your
-answer at once, with Undo, and Add why to give a reason; **No** opens a short form in the box that asks
-why, and Send files it. Signed out, or rather than signing in, Send opens a new issue on GitHub instead,
-with the declaration, the commit the site shows and what you wrote already in it, for one click there to
-file it (what you wrote goes on your clipboard too). Either way the issue is written as the form writes
-it:
+its review box asks the question, with two buttons. **Yes** opens a short form in the box, a reason
+optional, and **No** one that asks why; **Send on GitHub** opens a new issue there with the declaration,
+the commit the site shows and what you wrote already in it, for one click there to file it (what you
+wrote goes on your clipboard too). For whoever reviews several declarations, each form offers to sign in
+with GitHub (below) once: signed in, **Yes** files your answer at once, with Undo, and Add why to give a
+reason, and Send files a no from the page. Either way the issue is written as the form writes it:
 
 | answer | form | records |
 |---|---|---|
@@ -142,8 +142,9 @@ and `python -m answerer run --dry-run` to see what it would do.
   post; its **dependency map** (what it rests on above, what rests on it below; the results its proof
   uses and Mathlib's declarations on request; ↑ and ↓ unfold a level, − folds it), then as lists how
   it is proved, what is built on it, its examples and what it is used to prove; and its review box, as the site had it in September, asking "Is this theorem
-  (lemma, definition, …) correctly stated?" with Yes and No (signed in, Yes files at once; No and the
-  rest open a short form in the box, which Send files, or opens on GitHub filled in): below, a Correctly stated mark counting
+  (lemma, definition, …) correctly stated?" with Yes and No (each opens a short form in the box whose Send
+  opens it on GitHub filled in; signed in, which the forms offer to whoever reviews several, Yes files at
+  once and Send files from the page): below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
   mark, a twisty when it gives reasons that opens to why and its issue, and
   each no in full until it is answered, then folded into a twisty (where it stands, who said it, its
