@@ -251,14 +251,14 @@ a.mark:hover { border-color: var(--accent); text-decoration: none; }
 /* A twisty: a line that opens to show more, an answer's reasons or what a test checks and states. */
 .answers-list, .tests-list { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 6px 0 8px; }
 .answers-list > details, .tests-list > details { align-self: stretch; }
-.review details.twisty { margin: 0; }
-.review details.twisty > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; list-style: none;
+details.twisty { margin: 0; }
+details.twisty > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; list-style: none;
   cursor: pointer; font-size: 13px; color: var(--ink); }
-.review details.twisty > summary::-webkit-details-marker { display: none; }
-.review details.twisty > summary::before { content: "▶"; display: inline-block; width: 10px; color: var(--accent); font-size: 9px;
+details.twisty > summary::-webkit-details-marker { display: none; }
+details.twisty > summary::before { content: "▶"; display: inline-block; width: 10px; color: var(--accent); font-size: 9px;
   transition: transform .12s; }
-.review details.twisty[open] > summary::before { transform: rotate(90deg); }
-.review details.twisty > summary:hover .gist { color: var(--ink); }
+details.twisty[open] > summary::before { transform: rotate(90deg); }
+details.twisty > summary:hover .gist { color: var(--ink); }
 .twisty .gist { color: var(--muted); font-size: 12.5px; }
 .twisty-body { margin: 6px 0 4px 5px; padding: 2px 0 2px 16px; border-left: 2px solid var(--line); font-size: 14px; }
 .twisty-body > .md { margin: 4px 0; }
@@ -281,6 +281,11 @@ a.mark:hover { border-color: var(--accent); text-decoration: none; }
 .report.question .state { color: var(--accent); }
 .report.closed .state { color: var(--muted); }
 .report .fix { margin: 10px 0 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+/* A no or a suggestion once answered: folded, its line saying where it stands, who said it, and what. Opened, what
+   was decided stays legible (below), so the fold is not dimmed as a closed twisty is. */
+.report.twisty > summary { color: var(--muted); }
+.report.twisty.closed { opacity: 1; }
+.report.twisty .twisty-body { margin-bottom: 0; }
 .namedline { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 
 /* A record in full, as the Activity page lists them. */
@@ -315,6 +320,8 @@ a.mark:hover { border-color: var(--accent); text-decoration: none; }
 .record-actions a { font-family: var(--mono); color: var(--muted); }
 .decl-link { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 13px; }
 .records .thread:first-child { border-top: 0; }
+.thread .twisty.fold > summary { font-size: 13.5px; }
+.thread .twisty.fold > summary .state-word { margin: 0; }
 pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: var(--code); font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* The map. */

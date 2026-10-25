@@ -29,11 +29,13 @@
     const [head, ...rest] = h.replace(/^\//, '').split('/');
     const arg = decodeURIComponent(rest.join('/'));
     return ({'': ['home'], named: ['named'], reviewed: ['reviewed'], d: ['decl', arg], m: ['module', arg], area: ['area', arg],
-             search: ['search', arg], browse: ['browse'], activity: ['activity'], help: ['help']})[head] || ['missing', h];
+             search: ['search', arg], browse: ['browse'], activity: arg ? ['activity', arg] : ['activity'], help: ['help']})[head] || ['missing', h];
   }
-  const address = r => ({home: '#/', named: '#/named', reviewed: '#/reviewed', decl: '#/d/', module: '#/m/', area: '#/area/',
-                         search: '#/search/', browse: '#/browse', activity: '#/activity', help: '#/help'})[r[0]] +
-                       (r[1] != null ? encodeURIComponent(r[1]) : '');
+  const address = r => {
+    const base = {home: '#/', named: '#/named', reviewed: '#/reviewed', decl: '#/d/', module: '#/m/', area: '#/area/',
+                  search: '#/search/', browse: '#/browse', activity: '#/activity', help: '#/help'}[r[0]];
+    return r[1] != null ? base.replace(/\/?$/, '/') + encodeURIComponent(r[1]) : base;
+  };
 
   /* --- frame ---------------------------------------------------------------------------------------- */
   function show(...nodes) { main.replaceChildren(...nodes.filter(Boolean)); window.scrollTo(0, 0); }
@@ -198,6 +200,12 @@
       v.actions.forEach((a, i) => { if (i) acts.append(' · '); acts.append(ext(v.url, '/' + a)); });
       box.append(acts);
     }
+    // A no or a suggestion once answered (a reply, or a decision) folds into a twisty: its head, where it
+    // stands and its first line, opening to the rest.
+    if (v.kind === 'review' && v.verdict !== 'accept' && answered(v)) {
+      const word = box.querySelector(':scope > .state-word'), rest = [...box.childNodes].slice(1).filter(x => x !== word);
+      box.replaceChildren(twisty('fold', [head, word, el('span', 'gist', gist(v.text))].filter(Boolean), ...rest));
+    }
     return box;
   }
 
@@ -342,7 +350,7 @@
       `Yes, or no and why. Nothing is written into ${lib}: an answer is kept against the declaration's hash, and says so when the declaration changes.`);
     const stats = el('div', 'stats');
     [[c.declarations, 'declarations'], [c.named, 'named by Voyager'], [c.reviewed || 0, 'reviewed', '#/reviewed'],
-     [c.accepts.people, 'yes from people'], [c.accepts.ai, 'yes from AI agents'], [c.problems, 'no, still open']]
+     [c.accepts.people, 'yes from people'], [c.accepts.ai, 'yes from AI agents'], [c.problems, 'no, still open', '#/activity/open']]
       .forEach(([n, t, href]) => {
         const s = href ? link(href, null, 'stat') : el('div', 'stat');
         s.append(el('b', null, count(n)), el('span', null, t));
@@ -902,6 +910,10 @@
                (v.hash ? `Version ${v.hash}, ` : '') + date(v.at) + '.', statusNote(v)].filter(Boolean).join(' ');
     return m;
   }
+  /* What a text says, in a line: its first line, plain, cut at 90 characters, after a dash. */
+  const gist = text => { const first = plain(String(text || '').split('\n')[0]); return first ? ' — ' + (first.length > 90 ? first.slice(0, 89) + '…' : first) : ''; };
+  /* Whether a no or a suggestion has been answered: replied to, or decided. */
+  const answered = v => (v.replies || []).length + (v.statuses || []).length > 0;
   /* A twisty: a line that opens to show more. */
   function twisty(cls, head, ...body) {
     const d = el('details', 'twisty ' + cls), s = el('summary'), b = el('div', 'twisty-body');
@@ -968,8 +980,7 @@
     t.append(sign('yes'), el('span', 'trailer', 'Tested by'), ' ', el('span', 'who', parts.join(' · ')));
     row.append(t);
     const list = el('div', 'tests-list');
-    // What it checks, in a line: its first line, cut at 90 characters. The twisty holds the rest, if there is more.
-    const gist = text => { const first = plain(String(text || '').split('\n')[0]); return first ? ' — ' + (first.length > 90 ? first.slice(0, 89) + '…' : first) : ''; };
+    // What it checks, in a line (its gist); the twisty holds the rest, if there is more.
     const more = text => { const t = String(text || '').trim(); return t.includes('\n') || plain(t).length > 90; };
     tests.forEach(x => {
       const stmt = el('div', 'lean'), line = el('p', 'line');
@@ -1008,22 +1019,30 @@
     return box;
   }
   /* A no or a suggestion (a question record): where it stands, who said it and when, what they said, the
-     replies, and its issue with what was decided on it. */
+     replies, and its issue with what was decided on it. Once answered (a reply, or a decision), it folds into a
+     twisty: where it stands, who said it, and its first line, opening to the rest. */
   function report(v, byId) {
     const open = v.state === 'open', question = v.verdict === 'question';
-    const box = el('div', 'report' + (question ? ' question' : '') + (open ? '' : ' closed')), head = el('p', 'head');
-    head.append(el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? 'Closed' : STATE_WORDS[v.state] || 'Closed'), ' · ',
-                question ? 'suggested by ' : (v.category && v.category !== 'other' ? v.category + ' · ' : '') + 'answered no by ',
-                markWho(v.by), ', ' + date(v.at));
+    const cls = 'report' + (question ? ' question' : '') + (open ? '' : ' closed');
+    const head = [el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? 'Closed' : STATE_WORDS[v.state] || 'Closed'), ' · ',
+                  question ? 'suggested by ' : (v.category && v.category !== 'other' ? v.category + ' · ' : '') + 'answered no by ',
+                  markWho(v.by), ', ' + date(v.at)];
     const note = v.status !== 'current' && statusNote(v);
-    if (note) head.append(' · ', el('span', 'note', note));
-    if (v.source) head.append(` · from the ${v.source.name} store`);
-    box.append(head);
-    if (v.text) box.append(md(v.text));
-    if (v.fix) box.append(el('p', 'fix', 'Suggested fix'), md(v.fix));
-    replies(box, v, byId);
-    resolutions(box, v, markWho);
-    if (v.url) { const foot = el('p', 'line'); foot.append(ext(v.url, issueText(v.url))); box.append(foot); }
+    if (note) head.push(' · ', el('span', 'note', note));
+    if (v.source) head.push(` · from the ${v.source.name} store`);
+    const body = el('div');
+    if (v.text) body.append(md(v.text));
+    if (v.fix) body.append(el('p', 'fix', 'Suggested fix'), md(v.fix));
+    replies(body, v, byId);
+    resolutions(body, v, markWho);
+    if (v.url) { const foot = el('p', 'line'); foot.append(ext(v.url, issueText(v.url))); body.append(foot); }
+    if (answered(v)) {
+      const n = (v.replies || []).length;
+      return twisty(cls, [...head, n ? ' · ' + plural(n, 'reply', 'replies') : '', el('span', 'gist', gist(v.text))], ...body.childNodes);
+    }
+    const box = el('div', cls), line = el('p', 'head');
+    line.append(...head);
+    box.append(line, ...body.childNodes);
     return box;
   }
   /* What was decided on a no or a suggestion, each decision in full: how it stands (fixed, at which commit; behaves
@@ -1179,10 +1198,13 @@
     [[act.problems.length, 'no, still open'], [act.questions.length, 'suggestions open'], [act.challenges.length, 'suggested tests open'],
      [act.reviewers.length, 'reviewers']].forEach(([n, t]) => { const s = el('div', 'stat'); s.append(el('b', null, count(n)), el('span', null, t)); stats.append(s); });
     if (gen !== generation) return;
+    // #/activity/open, where the home page's count of the noes still open leads: those noes, at the top.
+    const open = section('Answered no, still open', act.problems.length, recordList(act.problems, 'None.'));
+    open.id = 'open';
     setNav('activity');
     show(el('h1', null, 'Activity'),
       el('p', 'lede', `Everything recorded about ${meta.library.name}, newest first, and what is still open.`), stats,
-      section('Answered no, still open', act.problems.length, recordList(act.problems, 'None.')),
+      open,
       section('Answered no, resolved', (act.answered || []).length,
               hint('Each no closed: fixed, behaving as intended, or not a problem, and why, the latest first.'),
               recordList(act.answered || [], 'None yet.')),
@@ -1192,6 +1214,7 @@
               queue.length ? queueList : el('p', 'faint', 'Nothing yet.')),
       section('Latest', null, recordList(act.recent, 'Nothing yet.')),
       section('Reviewers', act.reviewers.length, act.reviewers.length ? reviewers : el('p', 'faint', 'Nobody yet.')));
+    if (arg === 'open') open.scrollIntoView();
   };
 
   VIEWS.help = async (arg, gen) => {

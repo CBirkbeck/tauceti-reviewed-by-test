@@ -33,13 +33,17 @@ class PullRequestTests(unittest.TestCase):
         git(self.work, "config", "user.name", "t")
         git(self.work, "config", "user.email", "t@e")
         self.gh_calls, self.built = [], []
+        self.view = {"state": "MERGED", "mergeCommit": {"oid": "f" * 40}, "closedAt": "2026-10-25T10:35:34Z"}
+        self.main = ""  # main's commits, as `gh api … --jq` lists them: sha, a tab, the subject
 
         def gh(argv, stdin=None):
             self.gh_calls.append((argv, stdin))
             if argv[:3] == ["gh", "pr", "create"]:
                 return "https://github.com/TauCetiProject/TauCeti/pull/77\n"
             if argv[:3] == ["gh", "pr", "view"]:
-                return json.dumps({"state": "MERGED", "mergeCommit": {"oid": "f" * 40}})
+                return json.dumps(self.view)
+            if argv[:2] == ["gh", "api"]:
+                return self.main
             return ""
 
         self.prs = PullRequests(self.work, "TauCetiProject/TauCeti", gh=gh,
@@ -92,6 +96,23 @@ class PullRequestTests(unittest.TestCase):
 
     def test_merged(self):
         self.assertEqual(self.prs.state(77), ("MERGED", "f" * 40))
+
+    def test_merged_by_bors(self):
+        # Bors squashes the pull request into a commit on main and closes it.
+        self.view = {"state": "CLOSED", "mergeCommit": None, "closedAt": "2026-10-25T10:35:34Z"}
+        self.main = ("cae7027" + "0" * 33 + "\tdocs: say when heckeTNat's double coset is the classical Hecke operator (#21172)\n"
+                     "dedf03b" + "0" * 33 + "\tdocs: write the PDE docstrings' operator in the energy form's index order (#77)\n"
+                     "d96e9ce" + "0" * 33 + "\tfeat: characterize Lagrangian graphs of diffeomorphisms (#21110)\n")
+        self.assertEqual(self.prs.state(77), ("MERGED", "dedf03b" + "0" * 33))
+        api = next(c[0] for c in self.gh_calls if c[0][:2] == ["gh", "api"])
+        self.assertIn("repos/TauCetiProject/TauCeti/commits?sha=main&per_page=100&since=2026-10-24T10:35:34Z", api)
+
+    def test_closed_without_merging(self):
+        self.view = {"state": "CLOSED", "mergeCommit": None, "closedAt": "2026-10-25T10:35:34Z"}
+        self.main = "d96e9ce" + "0" * 33 + "\tfeat: characterize Lagrangian graphs of diffeomorphisms (#21110)\n"
+        self.assertEqual(self.prs.state(77), ("CLOSED", None))
+        self.main = "d96e9ce" + "0" * 33 + "\tfeat: something else, see #77 and (#770)\n"
+        self.assertEqual(self.prs.state(77), ("CLOSED", None))
 
 
 if __name__ == "__main__":

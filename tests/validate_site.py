@@ -95,6 +95,18 @@ def home(browser, url, errors):
     expect(page.locator("a.stat[href='#/reviewed'] b").inner_text() == "11", "how many are reviewed, a click from the list of them")
     expect(page.locator(".section", has_text="Latest named").locator(".list > li").count() == 2, "the latest named")
     expect(page.locator(".section", has_text="Areas").locator("a.chip").count() == 3, "the areas")
+    still = page.locator("a.stat[href='#/activity/open']")
+    expect(still.locator("span").inner_text() == "no, still open", "the noes still open, counted")
+    n = still.locator("b").inner_text()
+    still.click()
+    page.wait_for_function("location.hash === '#/activity/open' && window.TauReview.ready")
+    open_ = page.locator("section#open")
+    expect(open_.locator("h2").inner_text().startswith("Answered no, still open")
+           and str(open_.locator(".records > .thread").count()) == n and open_.locator("a.decl-link").count() == int(n),
+           "and a click from which they are")
+    # Scrolled to them: at the top, below the bar that stays there.
+    expect(page.evaluate("(() => { const top = document.getElementById('open').getBoundingClientRect().top;"
+                         " return top >= 0 && top < 150; })()"), "scrolled to them")
 
 
 @check
@@ -603,17 +615,23 @@ def other_pages(browser, url, errors):
     better = page.locator(".section", has=page.locator("h2", has_text="What could be better"))
     expect("any semiring" in better.inner_text(), "the open suggestions")
     answered = page.locator(".section", has=page.locator("h2", has_text="Answered no, resolved"))
-    expect(answered.locator("a.decl-link").all_inner_texts() == ["Fixture.one"]
-           and answered.locator(".resolution", has_text="Behaves as intended").locator(".md p").count() == 2,
-           "each no answered, with why in full")
+    fold = answered.locator(".thread details.twisty.fold")
+    expect(answered.locator("a.decl-link").all_inner_texts() == ["Fixture.one"] and fold.count() == 1
+           and not fold.evaluate("d => d.open") and "Behaves as intended" in fold.locator("summary").inner_text(),
+           "each no answered, folded: where it stands and who said it")
+    fold.locator("summary").click()
+    expect(fold.locator(".resolution", has_text="Behaves as intended").locator(".md p").count() == 2
+           and fold.locator(".resolution .md p").first.is_visible(), "which opens to why, in full")
     page = visit(browser, url, "#/d/Fixture.one", errors)
-    report = page.locator(".review .report.closed")
-    expect(report.locator(".head .state").inner_text() == "Behaves as intended"
-           and report.locator(".resolution").count() == 2
+    report = page.locator(".review details.report.twisty.closed")
+    expect(report.locator("summary .state").inner_text() == "Behaves as intended" and not report.evaluate("d => d.open"),
+           "a no answered, folded into a line saying how it stands")
+    report.locator("summary").click()
+    expect(report.locator(".resolution").count() == 2
            and report.locator(".resolution").last.locator(".md p").all_inner_texts()
            == ["Pos admits 0 on purpose: it is the predicate, and the theorems about it assume 0 < n where they need it.",
                "With that usual hypothesis it is the positive integers, so the declaration says what it should."],
-           "a no answered shows how, by whom, and why, in full, under the no")
+           "which opens to how, by whom, and why, in full")
     page = visit(browser, url, "#/help", errors)
     expect("Reviewed-by: TauCeti.Foo.bar" in page.inner_text("body"), "the bulk issue's lines")
     expect(page.locator("a[href='https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md']").count() == 1

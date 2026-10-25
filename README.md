@@ -146,7 +146,8 @@ and `python -m answerer run --dry-run` to see what it would do.
   rest open a short form in the box, which Send files, or opens on GitHub filled in): below, a Correctly stated mark counting
   people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
   mark, a twisty when it gives reasons that opens to why and its issue, and
-  each no in full; **What could be better**, its suggestions and the button to add one; and **Tests**,
+  each no in full until it is answered, then folded into a twisty (where it stands, who said it, its
+  first line) that opens to the no, the replies and what was decided; **What could be better**, its suggestions and the button to add one; and **Tests**,
   the button to suggest one and, when something tests it, a Tested by mark and each test as a twisty
   that opens to what it checks and its statement as the docs show it. Formulas in docstrings and in Voyager's
   sentences are typeset, whether written in TeX (`$…$`) or as text with TeX's marks
@@ -156,7 +157,8 @@ and `python -m answerer run --dry-run` to see what it would do.
   Tau Ceti builds on. Reach one from a Tau Ceti declaration
   that uses it, or by its Lean name in Search.
 - **Browse**, **Search** (names and docstring titles), **Activity** (the noes and the suggestions
-  still open, what to review next, reviewers) and **How to review**.
+  still open, the noes resolved, what to review next, reviewers; an answered no folded as on its page;
+  the home page's count of noes still open leads to them, `#/activity/open`) and **How to review**.
 
 Colour on a declaration means its review state: an open ring for not reviewed, white for reviewed,
 salmon for reviewed by AI agents only or on an earlier version, red for a no still open. A switch on

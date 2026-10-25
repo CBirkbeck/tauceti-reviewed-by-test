@@ -48,8 +48,11 @@ Every hour, on the server (`ssh ovh`, a systemd user timer), `python -m answerer
    An item from an issue gets a comment on its issue (the command on the first line, the reply
    below it, which intake keeps as the status's note). An item from a pull request (an AI agent's
    batch) has no issue: it gets the store's status form instead (`evidence-store status`), the
-   reply as the note. Either way the reply is recorded in the store, and the site shows it in full
-   under the no and in the Activity page's "Answered no, resolved".
+   reply as the note. Either way the reply is recorded in the store, and the site shows it under the
+   no, folded with it into a twisty once answered, and in the Activity page's "Answered no, resolved".
+   A reply is short and plain but exact (asked for on 2026-10-25): at most 120 words, its first
+   sentence the conclusion and the reason (the prompt), cut at a paragraph past 1,200 characters (the
+   code).
 4. Items it cannot settle are listed in one issue on the review repository, "Answerer: needs a
    person", which it rewrites each run.
 
