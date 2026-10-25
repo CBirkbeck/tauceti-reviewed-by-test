@@ -187,7 +187,9 @@ nothing compared them with the docs. Now:
 - the Dataset workflow publishes a dataset only if `scripts/check_signatures.py` passes: no signature
   prints a binder without its type, and the signatures of every declaration Voyager named, every one
   with a record, and two samples of the rest (800) say what the docs' headers say, namespaces, universes
-  and spacing set aside; otherwise it opens an issue and the site stays on the last dataset that passed;
+  and spacing set aside, and two notations a docs page writes out (`fun₀ | i => a`, `X ⟹ Y`: a docs page
+  is built from its module's imports alone); otherwise it opens an issue and the site stays on the last
+  dataset that passed. A difference reviewed and accepted goes in `data/signature-exceptions.json`;
 - the browser check of every build reads, on real pages, that what is shown is the dataset's signature;
 - the extractor's own test checks that binders keep their types and a structure says what it extends.
 

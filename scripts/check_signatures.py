@@ -70,6 +70,27 @@ def untyped(text: str) -> str | None:
     return None
 
 
+#: Notation a docs page may write out: a docs page is built from its module's imports alone, the dataset
+#: with the whole library loaded, which has Mathlib's notation for these everywhere (reviewed 2026-10-25,
+#: data/signature-exceptions.json). Rewritten the docs' way before comparing; any other difference stands.
+NOTATION = [
+    # `fun₀ | i => a` is `Finsupp.single i a` (one arm; with more, `Finsupp.update`, which stays a difference).
+    (re.compile(r"fun₀ \| ([^|=]+?) => ((?:[^()|]|\([^()]*\))+?)(?=\)|$| ∈| ⊗| =| ≤| <| \+)"), r"Finsupp.single \1 \2"),
+    # `X ⟹ Y` is `(CategoryTheory.ihom X).obj Y`.
+    (re.compile(r"(\S+) ⟹ (\S+?)(?=\)|$|\s)"), r"(CategoryTheory.ihom \1).obj \2"),
+]
+
+
+def bare(text: str) -> str:
+    return text.replace("(", "").replace(")", "")
+
+
+def written_out(text: str) -> str:
+    for pattern, replacement in NOTATION:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 def normal(text: str) -> str:
     """A header as compared: no keyword, universes, namespaces or spacing."""
     words = text.split(None, 3)
@@ -190,7 +211,7 @@ def check(dataset: Path, settings: dict, store: Path, voyager: Path, source: Pat
           exceptions: Path | None = None) -> dict:
     sigs = {r["decl"]: header(r)[0] for r in rows(dataset / "facets" / "signature.jsonl")}
     out: dict = {"signatures": len(sigs), "untyped": [], "compared": 0, "differ": [], "missing": [],
-                 "skipped": 0, "excused": [], "docs": None}
+                 "skipped": 0, "excused": [], "notation": [], "docs": None}
     allowed = excused(exceptions) if exceptions else {}
     for name, text in sigs.items():
         bad = untyped(text)
@@ -230,6 +251,12 @@ def check(dataset: Path, settings: dict, store: Path, voyager: Path, source: Pat
         ours, docs = normal(sigs[name]), normal(theirs)
         if ours == docs:
             continue
+        # Only where one of those notations is written; parentheses aside, as the notation and the
+        # application it stands for need different ones.
+        if any(sym in sigs[name] for sym in ("fun₀", "⟹")) and \
+                bare(normal(written_out(" ".join(sigs[name].split())))) == bare(docs):
+            out["notation"].append(name)
+            continue
         if allowed.get(name) == (ours, docs):
             out["excused"].append(name)
             continue
@@ -242,7 +269,8 @@ def report(r: dict, limit: int = 40) -> str:
              f"{len(r['untyped'])} found."]
     if r["docs"] is not None:
         lines.append(f"Against the docs (built at {', '.join(c[:12] for c in r['docs']) or 'an unknown commit'}): "
-                     f"{r['compared']} compared, {len(r['differ'])} differ; {len(r['excused'])} differ as reviewed "
+                     f"{r['compared']} compared, {len(r['differ'])} differ; {len(r['notation'])} in notation only (fun₀, ⟹), "
+                     f"{len(r['excused'])} as reviewed "
                      f"(data/signature-exceptions.json), {r['skipped']} left out (their file changed since the docs "
                      f"were built), {len(r['missing'])} not in the docs.")
     for name, bad in r["untyped"][:limit]:

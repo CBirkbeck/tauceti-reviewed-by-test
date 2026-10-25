@@ -60,6 +60,13 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(cs.normal(DOCS), cs.normal(RIGHT))
         self.assertEqual(cs.normal("noncomputable def A.b.{u} (x : ℕ) : ℕ"), cs.normal("A.b.{u} (x : ℕ) : ℕ"))
 
+    def test_two_notations_written_out(self):
+        site = "S.thm (C : V) (a : A) : (fun₀ | C => a) ∈ S.part C"
+        self.assertEqual(cs.bare(cs.normal(cs.written_out(site))), cs.bare(cs.normal("theorem S.thm (C : V) (a : A) :Finsupp.single C a ∈ part C")))
+        site = "P.ext {X Y : Pointed} {f g : (X ⟹ Y).X} : f = g"
+        self.assertEqual(cs.bare(cs.normal(cs.written_out(site))),
+                         cs.bare(cs.normal("theorem P.ext {X Y : Pointed} {f g : ((CategoryTheory.ihom X).obj Y).X} :f = g")))
+
     def test_what_was_lost_is_a_difference(self):
         self.assertNotEqual(cs.normal(DOCS), cs.normal(WRONG))
 
