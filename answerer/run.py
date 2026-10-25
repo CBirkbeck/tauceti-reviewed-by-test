@@ -77,6 +77,8 @@ def choose(items: list[Item], state: State, cfg: Config, today: str) -> list[Ite
             per_author[e["author"]] = per_author.get(e["author"], 0) + 1
     chosen = []
     for item in items:
+        if len(chosen) >= cfg.max_items:
+            break
         done = state.items.get(item.id)
         if done and (done.get("pr") or not reopened_since(item, done.get("at", ""))):
             continue
@@ -85,8 +87,6 @@ def choose(items: list[Item], state: State, cfg: Config, today: str) -> list[Ite
                 continue
             per_author[item.author] = per_author.get(item.author, 0) + 1
         chosen.append(item)
-        if len(chosen) >= cfg.max_items:
-            break
     return chosen
 
 

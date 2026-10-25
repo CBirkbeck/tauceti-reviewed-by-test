@@ -137,6 +137,10 @@ class RunTests(unittest.TestCase):
         self.assertEqual((argv[:2], a["--action"], a["--agent"], a["--commit"]),
                          (["evidence-store", "status"], "fixed", "Claude Code, claude-opus-5-5", "c" * 40))
 
+    def test_at_most_none(self):
+        self.go([], max_items=0)
+        self.assertEqual(self.gh.calls, [])
+
     def test_the_days_budget(self):
         self.state.spend("2026-10-25", 20.0)
         self.go([])
