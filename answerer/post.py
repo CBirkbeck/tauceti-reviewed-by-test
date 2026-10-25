@@ -63,6 +63,9 @@ class Poster:
                 "a person. It rewrites this list every hour.\n\n" + ("\n".join(entries) if entries else "Nothing now."))
         if number:
             self.call(["gh", "issue", "edit", str(number), "-R", self.repo, "--body-file", "-"], body)
+            # Open while something needs a person, closed while nothing does, so that its title says true.
+            self.call(["gh", "api", "-X", "PATCH", f"repos/{self.repo}/issues/{number}",
+                       "-f", f"state={'open' if entries else 'closed'}"])
             return number
         if not entries:
             return None

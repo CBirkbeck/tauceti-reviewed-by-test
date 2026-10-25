@@ -67,6 +67,11 @@ class PosterTests(unittest.TestCase):
         p.flags(["- a"], 42)
         self.assertEqual(self.run.calls[1][0][:4], ["gh", "issue", "edit", "42"])
         self.assertIn("- a", self.run.calls[1][1])
+        self.assertEqual(self.run.calls[2][0], ["gh", "api", "-X", "PATCH", "repos/o/r/issues/42", "-f", "state=open"])
+        # With nothing left for a person, it says so and closes.
+        p.flags([], 42)
+        self.assertIn("Nothing now.", self.run.calls[3][1])
+        self.assertEqual(self.run.calls[4][0][-1], "state=closed")
 
 
 class StateTests(unittest.TestCase):
