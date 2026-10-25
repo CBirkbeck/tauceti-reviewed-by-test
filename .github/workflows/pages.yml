@@ -58,6 +58,8 @@ jobs:
           git -C "$RUNNER_TEMP/TauCeti" fetch -q --depth 1 https://github.com/TauCetiProject/TauCeti "$commit"
           git -C "$RUNNER_TEMP/TauCeti" checkout -q FETCH_HEAD
           evidence-store fetch-imports --store evidence --out "$RUNNER_TEMP/imports"
+      - name: No signature prints a binder without its type
+        run: python scripts/check_signatures.py --dataset "$RUNNER_TEMP/dataset" --offline
       - name: Build
         run: python scripts/build_site.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti" --imports "$RUNNER_TEMP/imports" --out _site
       - name: The browser check, on the build

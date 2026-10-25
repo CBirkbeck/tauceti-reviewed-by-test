@@ -45,6 +45,11 @@ class UntypedTests(unittest.TestCase):
                      "∑ i ∈ s, f i", "∑ (i : ι), f i", "{x : M | x ∈ l}", "{x : T // p x}", "(x : ℕ) → x = x"):
             self.assertIsNone(cs.untyped(text), text)
 
+    def test_not_in_an_arguments_default_tactic(self):
+        # Printed as written, in the docs too: `(le : α → α → Bool := by exact fun a b => a ≤ b)`.
+        self.assertIsNone(cs.untyped("List.mergeSort (xs : List α) (le : α → α → Bool := by exact fun a b => decide (a ≤ b)) : List α"))
+        self.assertEqual(cs.untyped("(f : α → β := fun x => x) : ∃ y, p y"), "fun x =>")
+
     def test_the_signature_the_site_showed(self):
         self.assertEqual(cs.untyped(WRONG), "∃ V,")
         self.assertIsNone(cs.untyped(RIGHT))
@@ -89,7 +94,7 @@ class DocsTests(unittest.TestCase):
         (d / "meta.json").write_text(json.dumps({"library": {"commit": "da4d8dc48847cea93910477b85cf0cd427f169b3"}}))
         return d
 
-    def run_check(self, sig: str) -> dict:
+    def run_check(self, sig: str, exceptions: Path | None = None) -> dict:
         def fetch(docs, module):
             h = cs.Headers()
             h.feed(PAGE)
@@ -97,11 +102,23 @@ class DocsTests(unittest.TestCase):
         settings = {"library": {"repo": "o/r", "docs": "https://example.org/docs"}}
         store = Path(tempfile.mkdtemp())
         (store / "records").mkdir()
-        return cs.check(self.dataset(sig), settings, store, store / "none.jsonl", fetch=fetch, sample=5)
+        return cs.check(self.dataset(sig), settings, store, store / "none.jsonl", fetch=fetch, sample=5,
+                        exceptions=exceptions)
 
     def test_as_the_docs_have_it(self):
         r = self.run_check("Fixture.thing (n : ℕ) : ∃ (m : ℕ), m < n")
         self.assertEqual((r["compared"], r["differ"], r["untyped"]), (1, [], []))
+
+    def test_a_reviewed_difference(self):
+        site = "Fixture.thing (n : ℕ) : ∃ (m : ℕ), m < n + 0"
+        ex = Path(tempfile.mkdtemp()) / "exceptions.json"
+        ex.write_text(json.dumps([{"decl": "Fixture.thing", "site": site,
+                                   "docs": "theorem Fixture.thing (n : ℕ) :∃ (m : ℕ), m < n", "why": "reviewed"}]))
+        r = self.run_check(site, exceptions=ex)
+        self.assertEqual((r["differ"], r["excused"]), ([], ["Fixture.thing"]))
+        # Either text changing voids it.
+        r = self.run_check("Fixture.thing (n : ℕ) : ∃ (m : ℕ), m < n + 1", exceptions=ex)
+        self.assertEqual([d["decl"] for d in r["differ"]], ["Fixture.thing"])
 
     def test_otherwise_it_fails(self):
         r = self.run_check("Fixture.thing (n : ℕ) : ∃ m, m < n")

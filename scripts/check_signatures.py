@@ -53,9 +53,21 @@ BLOB = re.compile(r"/blob/([0-9a-f]{40})/")
 
 
 def untyped(text: str) -> str | None:
-    """The first binder printed without its type, if there is one."""
-    m = UNTYPED.search(text)
-    return m.group(0) if m else None
+    """The first binder printed without its type, if there is one: not one in an argument's default
+    tactic (`(le : α → α → Bool := by exact fun a b => a ≤ b)`), which is printed as written."""
+    for m in UNTYPED.finditer(text):
+        depth, start = 0, 0
+        for i in range(m.start() - 1, -1, -1):  # the bracket that encloses it
+            if text[i] in ")]}⟩⦄":
+                depth += 1
+            elif text[i] in "([{⟨⦃":
+                if depth == 0:
+                    start = i
+                    break
+                depth -= 1
+        if ":= by" not in text[start:m.start()]:
+            return m.group(0)
+    return None
 
 
 def normal(text: str) -> str:
@@ -165,11 +177,21 @@ def recorded(store: Path) -> set[str]:
     return names
 
 
+def excused(path: Path) -> dict[str, tuple[str, str]]:
+    """The differences reviewed and accepted (data/signature-exceptions.json): by declaration, the site's
+    text and the docs', as compared. Either text changing voids the exception."""
+    if not path.exists():
+        return {}
+    return {e["decl"]: (normal(e["site"]), normal(e["docs"])) for e in json.loads(path.read_text(encoding="utf-8"))}
+
+
 def check(dataset: Path, settings: dict, store: Path, voyager: Path, source: Path | None = None,
-          offline: bool = False, sample: int = 400, fetch=headers_of, jobs: int = 12) -> dict:
+          offline: bool = False, sample: int = 400, fetch=headers_of, jobs: int = 12,
+          exceptions: Path | None = None) -> dict:
     sigs = {r["decl"]: header(r)[0] for r in rows(dataset / "facets" / "signature.jsonl")}
     out: dict = {"signatures": len(sigs), "untyped": [], "compared": 0, "differ": [], "missing": [],
-                 "skipped": 0, "docs": None}
+                 "skipped": 0, "excused": [], "docs": None}
+    allowed = excused(exceptions) if exceptions else {}
     for name, text in sigs.items():
         bad = untyped(text)
         if bad:
@@ -205,8 +227,13 @@ def check(dataset: Path, settings: dict, store: Path, voyager: Path, source: Pat
             out["missing"].append(name)
             continue
         out["compared"] += 1
-        if normal(theirs) != normal(sigs[name]):
-            out["differ"].append({"decl": name, "site": sigs[name], "docs": " ".join(theirs.split())})
+        ours, docs = normal(sigs[name]), normal(theirs)
+        if ours == docs:
+            continue
+        if allowed.get(name) == (ours, docs):
+            out["excused"].append(name)
+            continue
+        out["differ"].append({"decl": name, "site": sigs[name], "docs": " ".join(theirs.split())})
     return out
 
 
@@ -215,8 +242,9 @@ def report(r: dict, limit: int = 40) -> str:
              f"{len(r['untyped'])} found."]
     if r["docs"] is not None:
         lines.append(f"Against the docs (built at {', '.join(c[:12] for c in r['docs']) or 'an unknown commit'}): "
-                     f"{r['compared']} compared, {len(r['differ'])} differ; {r['skipped']} left out (their file "
-                     f"changed since the docs were built), {len(r['missing'])} not in the docs.")
+                     f"{r['compared']} compared, {len(r['differ'])} differ; {len(r['excused'])} differ as reviewed "
+                     f"(data/signature-exceptions.json), {r['skipped']} left out (their file changed since the docs "
+                     f"were built), {len(r['missing'])} not in the docs.")
     for name, bad in r["untyped"][:limit]:
         lines.append(f"- `{name}`: `{bad}`")
     for d in r["differ"][:limit]:
@@ -231,12 +259,14 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--source", type=Path)
     ap.add_argument("--store", type=Path, default=ROOT / "evidence")
     ap.add_argument("--voyager", type=Path, default=ROOT / "data" / "voyager.jsonl")
+    ap.add_argument("--exceptions", type=Path, default=ROOT / "data" / "signature-exceptions.json")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--sample", type=int, default=400)
     ap.add_argument("--report", type=Path)
     a = ap.parse_args(argv)
     try:
-        r = check(a.dataset, load_settings(), a.store, a.voyager, a.source, a.offline, a.sample)
+        r = check(a.dataset, load_settings(), a.store, a.voyager, a.source, a.offline, a.sample,
+                  exceptions=a.exceptions)
     except OSError as e:
         print(f"the docs could not be read: {e}", file=sys.stderr)
         return 2
