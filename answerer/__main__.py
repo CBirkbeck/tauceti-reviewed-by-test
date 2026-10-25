@@ -53,6 +53,10 @@ def run(a: argparse.Namespace) -> int:
                 state.items = json.loads(json.dumps(real.items))
         settings = ready.settings
         store = Store.load(p.review / "evidence")
+        maintainers = tuple(store.config.get("maintainers") or ())
+        if ready.login not in maintainers:  # its closes would be refused: only a maintainer's count
+            log(f"gh acts as {ready.login}, not one of the store's maintainers ({', '.join(maintainers)}): stopping")
+            return 1
         ds = Dataset.load(ready.dataset)
         ev = Evidence.resolve(store.records, ds)
         items = open_items(ev, settings["repo"])
@@ -76,7 +80,7 @@ def run(a: argparse.Namespace) -> int:
         prs = PullRequests(p.prwork, settings["library"]["repo"], build=build_pr, roadmaps=roadmaps,
                            site=settings["site"]["url"], dry=a.dry_run)
         cfg = Config(repo=settings["repo"], library_repo=settings["library"]["repo"], site=settings["site"]["url"],
-                     commit=ready.commit, maintainers=tuple(store.config.get("maintainers") or ()), log=log)
+                     commit=ready.commit, maintainers=maintainers, log=log)
         if a.max is not None:
             cfg.max_items = a.max
         system = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")

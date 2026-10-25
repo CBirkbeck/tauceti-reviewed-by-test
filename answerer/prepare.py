@@ -47,6 +47,7 @@ class Ready:
     dataset: Path
     lean_path: str
     toolchain: Path
+    login: str  # the GitHub account it posts through
 
 
 def prepare(p: Paths, state: State, log: Callable[[str], None]) -> Ready:
@@ -61,6 +62,11 @@ def prepare(p: Paths, state: State, log: Callable[[str], None]) -> Ready:
         if not d.exists():
             d.parent.mkdir(parents=True, exist_ok=True)
             sh(["git", "clone", "-q", "--filter=blob:none", f"https://github.com/{repo}", d], timeout=7200)
+    # Its commits on docstring fixes: its own name, linked to the account that pushes them.
+    login = sh(["gh", "api", "user", "--jq", ".login"]).strip()
+    uid = sh(["gh", "api", f"users/{login}", "--jq", ".id"]).strip()
+    sh(["git", "-C", p.prwork, "config", "user.name", "Tau Ceti review answerer"])
+    sh(["git", "-C", p.prwork, "config", "user.email", f"{uid}+{login}@users.noreply.github.com"])
     if state.prepared.get("work") != commit or not state.prepared.get("lean_path"):
         log(f"the library at {commit[:12]}, built from the Lake caches")
         sh(["git", "-C", p.work, "fetch", "-q", "origin", commit])
@@ -70,7 +76,7 @@ def prepare(p: Paths, state: State, log: Callable[[str], None]) -> Ready:
         state.save()
     toolchain = Path(sh(["elan", "which", "lean"], cwd=p.work).strip()).resolve().parent.parent
     p.scratch.mkdir(parents=True, exist_ok=True)
-    return Ready(settings, commit, dataset, state.prepared["lean_path"], toolchain)
+    return Ready(settings, commit, dataset, state.prepared["lean_path"], toolchain, login)
 
 
 def cache(work: Path) -> None:
