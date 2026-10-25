@@ -602,6 +602,18 @@ def other_pages(browser, url, errors):
     expect("double n = n + n" in page.locator(".section", has_text="Suggested tests").inner_text(), "the open suggested test")
     better = page.locator(".section", has=page.locator("h2", has_text="What could be better"))
     expect("any semiring" in better.inner_text(), "the open suggestions")
+    answered = page.locator(".section", has=page.locator("h2", has_text="Answered no, resolved"))
+    expect(answered.locator("a.decl-link").all_inner_texts() == ["Fixture.one"]
+           and answered.locator(".resolution", has_text="Behaves as intended").locator(".md p").count() == 2,
+           "each no answered, with why in full")
+    page = visit(browser, url, "#/d/Fixture.one", errors)
+    report = page.locator(".review .report.closed")
+    expect(report.locator(".head .state").inner_text() == "Behaves as intended"
+           and report.locator(".resolution").count() == 2
+           and report.locator(".resolution").last.locator(".md p").all_inner_texts()
+           == ["Pos admits 0 on purpose: it is the predicate, and the theorems about it assume 0 < n where they need it.",
+               "With that usual hypothesis it is the positive integers, so the declaration says what it should."],
+           "a no answered shows how, by whom, and why, in full, under the no")
     page = visit(browser, url, "#/help", errors)
     expect("Reviewed-by: TauCeti.Foo.bar" in page.inner_text("body"), "the bulk issue's lines")
     expect(page.locator("a[href='https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md']").count() == 1

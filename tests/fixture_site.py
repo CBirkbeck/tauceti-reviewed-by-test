@@ -48,12 +48,22 @@ AGENT = {"kind": "agent", "identity": {"kind": "github", "id": "example"},
 SOMEONE = {"kind": "person", "identity": {"kind": "github", "id": "someone"}}
 
 
+#: Why the no on `Fixture.one` was closed: two paragraphs, as an answer to a no can run.
+INTENDED = ("`Pos` admits `0` on purpose: it is the predicate, and the theorems about it assume `0 < n` where they need it.\n\n"
+            "With that usual hypothesis it is the positive integers, so the declaration says what it should.")
+
+
 def extra_records(ds: Dataset) -> list[dict]:
     """What the vectors lack: an AI agent's review, a no still open (as the form records one), a
-    suggestion (the question form's record), a listed test, a proposed test."""
+    suggestion (the question form's record), a listed test, a proposed test, and why the vectors' no on
+    `Fixture.one` (closed as invalid, without a word) behaves as intended."""
     key = lambda name: rec.subject_from_decl(ds.by_name[name], ds)
     issue = lambda n: {"kind": "issue", "ref": f"example/fixture-store#{n}"}
+    one = next(r["id"] for r in rec.load(FIXTURES / "records.jsonl")
+               if r.get("verdict") == "problem" and r["subject"]["name"] == "Fixture.one")
     return [
+        {"schema": rec.SCHEMA, "kind": "status", "target": one, "state": "intended", "by": AGENT, "text": INTENDED,
+         "at": "2026-10-24T12:00:00Z", "origin": issue(16)},
         {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple"), "verdict": "accept", "by": AGENT,
          "text": "Compared with its definition, `n + n + n`.", "at": "2026-10-22T10:00:00Z", "origin": issue(11)},
         {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple_comm"), "verdict": "problem",

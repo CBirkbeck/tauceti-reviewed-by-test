@@ -406,6 +406,11 @@ class Site:
         recent.sort(key=lambda v: (v["at"], v["id"]), reverse=True)
         opened = lambda kind, verdict=None: [v for v in recent if v["kind"] == kind and v["state"] == "open"
                                              and (verdict is None or v.get("verdict") == verdict)]
+        # The noes answered, each with why (its statuses' notes): fixed, behaving as intended, or not a problem,
+        # the latest answer first, so that anyone can see why a no was closed.
+        answered = sorted((v for v in recent if v["kind"] == "review" and v.get("verdict") == "problem"
+                           and v["state"] in ("fixed", "intended", "invalid") and v["statuses"]),
+                          key=lambda v: (max(s["at"] for s in v["statuses"]), v["id"]), reverse=True)
         who, kind_of = Counter(), {}
         for v in recent:
             if v["kind"] in ("review", "test", "challenge", "comment"):
@@ -413,7 +418,7 @@ class Site:
                 kind_of[v["by"]["label"]] = v["by"]["kind"]
         named = sorted(self.named)
         return {"recent": recent[:40], "problems": opened("review", "problem"), "questions": opened("review", "question"),
-                "challenges": opened("challenge"),
+                "challenges": opened("challenge"), "answered": answered,
                 "reviewers": [{"label": k, "kind": kind_of[k], "n": n} for k, n in who.most_common()],
                 "queue": [[d.id, w] for d, w in (queue(ev, named, POLICIES[0], limit=60) if named else [])]}
 

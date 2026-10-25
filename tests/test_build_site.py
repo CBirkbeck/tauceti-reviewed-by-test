@@ -175,7 +175,8 @@ class EntryTests(unittest.TestCase):
         renamed = [v for v in entry("Fixture.triple_three'")["records"] if v["kind"] == "review"][0]
         self.assertEqual((renamed["status"], renamed["renamedFrom"]), ("renamed", "Fixture.triple_three"))
         problem = [v for v in entry("Fixture.one")["records"] if v["kind"] == "review"][0]
-        self.assertEqual((problem["verdict"], problem["state"]), ("problem", "invalid"))
+        # Closed as invalid, then said to behave as intended, with why: the latest status is where it stands.
+        self.assertEqual((problem["verdict"], problem["state"]), ("problem", "intended"))
 
     def test_tests_pass(self):
         self.assertEqual([(t["test"], t["result"]) for t in entry("Fixture.triple")["tests"]],
@@ -208,6 +209,10 @@ class PageFilesTests(unittest.TestCase):
         self.assertEqual([v["decl"] for v in act["problems"]], ["Fixture.triple_comm"])
         self.assertEqual([v["decl"] for v in act["questions"]], ["Fixture.triple"])  # what could be better
         self.assertEqual([v["decl"] for v in act["challenges"]], ["Fixture.double"])
+        # The noes answered, the latest answer first, each with why: fixed, intended or not a problem.
+        self.assertEqual([v["decl"] for v in act["answered"]], ["Fixture.one"])
+        self.assertEqual([(s["state"], s["text"]) for s in act["answered"][0]["statuses"]],
+                         [("invalid", ""), ("intended", fixture_site.INTENDED)])
         self.assertIn("Claude Code (claude-opus-5-5) via example", [r["label"] for r in act["reviewers"]])
 
     def test_reviewed(self):

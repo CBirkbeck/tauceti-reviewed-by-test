@@ -308,6 +308,9 @@ a.mark:hover { border-color: var(--accent); text-decoration: none; }
 .axes { display: flex; flex-wrap: wrap; gap: 4px; margin: 7px 0 2px; }
 .axes .chip { font-size: 12px; padding: 1px 8px; }
 .reply { margin: 8px 0 0 4px; padding-left: 10px; border-left: 2px solid var(--line); }
+/* What was decided on a no, and why: kept legible, not muted with the closed no it answers. */
+.resolution { margin: 8px 0 0 4px; padding-left: 10px; border-left: 2px solid var(--st-covered); color: var(--ink); }
+.resolution .line { color: var(--muted); }
 .record-actions { margin-top: 6px; color: var(--faint); font-size: 12.5px; }
 .record-actions a { font-family: var(--mono); color: var(--muted); }
 .decl-link { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 13px; }

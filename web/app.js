@@ -191,12 +191,7 @@
       reply.append(rh, md(r.text));
       box.append(reply);
     }
-    for (const s of v.statuses || []) {
-      const line = el('div', 'faint small');
-      line.append(`${STATE_WORDS[s.state] || s.state} by `, who(s.by), ` on ${date(s.at)}`);
-      if (s.text) line.append(': ', mdInline(s.text));
-      box.append(line);
-    }
+    resolutions(box, v, who);
     if (v.actions && v.actions.length && v.url) {
       const acts = el('div', 'record-actions');
       acts.append('On its issue: ');
@@ -1027,15 +1022,23 @@
     if (v.text) box.append(md(v.text));
     if (v.fix) box.append(el('p', 'fix', 'Suggested fix'), md(v.fix));
     replies(box, v, byId);
-    const foot = el('p', 'line');
-    if (v.url) foot.append(ext(v.url, issueText(v.url)));
-    (v.statuses || []).forEach(s => {
-      if (foot.childNodes.length) foot.append(' · ');
-      foot.append(`${STATE_WORDS[s.state] || s.state} by `, markWho(s.by), ', ' + date(s.at));
-      if (s.text) foot.append(': ', mdInline(s.text));
-    });
-    if (foot.childNodes.length) box.append(foot);
+    resolutions(box, v, markWho);
+    if (v.url) { const foot = el('p', 'line'); foot.append(ext(v.url, issueText(v.url))); box.append(foot); }
     return box;
+  }
+  /* What was decided on a no or a suggestion, each decision in full: how it stands (fixed, at which commit; behaves
+     as intended; not a problem; answered), who decided and when, and why, as written: so anyone can see why a no
+     was closed. */
+  function resolutions(box, v, whoOf) {
+    for (const s of v.statuses || []) {
+      const block = el('div', 'resolution'), head = el('p', 'line');
+      head.append(el('b', null, STATE_WORDS[s.state] || s.state), s.commit ? ` at ${s.commit.slice(0, 7)}` : '', ' · ', whoOf(s.by),
+                  ', ' + date(s.at));
+      if (s.url) head.append(' · ', ext(s.url, issueText(s.url)));
+      block.append(head);
+      if (s.text) block.append(md(s.text));
+      box.append(block);
+    }
   }
   function replies(box, v, byId) {
     for (const id of v.replies || []) {
@@ -1180,6 +1183,9 @@
     show(el('h1', null, 'Activity'),
       el('p', 'lede', `Everything recorded about ${meta.library.name}, newest first, and what is still open.`), stats,
       section('Answered no, still open', act.problems.length, recordList(act.problems, 'None.')),
+      section('Answered no, resolved', (act.answered || []).length,
+              hint('Each no closed: fixed, behaving as intended, or not a problem, and why, the latest first.'),
+              recordList(act.answered || [], 'None yet.')),
       section('What could be better, still open', act.questions.length, recordList(act.questions, 'No suggestions open.')),
       act.challenges.length ? section('Suggested tests, still open', act.challenges.length, recordList(act.challenges, '')) : null,
       section('What to review next', null, hint(`Unreviewed declarations of ${meta.library.name} that named results rest on, those most of them share first.`),
