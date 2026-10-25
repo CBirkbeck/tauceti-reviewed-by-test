@@ -9,6 +9,7 @@ answerer, an AI agent, proposed it, with the model that did.
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 import subprocess
@@ -78,9 +79,27 @@ class PullRequests:
                 f"🤖 Proposed by the Tau Ceti review answerer ({by['model']}).\n")
 
     def state(self, number: int) -> tuple[str, str | None]:
-        """("OPEN" | "CLOSED" | "MERGED", the merge commit if merged)."""
-        out = json.loads(self.gh(["gh", "pr", "view", str(number), "--repo", self.repo, "--json", "state,mergeCommit"]))
-        return out.get("state", ""), ((out.get("mergeCommit") or {}).get("oid"))
+        """("OPEN" | "CLOSED" | "MERGED", the merge commit if merged). The library merges through Bors, which
+        squashes a pull request into one commit on main, its subject ending `(#number)`, and closes it: a closed
+        one with such a commit has merged, there."""
+        out = json.loads(self.gh(["gh", "pr", "view", str(number), "--repo", self.repo, "--json", "state,mergeCommit,closedAt"]))
+        st, sha = out.get("state", ""), (out.get("mergeCommit") or {}).get("oid")
+        if st == "CLOSED" and out.get("closedAt"):
+            squashed = self.squashed(number, out["closedAt"])
+            if squashed:
+                return "MERGED", squashed
+        return st, sha
+
+    def squashed(self, number: int, closed_at: str) -> str | None:
+        """The commit Bors made on main of pull request `number`, closed at `closed_at`, if there is one."""
+        since = dt.datetime.fromisoformat(closed_at.replace("Z", "+00:00")) - dt.timedelta(days=1)
+        out = self.gh(["gh", "api", "--paginate", f"repos/{self.repo}/commits?sha=main&per_page=100&since="
+                       + since.strftime("%Y-%m-%dT%H:%M:%SZ"), "--jq", r'.[] | .sha + "\t" + (.commit.message | split("\n")[0])'])
+        for line in out.splitlines():
+            sha, _, subject = line.partition("\t")
+            if subject.rstrip().endswith(f"(#{number})"):
+                return sha
+        return None
 
 
 def title_of(title: str, name: str) -> str:
