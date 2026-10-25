@@ -175,7 +175,21 @@ the Named page says whether AI agents' reviews count.
 | [Pages](.github/workflows/pages.yml) | after any of these | runs the tests, builds the site (`scripts/build_site.py`), checks it in a browser, and publishes it from `main` |
 
 The tools are pinned: evidence-core `v0.16.1`, evidence-store `v0.7.2` (`requirements.txt`), the
-extractor's 0.13 series (`data/settings.json`). The store imports no other store.
+extractor's 0.13 series (`data/settings.json`; from the fork `CBirkbeck/extractor`, whose 0.13.2 prints
+binders with their types and 0.13.3 a structure's parents, until LeanTrustBuilders/extractor has them).
+The store imports no other store.
+
+**A page shows each statement as the docs do, and that is checked.** On 2026-10-25 the site showed
+existentials without their binders' types (`∃ V, … ∃ f, …` for
+`AlgebraicGeometry.Scheme.exists_isClosedImmersion_proj`, whose `f : X ⟶ Proj (SymmetricAlgebra …)`
+the docs show): the extractor printed signatures with Lean's default `pp.funBinderTypes`, false, and
+nothing compared them with the docs. Now:
+- the Dataset workflow publishes a dataset only if `scripts/check_signatures.py` passes: no signature
+  prints a binder without its type, and the signatures of every declaration Voyager named, every one
+  with a record, and two samples of the rest (800) say what the docs' headers say, namespaces, universes
+  and spacing set aside; otherwise it opens an issue and the site stays on the last dataset that passed;
+- the browser check of every build reads, on real pages, that what is shown is the dataset's signature;
+- the extractor's own test checks that binders keep their types and a structure says what it extends.
 
 ## Files
 

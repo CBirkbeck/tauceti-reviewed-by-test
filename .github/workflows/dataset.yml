@@ -108,12 +108,27 @@ jobs:
           attributes=$(find "$RUNNER_TEMP/extractor" -type f -name attributes.py | head -1)
           if [ -n "$attributes" ]; then python3 "$attributes" --dataset "$RUNNER_TEMP/dataset" --source .; fi
           du -sh "$RUNNER_TEMP/dataset"
+      # The safeguard set up on 2026-10-25, after a dataset printed existentials without their binders'
+      # types: a dataset whose signatures differ from the docs (or print a binder without its type) is not
+      # published, an issue says which, and the site stays on the last dataset that passed.
+      - name: The signatures say what the docs say
+        if: steps.published.outputs.done != 'true'
+        run: |
+          if python3 scripts/check_signatures.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti" \
+              --report "$RUNNER_TEMP/signatures.md"; then
+            exit 0
+          fi
+          gh issue create -R "$GITHUB_REPOSITORY" --title "Dataset ${COMMIT:0:12}: its signatures differ from the docs" \
+            --body-file "$RUNNER_TEMP/signatures.md" || true
+          echo "::error::the dataset's signatures differ from the docs: not published"
+          exit 1
       - name: Publish
         if: steps.published.outputs.done != 'true'
         run: |
           tar -czf "$RUNNER_TEMP/dataset.tar.gz" -C "$RUNNER_TEMP/dataset" .
           repo=$(python3 -c "import json; print(json.load(open('data/settings.json'))['extractor']['repo'])")
-          notes="The dataset (S2) of TauCetiProject/TauCeti at $COMMIT, by trust-extract $EXTRACTOR_TAG ($repo)."
+          checked=$(head -2 "$RUNNER_TEMP/signatures.md" | tr '\n' ' ')
+          notes="The dataset (S2) of TauCetiProject/TauCeti at $COMMIT, by trust-extract $EXTRACTOR_TAG ($repo). $checked"
           if [ "$EXISTS" = "true" ]; then
             gh release upload "$TAG" "$RUNNER_TEMP/dataset.tar.gz" -R "$GITHUB_REPOSITORY" --clobber
             gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --notes "$notes"

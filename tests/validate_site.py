@@ -671,6 +671,12 @@ def smoke(browser, url, errors):
         map_drawn(page)
         expect(page.locator("h1").count() == 1 and page.locator(".review .actions button").count() == 2,
                f"{name}: its page and its question's two answers")
+        # What the reader sees is the signature the dataset has, character for character (the dataset is
+        # checked against the docs before it is published: scripts/check_signatures.py).
+        kw, sig = page.evaluate("async n => { const d = await TauData.decl(n); return [d.entry.kw || '', d.entry.sig || '']; }", name)
+        if sig:
+            shown = " ".join(page.locator(".lean pre").first.inner_text().split())
+            expect(shown == " ".join(f"{kw} {sig}".split()), f"{name}: its signature shown as the dataset has it")
         arrow = page.locator(".map .node .open:not(.opened)")
         if arrow.count():  # an arrow unfolds something, or says it found nothing
             before = page.locator(".map .node").count()

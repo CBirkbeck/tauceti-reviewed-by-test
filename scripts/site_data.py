@@ -21,7 +21,7 @@ from evidence_core.graphs import Graphs, is_auxiliary
 from evidence_core.source import Sources, split_statement
 from evidence_core.store import Store, with_imports
 
-from common import fnv_shard
+from common import fnv_shard, header
 
 NODE_SHARD = 2048
 NAME_SHARDS = 64
@@ -277,8 +277,9 @@ class Site:
         e: dict = {"id": i, "name": name, "k": KIND_CODE.get(d.kind, "o"), "doc": self.docstrings.get(name, "")}
         sig = self.ds.facet_row("signature", name)
         if sig:
-            e["sig"] = sig.get("text", "")
-            e["sigRefs"] = self.links(sig.get("refs") or [], names)
+            # As the docs head it: a structure's parents (`extends P`) before the colon of its type.
+            e["sig"], refs = header(sig)
+            e["sigRefs"] = self.links(refs, names)
         src = self.ds.facet_row("source", name)
         if src:
             e["kw"], e["line"] = src.get("keyword", ""), [src["start"][0], src["end"][0]]
