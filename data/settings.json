@@ -13,7 +13,7 @@
   "docs_branch": "docgen"
  },
  "extractor": {
-  "repo": "LeanTrustBuilders/extractor",
+  "repo": "CBirkbeck/extractor",
   "series": "0.13"
  },
  "datasets": {

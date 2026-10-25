@@ -112,7 +112,8 @@ jobs:
         if: steps.published.outputs.done != 'true'
         run: |
           tar -czf "$RUNNER_TEMP/dataset.tar.gz" -C "$RUNNER_TEMP/dataset" .
-          notes="The dataset (S2) of TauCetiProject/TauCeti at $COMMIT, by trust-extract $EXTRACTOR_TAG (LeanTrustBuilders/extractor)."
+          repo=$(python3 -c "import json; print(json.load(open('data/settings.json'))['extractor']['repo'])")
+          notes="The dataset (S2) of TauCetiProject/TauCeti at $COMMIT, by trust-extract $EXTRACTOR_TAG ($repo)."
           if [ "$EXISTS" = "true" ]; then
             gh release upload "$TAG" "$RUNNER_TEMP/dataset.tar.gz" -R "$GITHUB_REPOSITORY" --clobber
             gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --notes "$notes"
