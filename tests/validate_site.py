@@ -252,6 +252,8 @@ def review(browser, url, errors):
            "each answer's mark, the AI agent's marked")
     why = box.locator(".answers-list details.why", has=page.locator(".mark.agent"))
     expect(why.count() == 1 and not why.evaluate("d => d.open"), "the AI agent's reasons, a closed twisty")
+    expect(box.locator(".answers-list .mark.stale").count() == 0 and "withdrawn" not in box.locator(".answers-list").inner_text()
+           and "earlier version" not in tally.inner_text(), "its answer withdrawn under an old name, left out")
     why.locator("summary").click()
     expect(why.evaluate("d => d.open") and "Compared with its definition" in why.inner_text()
            and why.locator(".twisty-body a[href='https://github.com/example/fixture-store/issues/11']").count() == 1,

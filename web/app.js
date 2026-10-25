@@ -620,7 +620,9 @@
                                       : `Outside ${meta.library.name}: review it where it lives.`));
     }
     const byId = new Map(records.map(v => [v.id, v]));
-    const reviews = verdict => records.filter(v => v.kind === 'review' && v.verdict === verdict);
+    // The answers that are still someone's: one withdrawn, or superseded by its answerer's later one, is left
+    // out, as on the Reviewed page (a relabelled answer, withdrawn under its old name, is not shown twice).
+    const reviews = verdict => records.filter(v => v.kind === 'review' && v.verdict === verdict && v.inForce);
     // Voyager's announcement heads the page; anyone else's naming is said here.
     records.filter(v => v.kind === 'named' && !(v.by.agent && v.by.agent.tool === 'Voyager')).forEach(v => {
       const line = el('p', 'namedline');

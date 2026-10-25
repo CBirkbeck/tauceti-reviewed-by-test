@@ -54,14 +54,24 @@ INTENDED = ("`Pos` admits `0` on purpose: it is the predicate, and the theorems 
 
 
 def extra_records(ds: Dataset) -> list[dict]:
-    """What the vectors lack: an AI agent's review, a no still open (as the form records one), a
-    suggestion (the question form's record), a listed test, a proposed test, and why the vectors' no on
-    `Fixture.one` (closed as invalid, without a word) behaves as intended."""
+    """What the vectors lack: an AI agent's review (and the same review under its model's family name,
+    withdrawn), a no still open (as the form records one), a suggestion (the question form's record), a
+    listed test, a proposed test, and why the vectors' no on `Fixture.one` (closed as invalid, without a
+    word) behaves as intended."""
     key = lambda name: rec.subject_from_decl(ds.by_name[name], ds)
     issue = lambda n: {"kind": "issue", "ref": f"example/fixture-store#{n}"}
     one = next(r["id"] for r in rec.load(FIXTURES / "records.jsonl")
                if r.get("verdict") == "problem" and r["subject"]["name"] == "Fixture.one")
+    # The AI agent's yes on `Fixture.triple`, first filed under its model's family name and withdrawn when
+    # filed again under the exact one: the page shows it once.
+    relabelled = rec.with_id({"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple"), "verdict": "accept",
+                              "by": {**AGENT, "agent": {"tool": "Claude Code", "model": "Opus 5"}},
+                              "text": "Compared with its definition, `n + n + n`.", "at": "2026-10-21T10:00:00Z",
+                              "origin": issue(10)})
     return [
+        relabelled,
+        {"schema": rec.SCHEMA, "kind": "status", "target": relabelled["id"], "state": "withdrawn", "by": AGENT,
+         "text": "Filed again under the exact model.", "at": "2026-10-22T09:59:00Z", "origin": issue(10)},
         {"schema": rec.SCHEMA, "kind": "status", "target": one, "state": "intended", "by": AGENT, "text": INTENDED,
          "at": "2026-10-24T12:00:00Z", "origin": issue(16)},
         {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple"), "verdict": "accept", "by": AGENT,
