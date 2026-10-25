@@ -7,6 +7,7 @@
   --ink: #e2e6eb; --ink-soft: #b9c2cc; --muted: #8391a0; --faint: #5b6875; --edge: #3b4753;
   --accent: #dfc186; --accent-soft: #2a261c; --accent-ink: #17130a;
   --concept: #7fa9d6; --result: #9cc59a; --instance: #b9a0dd; --gold: #dfc186;
+  --ai: #6cb4ff;  /* an AI agent's answer: its tick, its AI mark */
   --code: #111821; --hit: #3b3418;
   --st-covered: #f7f3e9; --st-uncounted: #e89678; --st-stale: #e89678; --st-problem: #e0705c; --st-unreviewed: #5b6875;
   --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
@@ -19,6 +20,7 @@
   --ink: #1d2126; --ink-soft: #3a414a; --muted: #5b6470; --faint: #8a929c; --edge: #c9c3b8;
   --accent: #8a6a1f; --accent-soft: #f6efdc; --accent-ink: #ffffff;
   --concept: #2c5f8a; --result: #2f7a55; --instance: #7a5b9a; --gold: #b8860b;
+  --ai: #1f6fd1;
   --code: #f4f2ee; --hit: #fff3c4;
   --st-covered: #2f7a55; --st-uncounted: #b4562f; --st-stale: #b4562f; --st-problem: #b0392a; --st-unreviewed: #8a929c;
   color-scheme: light;
@@ -131,7 +133,7 @@ details.more > summary { cursor: pointer; color: var(--accent); font-size: 14px;
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { display: inline-block; font-size: 13.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 a.chip:hover { border-color: var(--accent); text-decoration: none; }
-.chip.agent { border-color: color-mix(in srgb, var(--st-uncounted) 45%, var(--line)); }
+.chip.agent { border-color: color-mix(in srgb, var(--ai) 45%, var(--line)); }
 .results-group h3 { font-family: var(--sans); font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 18px 0 6px; }
 
 /* Review states. */
@@ -187,7 +189,7 @@ a.stat span { color: var(--accent); }
    Reviews and Tests under small capitals, each answer a mark (a tick or a cross in a pill), people's
    filled, AI agents' ringed, one that no longer stands grey; each no in full. */
 .review { margin: 1.6rem 0; padding: 14px 18px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
-  --person: var(--result); --agent: var(--result); --tested: var(--concept); --no: var(--st-problem); }
+  --person: var(--result); --agent: var(--ai); --tested: var(--concept); --no: var(--st-problem); }
 .review .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .review .ask { margin-right: 6px; font-family: var(--serif); font-size: 1.12rem; font-weight: 600; color: var(--ink); }
 .review .actions .btn { font-size: 13.5px; padding: 5px 12px; border-radius: 6px; color: var(--muted); }
@@ -304,7 +306,7 @@ details.twisty > summary:hover .gist { color: var(--ink); }
 .verdict.comment { color: var(--muted); background: var(--raised); }
 .who { color: var(--ink); }
 .who a { color: var(--ink); }
-.ai { color: var(--st-uncounted); font-weight: 700; }
+.ai { color: var(--ai); font-weight: 700; }
 .from { margin-top: 4px; color: var(--accent); font-size: 13px; }
 .status-note { margin-top: 5px; color: var(--st-uncounted); font-size: 13px; }
 .state-word { margin-top: 5px; color: var(--st-covered); font-size: 13px; font-weight: 600; }

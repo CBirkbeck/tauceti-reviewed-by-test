@@ -899,8 +899,8 @@
   const MARK_NOTE = {stale: () => 'earlier version', 'stale-underneath': () => 'what it rests on has changed',
                      renamed: v => 'as ' + v.renamedFrom, unavailable: () => 'did not build', orphaned: () => 'gone',
                      incomparable: () => 'cannot be compared'};
-  /* One answer, as its answerer's mark: a green tick for a yes, and for a no since fixed (or found to be no
-     problem), a cross for a no still open, a link to its issue (unless it heads a twisty, which holds the
+  /* One answer, as its answerer's mark: a tick for a yes, and for a no since fixed (or found to be no problem),
+     green for a person, blue for an AI agent (asked for on 2026-10-25); a cross for a no still open, a link to its issue (unless it heads a twisty, which holds the
      link), greyed when it no longer stands (a yes of an earlier version). */
   function mark(v, heading) {
     const settled = resolved(v), answer = v.verdict === 'problem' && !settled ? 'no' : 'yes';

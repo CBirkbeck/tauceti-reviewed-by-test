@@ -250,9 +250,13 @@ def review(browser, url, errors):
            "the yeses, people counted apart from AI agents")
     expect(box.locator(".answers-list .mark.person").count() == 1 and box.locator(".answers-list .mark.agent .ai").count() == 1,
            "each answer's mark, the AI agent's marked")
-    green = page.evaluate("""() => { const q = s => getComputedStyle(document.querySelector(s));
-      return [q('.answers-list .mark.person .tick').backgroundColor, q('.answers-list .mark.agent .tick').color]; }""")
-    expect(green[0] == green[1], f"a yes is a green tick, a person's filled, an AI agent's outlined ({green})")
+    colours = page.evaluate("""() => { const probe = document.createElement('span'); document.body.append(probe);
+      const of = v => { probe.style.color = `var(${v})`; return getComputedStyle(probe).color; };
+      const person = of('--result'), ai = of('--ai'); probe.remove();
+      const q = s => getComputedStyle(document.querySelector(s));
+      return [q('.answers-list .mark.person .tick').backgroundColor === person, q('.answers-list .mark.agent .tick').color === ai,
+              q('.answers-list .mark.agent .ai').color === ai, person !== ai]; }""")
+    expect(all(colours), f"a person's yes is a green tick, an AI agent's a blue one, its AI mark blue too ({colours})")
     why = box.locator(".answers-list details.why", has=page.locator(".mark.agent"))
     expect(why.count() == 1 and not why.evaluate("d => d.open"), "the AI agent's reasons, a closed twisty")
     expect(box.locator(".answers-list .mark.stale").count() == 0 and "withdrawn" not in box.locator(".answers-list").inner_text()
