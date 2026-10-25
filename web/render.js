@@ -57,8 +57,13 @@
     github: login => `https://github.com/${encodeURIComponent(login)}`,
     issues: meta => `https://github.com/${meta.store.repo}/issues`,
     bulk: meta => `https://github.com/${meta.store.repo}/issues/${meta.store.bulk}`,
+    /* A new issue on GitHub with the answer written in it as its form writes one (issueBody), the title the form
+       gives. Not the form itself (`template`, its fields by id): GitHub has opened that as an empty issue with the
+       title alone, dropping what was written (issues #79, #80). The label follows from the title and the first
+       field (.github/workflows/label.yml), which also spares a link `labels`, refused to anyone who may not label. */
     form: (meta, template, name, fields = {}) => `https://github.com/${meta.store.repo}/issues/new?` +
-      new URLSearchParams({template, title: FORMS[template].title + name, decl: name, commit: meta.library.commit, ...fields}).toString(),
+      new URLSearchParams({title: FORMS[template].title + name,
+                           body: issueBody(template, {...fields, decl: name, commit: meta.library.commit})}).toString(),
     decl: name => '#/d/' + encodeURIComponent(name),
   };
   /* The store's issue forms the site fills in (.github/ISSUE_TEMPLATE/): each one's title, its label, and its

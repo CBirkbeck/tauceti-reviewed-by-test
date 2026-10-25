@@ -379,9 +379,13 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
   better, versions, AI agents (AI-REVIEWS.md and the bulk issue's lines), and the commands on an
   answer's issue.
 
-Yes and No open `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?template=<form>`
-(`evidence-review.yml`, `evidence-problem.yml`) with the form's `decl` and `commit` fields filled in
-(the declaration and the pinned commit).
+Sending on GitHub opens `https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/new?title=…&body=…`:
+the form's title, and the body as the form writes it (`### Declaration`, `### Commit`, then what was
+written, `_No response_` for a field left empty). Until 2026-10-25 it opened the form itself,
+`?template=<form>` with its fields by id, and GitHub turned that into an empty issue with the title alone,
+dropping what had been written (issues #79, #80). The Label answers workflow gives the issue its label,
+by title and first field, and runs intake; what was written also goes on the clipboard, should GitHub
+lose it.
 
 **Signing in with GitHub** (asked for on 2026-10-24, so that Send files the issue from the page; "the
 approval" one click). The settings' `signin` names a GitHub App's client ID and a sign-in helper's

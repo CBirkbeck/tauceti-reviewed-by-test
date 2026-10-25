@@ -178,6 +178,21 @@ def declaration(browser, url, errors):
            "a variable's card is its type, and its uses light up")
 
 
+def on_github(url: str, kind: str):
+    """What a "Send on GitHub" address files, as GitHub, the Label answers workflow and intake read it: its
+    title, the label scripts/label_issue.py gives it, and its answers as evidence-store parses them. A title and
+    a body only: no form (`template`), which GitHub has opened as an empty issue, dropping what was written
+    (#79, #80), and no `labels`, which GitHub refuses to anyone who may not label."""
+    sys.path.insert(0, str(HERE.parent / "scripts"))
+    from evidence_store import forms
+    from label_issue import TEMPLATES, label_for, template_forms
+    u, q = urlparse(url), parse_qs(urlparse(url).query)
+    expect(f"{u.scheme}://{u.netloc}{u.path}" == "https://github.com/example/fixture-store/issues/new"
+           and sorted(q) == ["body", "title"], f"a new issue on GitHub, its title and body only: {url}")
+    title, body = q["title"][0], q["body"][0]
+    return title, label_for({"title": title, "body": body}, template_forms(TEMPLATES)), forms.parse(kind, body)
+
+
 def without_signin(page):
     """The site as it is with no sign-in in its settings: data/meta.json without `signin`."""
     def handle(route):
@@ -195,24 +210,27 @@ def review(browser, url, errors):
     expect(box.locator(".ask").inner_text() == "Is this definition correctly stated?", "one question, naming what it asks about")
     expect(box.locator(".actions button").all_inner_texts() == ["Yes", "No"], "and two answers")
     page.evaluate("window.__opened = []; window.open = u => { window.__opened.push(u); return null; }")
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
     opened = lambda: page.evaluate("window.__opened[window.__opened.length - 1]")
     shown = box.locator("form.unfold:visible")
     box.locator(".actions button", has_text="Yes").click()
     expect(shown.count() == 1 and shown.locator("button.send").is_enabled(), "yes unfolds its form in the box, a reason optional")
     shown.locator("textarea").fill("Checked against Stacks.")
     shown.locator("button.send").click()
-    yes = opened()
-    expect(yes.startswith("https://github.com/example/fixture-store/issues/new?") and "template=evidence-review.yml" in yes
-           and "decl=Fixture.triple" in yes and "commit=B" in yes and "rationale=Checked+against+Stacks." in yes
+    expect(on_github(opened(), "review") == ("Correctly stated: Fixture.triple", "evidence:review",
+                                             {"decl": "Fixture.triple", "commit": "B", "rationale": "Checked against Stacks."})
            and shown.count() == 0 and box.locator(".sent-note:visible").count() == 1,
-           "Send opens the review form on GitHub, filled in with the reason too, and says so")
+           "Send opens a new issue on GitHub with the answer written in it as the review form writes it, and says so")
+    page.wait_for_function("document.querySelector('.review .sent-note:not([hidden])').textContent.includes('clipboard')")
+    expect("### Why\n\nChecked against Stacks." in page.evaluate("navigator.clipboard.readText()"),
+           "and what was written is on the clipboard too, should GitHub lose it")
     box.locator(".actions button", has_text="No").click()
     expect(shown.locator("button.send").is_disabled(), "no unfolds the form that asks why, and will not send without it")
     shown.locator("textarea").fill("It is the wrong object.")
     shown.locator("button.send").click()
-    no = opened()
-    expect("template=evidence-problem.yml" in no and "decl=Fixture.triple" in no and "rationale=It+is+the+wrong+object." in no,
-           "and opens the problem form on GitHub, filled in")
+    expect(on_github(opened(), "problem") == ("Not correctly stated: Fixture.triple", "evidence:problem",
+                                              {"decl": "Fixture.triple", "commit": "B", "rationale": "It is the wrong object."}),
+           "and opens a new issue on GitHub with the no and its why written in it")
     expect(box.locator(".actions a", has_text="Read it in the API docs").get_attribute("href")
            == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review box links to the docs")
     tally = box.locator(".mark.tally.yes")
@@ -236,16 +254,18 @@ def review(browser, url, errors):
     box.locator(".offer button", has_text="Suggest an improvement").click()
     shown.locator("textarea").fill("State it for any semiring.")
     shown.locator("button.send").click()
-    better = opened()
-    expect("template=evidence-question.yml" in better and "decl=Fixture.triple" in better and "question=State+it+for+any+semiring." in better,
-           "What could be better: a suggestion unfolds its form, and Send opens it on GitHub, filled in")
+    expect(on_github(opened(), "question") == ("What could be better: Fixture.triple", "evidence:question",
+                                               {"decl": "Fixture.triple", "commit": "B", "question": "State it for any semiring."}),
+           "What could be better: a suggestion unfolds its form, and Send opens it on GitHub with the suggestion in it")
     box.locator(".offer button", has_text="Suggest a test").click()
     expect(shown.locator("textarea").count() == 3, "a test asks what it should satisfy, its Lean statement and what it would catch")
     shown.locator("textarea").first.fill("its value at 0")
+    shown.locator("textarea").nth(1).fill("triple 0 = 0 ∧ ∀ n, triple (n + 1) = triple n + 3")
     shown.locator("button.send").click()
-    test = opened()
-    expect("template=evidence-challenge.yml" in test and "decl=Fixture.triple" in test and "property=its+value+at+0" in test,
-           "Tests: a test to suggest unfolds its form, and Send opens it on GitHub, filled in")
+    expect(on_github(opened(), "challenge") == ("Suggested test: Fixture.triple", "evidence:challenge",
+                                                {"decl": "Fixture.triple", "commit": "B", "property": "its value at 0",
+                                                 "statement": "triple 0 = 0 ∧ ∀ n, triple (n + 1) = triple n + 3"}),
+           "Tests: a test to suggest unfolds its form, and Send opens it on GitHub with the test in it, symbols and all")
     suggestion = box.locator(".report.question").inner_text()
     expect("suggested by @someone" in suggestion and "any semiring" in suggestion and "Issue #15" in suggestion,
            "and each suggestion shows, with who made it and its issue")
@@ -386,7 +406,7 @@ def signin(browser, url, errors):
     expect(prompt.is_visible() and prompt.locator("button.send").inner_text() == "Sign in with GitHub" and shown.count() == 0,
            "signed out, Yes asks to sign in first")
     prompt.locator("button", has_text="or answer on GitHub").click()
-    expect("template=evidence-review.yml" in opened() and "decl=Fixture.triple" in opened() and "commit=B" in opened()
+    expect(on_github(opened(), "review") == ("Correctly stated: Fixture.triple", "evidence:review", {"decl": "Fixture.triple", "commit": "B"})
            and note.inner_text().startswith("Opened on GitHub"), "or answers on GitHub, filled in")
     box.locator(".actions button", has_text="Yes").click()
     via_github(prompt.locator("button", has_text="Sign in with GitHub"))
@@ -453,8 +473,8 @@ def signin(browser, url, errors):
     box.locator(".actions button", has_text="No").click()
     shown.locator("textarea").fill("Off by one.")
     shown.locator("button", has_text="or send it on GitHub").click()
-    expect("template=evidence-problem.yml" in opened() and "rationale=Off+by+one." in opened() and len(gh.issues) == 6,
-           "signed in, a form still opens on GitHub if asked")
+    expect(on_github(opened(), "problem")[2] == {"decl": "Fixture.triple", "commit": "B", "rationale": "Off by one."}
+           and len(gh.issues) == 6, "signed in, it still opens on GitHub if asked")
     # A sign-in that has ended: say so, sign in again, and file it then.
     gh.refuse = 401
     box.locator(".actions button", has_text="No").click()

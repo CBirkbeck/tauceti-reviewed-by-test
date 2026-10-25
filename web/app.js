@@ -745,6 +745,10 @@
       form.reset();
       shut();
       say(OPENED);
+      // What was written, on the clipboard as well, to paste should GitHub lose it.
+      if (!Object.keys(v).length || !navigator.clipboard) return;
+      navigator.clipboard.writeText(issueBody(template, {...v, decl: name, commit: meta.library.commit}))
+        .then(() => say(OPENED + ' What you wrote is on your clipboard too, should it not be there.'), () => {});
     };
     const toGitHub = (text, v) => { const b = btn(text, 'link gh'); b.addEventListener('click', () => onGitHub(v())); return b; };
     // Signed out: off to GitHub to sign in, and back here to file it.

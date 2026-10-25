@@ -22,9 +22,10 @@ forms, and evidence-core for everything computed from them. The design:
 A review answers one question: **is this declaration correctly stated?** Open a declaration on the site:
 its review box asks the question, with two buttons. Signed in with GitHub (below), **Yes** files your
 answer at once, with Undo, and Add why to give a reason; **No** opens a short form in the box that asks
-why, and Send files it. Signed out, or rather than signing in, a form opens on GitHub instead, filled in
-with the declaration and the commit the site shows, for one click there to file it. Either way the
-issue is the form's:
+why, and Send files it. Signed out, or rather than signing in, Send opens a new issue on GitHub instead,
+with the declaration, the commit the site shows and what you wrote already in it, for one click there to
+file it (what you wrote goes on your clipboard too). Either way the issue is written as the form writes
+it:
 
 | answer | form | records |
 |---|---|---|
@@ -48,10 +49,11 @@ The store's other forms (listing a test, names, statuses) are still there for in
 does not offer them.
 
 Intake turns the issue into a record under the account that opened it, answers on the issue, and
-rebuilds the site within minutes. An issue filed from the page by someone who is not a collaborator
-comes without its label (GitHub drops it), and intake reads an issue's form by its label: the Label
-answers workflow gives it back, from the title and the fields, and has intake read it
-(`scripts/label_issue.py`; it does the same for an AI agent's `evidence-store submit`). On an answer's issue, a comment whose first line is a command
+rebuilds the site within minutes. Intake reads an issue's form by its label, and some answers come
+without one: one filed from the page by someone who is not a collaborator (GitHub drops it), and every
+one sent on GitHub, which opens as a plain new issue. The Label answers workflow gives each its label,
+from the title and the fields, and has intake read it (`scripts/label_issue.py`; it does the same for an
+AI agent's `evidence-store submit`). On an answer's issue, a comment whose first line is a command
 changes where it stands: `/withdraw`; on a no, `/fixed [commit]`, `/intended`, `/invalid`, `/reopen`.
 
 **Many yeses at once:** comment lines on [issue #1](../../issues/1), one record each (it also takes

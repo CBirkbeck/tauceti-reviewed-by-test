@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Gives an issue the label of the form it was written with, when GitHub dropped it.
 
-Intake reads an issue's form from its label. GitHub drops the labels of an issue opened through its API by
-an account that may not set labels, which is anyone not a collaborator: so an answer filed from the site's
-page by a signed-in reader (web/signin.js) comes without one, and so does an AI agent's from
-`evidence-store submit` under such an account. Both title the issue as their form does (the site as
+Intake reads an issue's form from its label. An answer sent on GitHub from the site's page comes without
+one: it opens a plain new issue with the answer written in it, not the form (render.js, `URLS.form`). And
+GitHub drops the labels of an issue opened through its API by an account that may not set labels, which is
+anyone not a collaborator: so an answer filed from the site's page by a signed-in reader (web/signin.js)
+comes without one, and so does an AI agent's from `evidence-store submit` under such an account. All title
+the issue as their form does (the site as
 .github/ISSUE_TEMPLATE's forms, evidence-store as its own) and write its fields as `### <label>` sections.
 An issue with no form's label, whose title starts as a form's does and whose body has that form's first
 field, gets that form's label.

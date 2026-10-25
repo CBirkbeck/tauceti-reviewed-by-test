@@ -1,9 +1,10 @@
 name: Label answers
 
-# Gives an answer filed from the site's page its form's label, which GitHub drops when whoever filed it may not
-# set labels (anyone not a collaborator), as it does for an AI agent's from `evidence-store submit`; then reads
-# it in, as evidence-intake.yml would have. Intake reads an issue's form from its label: without one, an issue is
-# never read. scripts/label_issue.py says how it knows the form.
+# Gives an answer its form's label when it came without one: sent on GitHub from the site's page, which opens a
+# plain new issue with the answer written in it; or filed from the page, or by an AI agent's `evidence-store
+# submit`, by someone who may not set labels (anyone not a collaborator), when GitHub drops it. Then reads it in,
+# as evidence-intake.yml would have. Intake reads an issue's form from its label: without one, an issue is never
+# read. scripts/label_issue.py says how it knows the form.
 on:
   issues:
     types: [opened]
