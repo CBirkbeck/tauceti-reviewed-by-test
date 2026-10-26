@@ -3,3 +3,5 @@ vectors/records.jsonl); source-b/ is the fixture of LeanTrustBuilders/extractor 
 test/fixture-b/Fixture/Basic.lean laid over it): its version B, which dataset-b describes. Both are
 Apache-2.0 (the LICENSE files of those repositories). voyager/messages.json is three posts in the form
 of Voyager's on the Lean Zulip, shortened.
+docs/ holds four declarations' entries cut from Tau Ceti's API docs (https://taucetiproject.org/docs, built by
+doc-gen4 from TauCetiProject/TauCeti, Apache-2.0) as they were on 2026-10-26, each in a page of its own.

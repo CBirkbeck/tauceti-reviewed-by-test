@@ -331,8 +331,10 @@ light  --bg #fbfaf7  --surface #ffffff  --ink #1d2126  --accent #8a6a1f
      but not one that goes on in its sentence or says more; its maths rendered: `$…$` as KaTeX renders it, and a
      formula written as text with TeX's marks (`Θ_L(τ) = ∑_{v ∈ L} exp (π i ‖v‖² τ)`, in a code span
      or in a sentence) typeset too (`web/formulas.js`); Lean in a code span stays code;
-  3. **In Lean,** what the docs show of it: the signature Lean prints (the dataset's `signature`
-     facet: section variables included, every name a link, and on hover its card: what it is, its signature with
+  3. **In Lean,** what the docs show of it: the docs' own header, read from its module's page (the
+     dataset's `docs-signature` facet, since 2026-10-26: a docs page is printed with its module's imports alone,
+     so Lean printing it again with the whole library loaded could differ in notation), or where the docs have
+     none the signature Lean prints (the `signature` facet): section variables included, every name a link, and on hover its card: what it is, its signature with
      its names linked and a definition's value with its names linked, so that a name in a card opens its own card in
      turn, and a variable's type, its uses lit up; all from the site's data, no Lean, asked for on 2026-10-24), a definition's
      value folded (the docs' Equations), a structure's fields, and never a proof;

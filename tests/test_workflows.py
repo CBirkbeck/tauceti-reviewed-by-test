@@ -51,6 +51,16 @@ class DatasetWorkflowTests(unittest.TestCase):
         self.assertIn('gh release upload "$TAG"', text)  # replacing the dataset of a commit
         self.assertEqual(wf["on"]["workflow_dispatch"]["inputs"]["replace"]["type"], "boolean")
 
+    def test_the_statements_come_from_the_docs_before_the_check_and_the_publishing(self):
+        names = [s.get("name", "") for s in steps(load("dataset.yml")["jobs"]["extract"])]
+        text = [s.get("run", "") for s in steps(load("dataset.yml")["jobs"]["extract"])]
+        at = lambda command: next(i for i, t in enumerate(text) if command in t)  # noqa: E731
+        self.assertIn('python3 scripts/docs_signatures.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti"',
+                      text[at("scripts/docs_signatures.py")])
+        self.assertLess(at('"$EXTRACTOR_BIN" extract'), at("scripts/docs_signatures.py"))
+        self.assertLess(at("scripts/docs_signatures.py"), at("scripts/check_signatures.py"))
+        self.assertLess(at("scripts/docs_signatures.py"), names.index("Publish"))
+
     def test_follow_pins_extracts_and_prunes(self):
         wf = load("follow.yml")
         self.assertEqual(wf["on"]["schedule"], [{"cron": "*/20 * * * *"}])  # has docgen moved?

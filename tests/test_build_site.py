@@ -138,6 +138,46 @@ class BriefTests(unittest.TestCase):
         self.assertEqual(self.brief("Foo.g", None), "")
 
 
+class DocsSignatureTests(unittest.TestCase):
+    """A declaration the docs have is shown as the docs show it (the facet docs-signature), its own
+    notation and line breaks included; the others as Lean prints them."""
+
+    #: Its hypothesis named as no other source names it, so that only this row can give what is shown.
+    DOCS = "Fixture.triple_pos (n : Nat) (hn : 0 < n) :\n  0 < triple n"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = Path(tempfile.mkdtemp(prefix="site-docs-"))
+        dataset = cls.tmp / "dataset"
+        shutil.copytree(fixture_site.DATASET, dataset)
+        refs = [[cls.DOCS.index("Nat"), cls.DOCS.index("Nat") + 3, "Nat"], [cls.DOCS.index("<"), cls.DOCS.index("<") + 1, "LT.lt"],
+                [cls.DOCS.index("triple n"), cls.DOCS.index("triple n") + 6, "Fixture.triple"]]
+        (dataset / "facets" / "docs-signature.jsonl").write_text(
+            json.dumps({"decl": "Fixture.triple_pos", "text": cls.DOCS, "refs": refs}) + "\n", encoding="utf-8")
+        meta = json.loads((dataset / "meta.json").read_text(encoding="utf-8"))
+        meta["facets"].append({"name": "docs-signature", "file": "facets/docs-signature.jsonl", "schema": "docs-signature/1"})
+        (dataset / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+        cls.root = cls.tmp / "site"
+        fixture_site.build(cls.root, dataset=dataset)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def test_the_page_shows_the_docs_statement(self):
+        e, names = entry("Fixture.triple_pos", self.root), module_of("Fixture.triple_pos", self.root)["names"]
+        self.assertEqual(e["sig"], self.DOCS)
+        linked = {e["sig"][a:b]: names[k] for a, b, k in e["sigRefs"]}
+        self.assertEqual(linked["triple"], "Fixture.triple")
+        self.assertEqual(linked["<"], "LT")  # a class's field stands for its class, as before
+
+    def test_lists_too(self):
+        self.assertEqual(node("Fixture.triple_pos", self.root)[11], "(n : Nat) (hn : 0 < n) : 0 < triple n")
+
+    def test_the_others_as_lean_prints_them(self):
+        self.assertEqual(entry("Fixture.triple", self.root)["sig"], "Fixture.triple (n : Nat) : Nat")
+
+
 class EntryTests(unittest.TestCase):
     def test_the_source(self):
         e = entry("Fixture.triple")

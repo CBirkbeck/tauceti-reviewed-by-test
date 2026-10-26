@@ -243,7 +243,7 @@ class Site:
         p, np_, _ = self.proof_steps(d)
         sp, sa = self.states.get(d.id, (0, 0))
         return [d.name, KIND_CODE.get(d.kind, "o"), self.flags(d), self.mod_index.get(d.module, -1), self.title(d),
-                sp, sa, m, p, nm, np_, brief(d.name, self.ds.facet_row("signature", d.name)), ml, self.below(d)]
+                sp, sa, m, p, nm, np_, brief(d.name, self.signature_row(d.name)), ml, self.below(d)]
 
     def node_shards(self):
         """(k, rows): `nodes/<k>.json`, the nodes with ids k·NODE_SHARD onwards."""
@@ -275,10 +275,12 @@ class Site:
     def entry(self, d: Decl, names: dict[str, int]) -> dict:
         i, name = d.id, d.name
         e: dict = {"id": i, "name": name, "k": KIND_CODE.get(d.kind, "o"), "doc": self.docstrings.get(name, "")}
-        sig = self.ds.facet_row("signature", name)
+        docs = self.ds.facet_row("docs-signature", name)
+        sig = docs or self.ds.facet_row("signature", name)
         if sig:
-            # As the docs head it: a structure's parents (`extends P`) before the colon of its type.
-            e["sig"], refs = header(sig)
+            # As the docs head it: their own header, or Lean's with a structure's parents (`extends P`) put
+            # before the colon of its type.
+            e["sig"], refs = (docs["text"], docs.get("refs") or []) if docs else header(sig)
             e["sigRefs"] = self.links(refs, names)
         src = self.ds.facet_row("source", name)
         if src:
@@ -307,6 +309,11 @@ class Site:
             if tests:
                 e["tests"] = tests
         return e
+
+    def signature_row(self, name: str) -> dict | None:
+        """The signature the site shows of a declaration: as the API docs show it (the facet docs-signature,
+        from the docs' pages: scripts/docs_signatures.py) when they have it, else as Lean prints it."""
+        return self.ds.facet_row("docs-signature", name) or self.ds.facet_row("signature", name)
 
     def links(self, refs: list, names: dict[str, int]) -> list[list]:
         """A signature's names, each the declaration it stands for: a node, or for a field of a structure

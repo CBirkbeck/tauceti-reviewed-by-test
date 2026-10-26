@@ -186,12 +186,21 @@ existentials without their binders' types (`∃ V, … ∃ f, …` for
 `AlgebraicGeometry.Scheme.exists_isClosedImmersion_proj`, whose `f : X ⟶ Proj (SymmetricAlgebra …)`
 the docs show): the extractor printed signatures with Lean's default `pp.funBinderTypes`, false, and
 nothing compared them with the docs. Now:
+- since 2026-10-26 the statement is the docs' own: the Dataset workflow reads every module's docs page
+  (`scripts/docs_signatures.py`, about five minutes) into the facet `docs-signature`, each header with
+  its names linked and its lines broken where the docs' printer broke them. A docs page is printed with
+  its module's imports alone and the dataset with the whole library loaded, so Lean's own printing of a
+  statement can differ in notation (`∃ (a : A), ∃ (b : B)` against `∃ (a : A) (b : B)`, `∀ (z : α),
+  z ∈ s → …` against `∀ z ∈ s, …`). Lean's printing is kept only where the docs have no header (fields,
+  constructors, declarations the compiler makes) or the page is older than a change to its module;
 - the Dataset workflow publishes a dataset only if `scripts/check_signatures.py` passes: no signature
   prints a binder without its type, and the signatures of every declaration Voyager named, every one
   with a record, and two samples of the rest (800) say what the docs' headers say, namespaces, universes
   and spacing set aside, and two notations a docs page writes out (`fun₀ | i => a`, `X ⟹ Y`: a docs page
   is built from its module's imports alone); otherwise it opens an issue and the site stays on the last
-  dataset that passed. A difference reviewed and accepted goes in `data/signature-exceptions.json`;
+  dataset that passed. What is compared is what the site shows, so a statement taken from the docs is
+  compared with its own page, and a misreading of it is caught. A difference reviewed and accepted goes in
+  `data/signature-exceptions.json`;
 - the browser check of every build reads, on real pages, that what is shown is the dataset's signature;
 - the extractor's own test checks that binders keep their types and a structure says what it extends.
 

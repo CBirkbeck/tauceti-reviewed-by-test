@@ -98,16 +98,18 @@ class DocsTests(unittest.TestCase):
         self.assertEqual(h.commit, "da4d8dc48847cea93910477b85cf0cd427f169b3")
         self.assertEqual(" ".join(h.headers["Fixture.thing"].split()), "theorem Fixture.thing (n : ℕ) :∃ (m : ℕ), m < n")
 
-    def dataset(self, sig: str) -> Path:
+    def dataset(self, sig: str, docs: str | None = None) -> Path:
         d = Path(tempfile.mkdtemp())
         (d / "facets").mkdir()
         (d / "decls.jsonl").write_text(json.dumps({"name": "Fixture.thing", "module": "Fixture.Basic", "scope": "project"}) + "\n")
         (d / "facets" / "signature.jsonl").write_text(json.dumps({"decl": "Fixture.thing", "text": sig}) + "\n")
+        if docs is not None:  # the statement the site shows, from the docs' page (scripts/docs_signatures.py)
+            (d / "facets" / "docs-signature.jsonl").write_text(json.dumps({"decl": "Fixture.thing", "text": docs}) + "\n")
         (d / "facets" / "source.jsonl").write_text(json.dumps({"decl": "Fixture.thing", "path": "F.lean"}) + "\n")
         (d / "meta.json").write_text(json.dumps({"library": {"commit": "da4d8dc48847cea93910477b85cf0cd427f169b3"}}))
         return d
 
-    def run_check(self, sig: str, exceptions: Path | None = None) -> dict:
+    def run_check(self, sig: str, exceptions: Path | None = None, docs: str | None = None) -> dict:
         def fetch(docs, module):
             h = cs.Headers()
             h.feed(PAGE)
@@ -115,8 +117,17 @@ class DocsTests(unittest.TestCase):
         settings = {"library": {"repo": "o/r", "docs": "https://example.org/docs"}}
         store = Path(tempfile.mkdtemp())
         (store / "records").mkdir()
-        return cs.check(self.dataset(sig), settings, store, store / "none.jsonl", fetch=fetch, sample=5,
+        return cs.check(self.dataset(sig, docs), settings, store, store / "none.jsonl", fetch=fetch, sample=5,
                         exceptions=exceptions)
+
+    def test_the_statement_the_site_shows_is_compared(self):
+        # From the docs' page, it says what the page says, whatever notation Lean prints it in.
+        r = self.run_check("Fixture.thing (n : ℕ) : ∃ (m : ℕ), m < n + 0", docs="Fixture.thing (n : ℕ) :\n  ∃ (m : ℕ), m < n")
+        self.assertEqual((r["compared"], r["differ"], r["from_docs"]), (1, [], 1))
+
+    def test_a_statement_from_the_docs_that_misreads_its_page_fails(self):
+        r = self.run_check("Fixture.thing (n : ℕ) : ∃ (m : ℕ), m < n", docs="Fixture.thing (n : ℕ) :\n  ∃ (m : ℕ), m < n + 1")
+        self.assertEqual([d["decl"] for d in r["differ"]], ["Fixture.thing"])
 
     def test_as_the_docs_have_it(self):
         r = self.run_check("Fixture.thing (n : ℕ) : ∃ (m : ℕ), m < n")

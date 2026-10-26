@@ -109,9 +109,17 @@ jobs:
           attributes=$(find "$RUNNER_TEMP/extractor" -type f -name attributes.py | head -1)
           if [ -n "$attributes" ]; then python3 "$attributes" --dataset "$RUNNER_TEMP/dataset" --source .; fi
           du -sh "$RUNNER_TEMP/dataset"
+      # What the site shows of a statement is what the docs show (2026-10-26): a docs page is printed with
+      # its module's imports alone, this dataset with the whole library loaded, whose notation can differ.
+      # Each header is taken from the docs' pages, as the facet docs-signature; a declaration they do not
+      # have keeps the extractor's signature. Too many pages that do not come, and nothing is published.
+      - name: The statements as the docs show them
+        if: steps.published.outputs.done != 'true'
+        run: python3 scripts/docs_signatures.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti"
       # The safeguard set up on 2026-10-25, after a dataset printed existentials without their binders'
       # types: a dataset whose signatures differ from the docs (or print a binder without its type) is not
-      # published, an issue says which, and the site stays on the last dataset that passed.
+      # published, an issue says which, and the site stays on the last dataset that passed. A statement
+      # taken from the docs is compared with its page too, which catches a misreading.
       - name: The signatures say what the docs say
         if: steps.published.outputs.done != 'true'
         run: |

@@ -99,16 +99,17 @@ def imported_store(ds: Dataset, cache: Path) -> None:
     (cache / "imports.json").write_text(json.dumps([{"repo": "example/imports", "path": "evidence", "commit": "c0ffee"}]))
 
 
-def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None = None) -> dict:
+def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None = None,
+          dataset: Path = DATASET) -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="fixture-site-"))
-    ds = Dataset.load(DATASET)
+    ds = Dataset.load(dataset)
     store = Store.init(tmp / "evidence", {**default_config("example/fixture-store", "Fixture", "Fixture"),
                                            "imports": [{"repo": "example/imports"}]})
     store.add(rec.load(FIXTURES / "records.jsonl"))
     store.add(extra_records(ds))
     store.add(voyager.named_records(ANNOUNCEMENTS, ds, store, SETTINGS["voyager"]))
     imported_store(ds, tmp / "imports")
-    return build_site.build(DATASET, tmp / "evidence", Path(out), settings or SETTINGS, source=SOURCE,
+    return build_site.build(dataset, tmp / "evidence", Path(out), settings or SETTINGS, source=SOURCE,
                             imports=tmp / "imports", budget_mb=budget_mb, cap=cap)
 
 

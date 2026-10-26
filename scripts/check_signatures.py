@@ -8,7 +8,9 @@ Two checks on a dataset:
 - every signature, without the network: no binder printed without its type (`∃ x,`, `fun x =>`);
 - against the docs: each declaration Voyager named, each one with a record in the store, and two
   samples of the rest (one from all of them, one from those that bind variables), each compared with
-  the header the docs show for it, namespaces, universes and spacing set aside. A module that changed
+  the header the docs show for it, namespaces, universes and spacing set aside. What is compared is what
+  the site shows: the docs' own header where the facet docs-signature has it (scripts/docs_signatures.py),
+  which must read exactly as its page, and otherwise the extractor's signature. A module that changed
   between the dataset's commit and the commit the docs were built at is left out, and counted.
 
   python3 scripts/check_signatures.py --dataset DIR [--source TAUCETI_CHECKOUT] [--offline]
@@ -210,8 +212,11 @@ def check(dataset: Path, settings: dict, store: Path, voyager: Path, source: Pat
           offline: bool = False, sample: int = 400, fetch=headers_of, jobs: int = 12,
           exceptions: Path | None = None) -> dict:
     sigs = {r["decl"]: header(r)[0] for r in rows(dataset / "facets" / "signature.jsonl")}
+    # What the site shows of a declaration the docs have: their own header (scripts/docs_signatures.py).
+    facet = dataset / "facets" / "docs-signature.jsonl"
+    shown = {r["decl"]: r["text"] for r in rows(facet)} if facet.exists() else {}
     out: dict = {"signatures": len(sigs), "untyped": [], "compared": 0, "differ": [], "missing": [],
-                 "skipped": 0, "excused": [], "notation": [], "docs": None}
+                 "skipped": 0, "excused": [], "notation": [], "docs": None, "from_docs": 0}
     allowed = excused(exceptions) if exceptions else {}
     for name, text in sigs.items():
         bad = untyped(text)
@@ -248,16 +253,23 @@ def check(dataset: Path, settings: dict, store: Path, voyager: Path, source: Pat
             out["missing"].append(name)
             continue
         out["compared"] += 1
-        ours, docs = normal(sigs[name]), normal(theirs)
+        site = shown.get(name, sigs[name])
+        ours, docs = normal(site), normal(theirs)
+        if name in shown:
+            # Read from this very page: a difference is a misreading, which no notation or review excuses.
+            out["from_docs"] += 1
+            if ours != docs:
+                out["differ"].append({"decl": name, "site": site, "docs": " ".join(theirs.split())})
+            continue
         if ours == docs:
             continue
-        if any(s in sigs[name] for s in NOTATION_SIGNS) and notation_free(sigs[name]) == notation_free(theirs):
+        if any(s in site for s in NOTATION_SIGNS) and notation_free(site) == notation_free(theirs):
             out["notation"].append(name)
             continue
         if allowed.get(name) == (ours, docs):
             out["excused"].append(name)
             continue
-        out["differ"].append({"decl": name, "site": sigs[name], "docs": " ".join(theirs.split())})
+        out["differ"].append({"decl": name, "site": site, "docs": " ".join(theirs.split())})
     return out
 
 
@@ -266,7 +278,8 @@ def report(r: dict, limit: int = 40) -> str:
              f"{len(r['untyped'])} found."]
     if r["docs"] is not None:
         lines.append(f"Against the docs (built at {', '.join(c[:12] for c in r['docs']) or 'an unknown commit'}): "
-                     f"{r['compared']} compared, {len(r['differ'])} differ; {len(r['notation'])} in notation only (fun₀, ⟹), "
+                     f"{r['compared']} compared ({r['from_docs']} shown as the docs show them), {len(r['differ'])} differ; "
+                     f"{len(r['notation'])} in notation only (fun₀, ⟹), "
                      f"{len(r['excused'])} as reviewed "
                      f"(data/signature-exceptions.json), {r['skipped']} left out (their file changed since the docs "
                      f"were built), {len(r['missing'])} not in the docs.")
