@@ -17,7 +17,7 @@ from evidence_core import records as rec
 from evidence_core import views
 from evidence_core.coverage import Evidence, Policy, coverage, queue
 from evidence_core.dataset import Dataset, Decl
-from evidence_core.graphs import Graphs, is_auxiliary
+from evidence_core.graphs import Graphs, is_auxiliary, is_machinery
 from evidence_core.source import Sources, split_statement
 from evidence_core.store import Store, with_imports
 
@@ -33,6 +33,27 @@ POLICIES = (Policy(agents=False), Policy(agents=True))
 STATES = ("unreviewed", "covered", "uncounted", "stale", "problem", "disputed")
 KIND_CODE = {"theorem": "t", "definition": "d", "structure": "s", "class": "c", "inductive": "n",
              "instance": "i", "axiom": "a", "opaque": "o"}
+#: The logic under everything Lean states, which a map of what a declaration rests on leaves out with the
+#: classes behind notation (`OfNat`, `HAdd`, `LT`, …) and the machinery of tactics and metaprogramming:
+#: plumbing, which tells a reader nothing of what it is built from or about (asked for on 2026-10-26).
+LOGIC = frozenset({"Eq", "Ne", "HEq", "And", "Or", "Not", "Iff", "True", "False", "Exists", "ExistsUnique",
+                   "ite", "dite", "cond", "outParam", "semiOutParam", "optParam", "autoParam", "id"})
+
+
+def plumbing(d: Decl) -> bool:
+    """Lean's own plumbing: a class or a piece of logic of its core (`Init`), or the machinery of tactics."""
+    core = d.module == "Init" or d.module.startswith("Init.")
+    return (core and (d.kind == "class" or d.name in LOGIC)) or is_machinery(d.name)
+
+
+def rank_rests_on(ds: Dataset, imp, ids) -> list[int]:
+    """What a declaration rests on, in the order its map draws it: the library's own first, most important
+    first; then the others, the least widely used first, which say most about it (`jacobiSym` before `Eq`)."""
+    decls = ds.decls
+    return sorted(set(ids), key=lambda x: (not decls[x].is_project, -imp[x] if decls[x].is_project else imp[x],
+                                           decls[x].name))
+
+
 #: The keyword a declaration outside the library is headed with, which no source of it in the dataset gives.
 KEYWORD = {"theorem": "theorem", "definition": "def", "structure": "structure", "class": "class",
            "inductive": "inductive", "instance": "instance", "axiom": "axiom", "opaque": "opaque"}
@@ -218,13 +239,15 @@ class Site:
 
     def above(self, d: Decl) -> tuple[list[int], int, int]:
         """What it rests on in meaning: what a theorem (or instance) is about, what anything else is
-        built from. The first of them, how many there are, and how many of those are the library's."""
+        built from, Lean's plumbing aside. The first of them, how many there are, and how many of those are
+        the library's."""
         if not d.is_project:
             return [], 0, 0
         i = d.id
-        ids = set(self.g.about(i) if (self.g.result[i] or d.kind == "instance") else self.g.built_from(i))
-        m, nm = self.capped(ids)
-        return m, nm, sum(self.ds.decls[x].is_project for x in ids)
+        ids = {x for x in (self.g.about(i) if (self.g.result[i] or d.kind == "instance") else self.g.built_from(i))
+               if not plumbing(self.ds.decls[x])}
+        ranked = rank_rests_on(self.ds, self.g.importance, ids)
+        return ranked[:self.cap], len(ranked), sum(self.ds.decls[x].is_project for x in ids)
 
     def below(self, d: Decl) -> int:
         """How many declarations rest on it in meaning: the concepts built on it, the results about it and

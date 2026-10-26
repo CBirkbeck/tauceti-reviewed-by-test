@@ -304,7 +304,9 @@
      declaration outside the library. `opts.ai()` says whether the reader counts AI reviews; `opts.lib`
      is the library's name. */
   function draw(host, center, entry, opts) {
-    const o = {proof: false, mathlib: false, opened: new Set(), all: new Set(), added: new Map(), empty: new Set()};
+    // Resting on nothing of the library but on something outside it, it opens with what it rests on outside
+    // (asked for on 2026-10-26: the Kronecker symbol's map was empty above it).
+    const o = {proof: false, mathlib: !center.ml && center.nm > 0, opened: new Set(), all: new Set(), added: new Map(), empty: new Set()};
     const ai = (opts && opts.ai) || (() => false), lib = (opts && opts.lib) || 'the library';
     host.replaceChildren();
     const box = el('div', 'map'), tools = el('div', 'map-tools'), canvas = el('div', 'map-canvas'), note = el('div', 'map-note');

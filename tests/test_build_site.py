@@ -13,6 +13,8 @@ import common  # noqa: E402
 import fixture_site  # noqa: E402
 import site_data  # noqa: E402
 
+from evidence_core.dataset import Dataset  # noqa: E402
+
 OUT: Path
 RESULT: dict
 
@@ -102,6 +104,33 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(node("Fixture.triple_pos")[11], "(n : Nat) (h : 0 < n) : 0 < triple n")
         self.assertEqual(node("Fixture.triple")[11], "(n : Nat) : Nat")
         self.assertEqual(node("Fixture.triple_two")[11], "triple 2 = 6")
+
+
+def rests_on(name: str) -> list[str]:
+    """What the map draws above a declaration, in its order: the names of its node's `m`."""
+    return [data(f"nodes/{i // 2048}.json")[i % 2048][0] for i in node(name)[7]]
+
+
+class RestsOnTests(unittest.TestCase):
+    """What a declaration rests on, as the map draws it (asked for on 2026-10-26, when the Kronecker symbol's
+    map showed `outParam`, `Eq` and `OfNat` before `jacobiSym` and `Nat.factorization`)."""
+
+    def test_leans_plumbing_is_left_out(self):
+        # The classes behind notation (`HAdd`) and the logic underneath (`outParam`, `Eq`): Lean's core types stay.
+        self.assertEqual(rests_on("Fixture.triple"), ["Nat"])
+        self.assertEqual(node("Fixture.triple")[9], 1)  # and the count says so
+        self.assertEqual(rests_on("Fixture.triple_pos"), ["Fixture.triple", "Nat"])
+        self.assertEqual(rests_on("Fixture.not_isSmall_twelve"), ["Fixture.IsSmall", "Nat"])  # `Not` too
+        self.assertEqual(rests_on("Fixture.«term𝟚_»"), ["Nat"])  # and the metaprogramming a notation rests on
+
+    def test_from_outside_the_most_particular_first(self):
+        # The library's own first, as before; then the others, the least widely used first.
+        ds = Dataset.load(fixture_site.DATASET)
+        imp = site_data.Graphs(ds).importance
+        own, nat, int_ = (ds.by_name[n].id for n in ("Fixture.triple", "Nat", "Int"))
+        lo, hi = sorted((nat, int_), key=lambda x: imp[x])
+        self.assertLess(imp[lo], imp[hi])
+        self.assertEqual(site_data.rank_rests_on(ds, imp, [hi, own, lo]), [own, lo, hi])
 
 
 def sig(text: str, *names: str) -> dict:

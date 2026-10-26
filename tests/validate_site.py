@@ -600,6 +600,8 @@ def dependency_map(browser, url, errors):
     expect(page.evaluate("TauReview.route()") == "decl:Fixture.triple_pos", "a drag that starts on a node does not open it")
     page.click(".map-tools button:has-text('Mathlib')")
     page.wait_for_function("TauReview.mapNodes().includes('Nat')")
+    names = page.evaluate("TauReview.mapNodes()")
+    expect("OfNat" not in names and "LT" not in names, "Lean's plumbing left out: the classes behind notation")
     page.click(".map .node[data-name='Fixture.triple'] rect")
     settle(page, "decl:Fixture.triple")
     page.wait_for_selector(".map .node[data-name='Fixture.triple_pos']")
@@ -616,6 +618,13 @@ def dependency_map(browser, url, errors):
     expect("Fixture.one_pos'" not in page.evaluate("TauReview.mapNodes()"), "proofs left out at first")
     page.click(".map-tools button:has-text('Proof uses')")
     page.wait_for_function("TauReview.mapNodes().includes(\"Fixture.one_pos'\")")
+    # Resting on nothing of the library, a map opens on what it rests on outside it, plumbing aside (asked for on
+    # 2026-10-26: the Kronecker symbol's map was empty above it).
+    page = visit(browser, url, "#/d/Fixture.triple", errors)
+    page.wait_for_function("TauReview.mapNodes().includes('Nat')")
+    expect(page.locator(".map-tools button", has_text="Mathlib").get_attribute("aria-pressed") == "true", "with the Mathlib layer on")
+    names = page.evaluate("TauReview.mapNodes()")
+    expect("HAdd" not in names and "outParam" not in names, "and without Lean's plumbing")
 
 
 @check
