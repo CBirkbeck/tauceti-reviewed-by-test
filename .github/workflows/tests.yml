@@ -1,0 +1,27 @@
+name: Tests
+
+# The unit tests, on a change to a workflow or a test. Pages runs them before every build, but a
+# push that changes only workflows does not start Pages, and a workflow GitHub refuses to start
+# (`startup_failure`) runs no job that could say so: test_workflows.py checks what GitHub would refuse.
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/**', 'tests/**']
+  pull_request:
+    paths: ['.github/workflows/**', 'tests/**']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q -r requirements.txt -r requirements-test.txt
+      - run: python -m unittest discover -s tests

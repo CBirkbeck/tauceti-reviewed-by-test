@@ -174,6 +174,7 @@ the Named page says whether AI agents' reviews count.
 | [Evidence intake](.github/workflows/evidence-intake.yml), [Evidence check](.github/workflows/evidence-check.yml) | on every issue event; on every change to `evidence/` | evidence-store's: records from forms, comments and the bulk issue; the check that the store only grows, and that a push adds only its author's records |
 | [Label answers](.github/workflows/label.yml) | on every new issue | gives an answer that came without its form's label (filed from the page, or by `evidence-store submit`, under an account that cannot label) that label, from its title and fields, then runs intake on it (`scripts/label_issue.py`) |
 | [Pages](.github/workflows/pages.yml) | after any of these | runs the tests, builds the site (`scripts/build_site.py`), checks it in a browser, and publishes it from `main` |
+| [Tests](.github/workflows/tests.yml) | on every change to a workflow or a test | runs the unit tests, which Pages runs only when the site or the store changes; among them, that every call of a workflow grants the permissions the called workflow asks for, without which GitHub refuses to start the run |
 
 The tools are pinned: evidence-core `v0.16.1`, evidence-store `v0.7.2` (`requirements.txt`), the
 extractor's 0.13 series (`data/settings.json`; from the fork `CBirkbeck/extractor`, whose 0.13.2 prints
