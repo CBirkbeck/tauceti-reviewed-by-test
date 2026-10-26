@@ -1,7 +1,7 @@
 """What a run needs on the server, made ready at its start.
 
 Under the answerer's home (`~/tauceti-answerer`): `review`, a clone of the review repository, pulled;
-`datasets/<commit>`, the dataset of the commit the site shows (`evidence-store dataset`); `work/TauCeti`,
+`datasets/<commit>`, the dataset of the commit the site shows (`evidence-store dataset`, its `data/meta.json`, not the pin, which moves first); `work/TauCeti`,
 the library at that commit with its builds from the Lake caches (Mathlib's and Tau Ceti's), prepared again
 only when the commit moves; `work/TauCeti-pr`, a second clone for docstring fixes, on the library's
 `main`; `state/`, its memory. The API key is read from `~/.config/tauceti/secrets/anthropic.key`.
@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -50,14 +52,45 @@ class Ready:
     login: str  # the GitHub account it posts through
 
 
+def site_commit(settings: dict, fetch: Callable[[str], dict] | None = None) -> str:
+    """The library commit the site shows (its `data/meta.json`). The pin (`tauceti` in settings.json) moves
+    first, when a new dataset is being extracted, some forty minutes before that dataset is published and the
+    site shows it (2026-10-26). The pin when the site cannot be read."""
+    fetch = fetch or (lambda url: json.load(urllib.request.urlopen(url, timeout=60)))
+    try:
+        return fetch(settings["site"]["url"].rstrip("/") + "/data/meta.json")["library"]["commit"]
+    except Exception:  # noqa: BLE001 -- a site that cannot be read leaves the pin
+        return settings["tauceti"]
+
+
+def fetch_dataset(p: Paths, commit: str, run: Callable = sh) -> Path:
+    """`datasets/<commit>`, fetched unless it is there whole (with its meta.json). A download goes to a folder
+    beside it and is moved in only once complete: a failed one left an empty folder, which every later run took
+    for the dataset and failed on (from 2026-10-25)."""
+    dataset = p.datasets / commit[:12]
+    if (dataset / "meta.json").exists():
+        return dataset
+    part = p.datasets / f"{commit[:12]}.part"
+    for d in (dataset, part):
+        shutil.rmtree(d, ignore_errors=True)
+    p.datasets.mkdir(parents=True, exist_ok=True)
+    try:
+        run(["evidence-store", "dataset", "--store", p.review / "evidence", "--commit", commit, "--out", part],
+            cwd=p.review)
+    except BaseException:
+        shutil.rmtree(part, ignore_errors=True)
+        raise
+    part.rename(dataset)
+    return dataset
+
+
 def prepare(p: Paths, state: State, log: Callable[[str], None]) -> Ready:
     sh(["git", "-C", p.review, "pull", "-q", "--ff-only"])
     settings = json.loads((p.review / "data" / "settings.json").read_text(encoding="utf-8"))
-    commit, repo = settings["tauceti"], settings["library"]["repo"]
-    dataset = p.datasets / commit[:12]
-    if not dataset.exists():
+    commit, repo = site_commit(settings), settings["library"]["repo"]
+    if not (p.datasets / commit[:12] / "meta.json").exists():
         log(f"the dataset of {commit[:12]}")
-        sh(["evidence-store", "dataset", "--store", p.review / "evidence", "--commit", commit, "--out", dataset], cwd=p.review)
+    dataset = fetch_dataset(p, commit)
     for d in (p.work, p.prwork):
         if not d.exists():
             d.parent.mkdir(parents=True, exist_ok=True)
