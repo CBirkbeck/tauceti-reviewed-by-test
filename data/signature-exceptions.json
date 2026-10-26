@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "decl": "TauCeti.reverseRowBump_eq_some_iff",
+    "site": "TauCeti.reverseRowBump_eq_some_iff.{u_1} {α : Type u_1} [LinearOrder α] (x y : α) (row result : List α) : TauCeti.reverseRowBump y row = (result, some x) ↔ ∃ (before : List α) (after : List α), row = before ++ x :: after ∧ result = before ++ y :: after ∧ (∀ z ∈ after, y ≤ z) ∧ x < y",
+    "docs": "theorem TauCeti.reverseRowBump_eq_some_iff {α : Type u_1} [LinearOrder α] (x y : α) (row result : List α) :reverseRowBump y row = (result, some x) ↔ ∃ (before : List α), ∃ (after : List α), row = before ++ x :: after ∧ result = before ++ y :: after ∧ (∀ (z : α), z ∈ after → y ≤ z) ∧ x < y",
+    "why": "Notation only (reviewed 2026-10-26): the source is `∃ before after, … ∧ (∀ z ∈ after, y ≤ z) ∧ x < y`. The docs page, printed with TauCeti.Combinatorics.Young.RowInsertion's imports alone, writes out `∃ (before : List α), ∃ (after : List α)` and `∀ (z : α), z ∈ after → y ≤ z`; the dataset, printed with the whole library loaded, has Mathlib's delaborators, which merge the existentials and print the bounded quantifier. Same term, every binder's type shown or fixed by `after`."
+  }
+]
