@@ -42,13 +42,15 @@
     const hit = rows.find(r => r[1] === name);
     return hit ? hit[0] : null;
   }
-  /* A declaration: its node, and for one of the library's its entry and module (data/m/<n>.json). */
+  /* A declaration: its node, its entry and its module's file (data/m/<n>.json for one of the library's,
+     data/u/<n>.json for one outside it). */
   async function decl(name) {
     const id = await idOf(name);
     if (id == null) return null;
     const n = await node(id);
-    if (!(n.flags & FLAG.PROJECT) || n.mod < 0) return {node: n, entry: null, module: null};
-    const module = await json(`m/${n.mod}.json`);
+    if (n.mod < 0) return {node: n, entry: null, module: null};
+    // One outside the library is in its module's file in data/u/, with its signature only.
+    const module = await json(`${n.flags & FLAG.PROJECT ? 'm' : 'u'}/${n.mod}.json`);
     return {node: n, entry: module.decls.find(e => e.id === id) || null, module};
   }
   async function moduleByName(name) {

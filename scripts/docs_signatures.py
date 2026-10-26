@@ -17,6 +17,12 @@ name aside). A page built at an older commit whose module has changed since is l
 the docs do not have: their declarations keep the extractor's signature, and are counted. Fields and
 constructors, which the docs show inside their structure or type, keep theirs too.
 
+With `library.upstream_docs` set (Mathlib's docs, which hold Lean's, Batteries' and Aesop's too), the
+declarations outside the library get the same from those docs' pages. Those show Mathlib's latest version,
+not the one the dataset pins, so a header is taken only where it says what Lean prints at the pin (the same
+text, namespaces, universes and spacing aside, and the same constants linked): elsewhere Lean's printing at
+the pin stands. A page of those docs that does not come stops nothing.
+
 Exit 0 when the facet is written; 1 when more pages than --max-unread could not be read, and then nothing
 is written; 2 on bad input.
 """
@@ -35,8 +41,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_signatures import BLOB, changed as changed_between  # noqa: E402
-from common import load_settings  # noqa: E402
+from check_signatures import BLOB, changed as changed_between, normal  # noqa: E402
+from common import header, load_settings  # noqa: E402
 
 FACET = {"name": "docs-signature", "file": "facets/docs-signature.jsonl", "schema": "docs-signature/1",
          "description": "each declaration's header as Tau Ceti's API docs show it (`name (x : α) … :\\n  β`, from its "
@@ -203,19 +209,9 @@ def jsonl(path: Path):
                 yield json.loads(line)
 
 
-def run(dataset: Path, settings: dict, source: Path | None = None, fetch=fetch_page, changed=None,
-        jobs: int = 16, max_unread: int = 20) -> dict:
-    """Write the facet into ``dataset`` from the docs' pages of its library's modules; what was read,
-    left out and missed. ``changed(old, new)`` is the paths that differ between two commits of the library,
-    None when that cannot be told."""
-    meta = json.loads((dataset / "meta.json").read_text(encoding="utf-8"))
-    commit, docs = meta["library"]["commit"], settings["library"]["docs"].rstrip("/")
-    if changed is None:
-        changed = lambda old, new: changed_between(source, settings["library"]["repo"], old, new)  # noqa: E731
-    names: dict[str, set[str]] = {}
-    for d in jsonl(dataset / "decls.jsonl"):
-        if d.get("scope") == "project":
-            names.setdefault(d["module"], set()).add(d["name"])
+def read_pages(fetch, docs: str, modules, jobs: int) -> tuple[dict[str, DocsPage], list[str], list[str]]:
+    """The pages of ``modules`` in the docs at ``docs``, parsed; the modules they have no page for; those whose
+    page did not come."""
     pages: dict[str, DocsPage] = {}
     missing, unread = [], []
 
@@ -224,18 +220,62 @@ def run(dataset: Path, settings: dict, source: Path | None = None, fetch=fetch_p
         return None if html is None else parse(html)
 
     with cf.ThreadPoolExecutor(jobs) as pool:
-        futures = {pool.submit(read, m): m for m in sorted(names)}
+        futures = {pool.submit(read, m): m for m in sorted(modules)}
         for f in cf.as_completed(futures):
             m = futures[f]
             try:
                 p = f.result()
-            except Exception:  # noqa: BLE001 -- a page that did not come is counted below
+            except Exception:  # noqa: BLE001 -- a page that did not come is counted
                 unread.append(m)
                 continue
             if p is None:
                 missing.append(m)
             else:
                 pages[m] = p
+    return pages, missing, unread
+
+
+def agrees(docs: dict, lean: dict | None) -> bool:
+    """Whether a header from docs of another version says what Lean prints at the dataset's: the same text,
+    namespaces, universes and spacing aside, and the same constants linked."""
+    if not lean:
+        return False
+    text, refs = header(lean)
+    return normal(docs["text"]) == normal(text) and {c for *_, c in docs["refs"]} == {c for *_, c in refs}
+
+
+def outside_rows(dataset: Path, names: dict[str, set[str]], docs: str, fetch, jobs: int) -> tuple[list[dict], dict]:
+    """The rows for the declarations outside the library, from docs that show another version than the
+    dataset pins (Mathlib's latest): a header only where it says what Lean prints at the pin."""
+    wanted = set().union(*names.values()) if names else set()
+    lean = {r["decl"]: r for r in jsonl(dataset / "facets" / "signature.jsonl") if r["decl"] in wanted}
+    pages, missing, unread = read_pages(fetch, docs, names, jobs)
+    rows, disagree = [], 0
+    for m, p in sorted(pages.items()):
+        for n in sorted(names[m] & p.rows.keys()):
+            if agrees(p.rows[n], lean.get(n)):
+                rows.append({"decl": n, **p.rows[n]})
+            else:
+                disagree += 1
+    return rows, {"modules": len(names), "pages": len(pages), "rows": len(rows), "disagree": disagree,
+                  "missing": sorted(missing), "unread": sorted(unread)}
+
+
+def run(dataset: Path, settings: dict, source: Path | None = None, fetch=fetch_page, changed=None,
+        jobs: int = 16, max_unread: int = 20) -> dict:
+    """Write the facet into ``dataset`` from the docs' pages of its library's modules, and, with
+    `library.upstream_docs` set, of the other modules too; what was read, left out and missed.
+    ``changed(old, new)`` is the paths that differ between two commits of the library, None when that cannot
+    be told. Only the library's pages that do not come can stop it: outside, Lean's printing stands in."""
+    meta = json.loads((dataset / "meta.json").read_text(encoding="utf-8"))
+    commit, docs = meta["library"]["commit"], settings["library"]["docs"].rstrip("/")
+    if changed is None:
+        changed = lambda old, new: changed_between(source, settings["library"]["repo"], old, new)  # noqa: E731
+    names: dict[str, set[str]] = {}
+    others: dict[str, set[str]] = {}
+    for d in jsonl(dataset / "decls.jsonl"):
+        (names if d.get("scope") == "project" else others).setdefault(d["module"], set()).add(d["name"])
+    pages, missing, unread = read_pages(fetch, docs, names, jobs)
     moved: dict[str, set[str] | None] = {}
     stale, rows = [], []
     for m, p in sorted(pages.items()):
@@ -251,6 +291,10 @@ def run(dataset: Path, settings: dict, source: Path | None = None, fetch=fetch_p
            "stale": sorted(stale), "missing": sorted(missing), "unread": sorted(unread)}
     if len(unread) > max_unread:
         return out
+    upstream = (settings["library"].get("upstream_docs") or "").rstrip("/")
+    if upstream:
+        more, out["outside"] = outside_rows(dataset, others, upstream, fetch, jobs)
+        rows += more
     (dataset / "facets").mkdir(exist_ok=True)
     with (dataset / FACET["file"]).open("w", encoding="utf-8") as f:
         for r in rows:
@@ -266,7 +310,12 @@ def summary(r: dict) -> str:
     return (f"Statements as the docs show them: {r['rows']} declarations, from {r['pages'] - len(r['stale'])} of "
             f"{r['modules']} modules' pages; {len(r['stale'])} pages left out, their module changed since they were "
             f"built{listed(r['stale'])}; {len(r['missing'])} modules the docs do not have{listed(r['missing'])}; "
-            f"{len(r['unread'])} pages that did not come{listed(r['unread'])}.")
+            f"{len(r['unread'])} pages that did not come{listed(r['unread'])}." + (
+            "" if "outside" not in r else
+            f" Outside the library: {r['outside']['rows']} declarations as Mathlib's docs show them, from "
+            f"{r['outside']['pages']} of {r['outside']['modules']} modules' pages; {r['outside']['disagree']} headers "
+            f"that say otherwise than Lean at the pin, which keep Lean's printing; {len(r['outside']['missing'])} "
+            f"modules those docs do not have; {len(r['outside']['unread'])} pages that did not come."))
 
 
 def main(argv: list[str]) -> int:

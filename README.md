@@ -192,7 +192,11 @@ nothing compared them with the docs. Now:
   its module's imports alone and the dataset with the whole library loaded, so Lean's own printing of a
   statement can differ in notation (`∃ (a : A), ∃ (b : B)` against `∃ (a : A) (b : B)`, `∀ (z : α),
   z ∈ s → …` against `∀ z ∈ s, …`). Lean's printing is kept only where the docs have no header (fields,
-  constructors, declarations the compiler makes) or the page is older than a change to its module;
+  constructors, declarations the compiler makes) or the page is older than a change to its module.
+  Outside the library (Mathlib, Lean, Batteries, Aesop) the statement comes from Mathlib's docs
+  (`library.upstream_docs`), which show Mathlib's latest version, so a header is taken only where it says
+  what Lean prints at the version the library pins (the same text and constants); elsewhere Lean's
+  printing at the pin stands (asked for on 2026-10-26, when `zero_smul` showed no statement at all);
 - the Dataset workflow publishes a dataset only if `scripts/check_signatures.py` passes: no signature
   prints a binder without its type, and the signatures of every declaration Voyager named, every one
   with a record, and two samples of the rest (800) say what the docs' headers say, namespaces, universes

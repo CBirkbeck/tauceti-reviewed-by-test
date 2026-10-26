@@ -48,6 +48,12 @@ def entry(name: str, root: Path | None = None) -> dict:
     return next(e for e in module_of(name, root)["decls"] if e["name"] == name)
 
 
+def outside_entry(name: str, root: Path | None = None) -> tuple[dict, list]:
+    """A declaration outside the library: its entry in its module's file `u/<module>.json`, and that file's names."""
+    f = data(f"u/{node(name, root)[3]}.json", root)
+    return next(e for e in f["decls"] if e["name"] == name), f["names"]
+
+
 class MetaTests(unittest.TestCase):
     def test_the_build(self):
         m = data("meta.json")
@@ -144,6 +150,8 @@ class DocsSignatureTests(unittest.TestCase):
 
     #: Its hypothesis named as no other source names it, so that only this row can give what is shown.
     DOCS = "Fixture.triple_pos (n : Nat) (hn : 0 < n) :\n  0 < triple n"
+    #: A declaration outside the library, as Mathlib's docs show it (`h` renamed, for the same reason).
+    OUTSIDE = "Eq.symm {α : Sort u} {a b : α} (hab : a = b) :\n  b = a"
 
     @classmethod
     def setUpClass(cls):
@@ -152,8 +160,10 @@ class DocsSignatureTests(unittest.TestCase):
         shutil.copytree(fixture_site.DATASET, dataset)
         refs = [[cls.DOCS.index("Nat"), cls.DOCS.index("Nat") + 3, "Nat"], [cls.DOCS.index("<"), cls.DOCS.index("<") + 1, "LT.lt"],
                 [cls.DOCS.index("triple n"), cls.DOCS.index("triple n") + 6, "Fixture.triple"]]
+        outside = {"decl": "Eq.symm", "text": cls.OUTSIDE, "refs": [[cls.OUTSIDE.index("="), cls.OUTSIDE.index("=") + 1, "Eq"]]}
         (dataset / "facets" / "docs-signature.jsonl").write_text(
-            json.dumps({"decl": "Fixture.triple_pos", "text": cls.DOCS, "refs": refs}) + "\n", encoding="utf-8")
+            json.dumps({"decl": "Fixture.triple_pos", "text": cls.DOCS, "refs": refs}) + "\n"
+            + json.dumps(outside) + "\n", encoding="utf-8")
         meta = json.loads((dataset / "meta.json").read_text(encoding="utf-8"))
         meta["facets"].append({"name": "docs-signature", "file": "facets/docs-signature.jsonl", "schema": "docs-signature/1"})
         (dataset / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
@@ -173,6 +183,21 @@ class DocsSignatureTests(unittest.TestCase):
 
     def test_lists_too(self):
         self.assertEqual(node("Fixture.triple_pos", self.root)[11], "(n : Nat) (hn : 0 < n) : 0 < triple n")
+
+    def test_which_says_where_it_comes_from(self):
+        self.assertEqual(entry("Fixture.triple_pos", self.root).get("docs"), 1)
+        self.assertNotIn("docs", entry("Fixture.triple", self.root))
+
+    def test_outside_the_library_from_the_docs(self):
+        e, names = outside_entry("Eq.symm", self.root)
+        self.assertEqual((e["sig"], e["kw"], e.get("docs")), (self.OUTSIDE, "theorem", 1))
+        self.assertEqual({e["sig"][a:b]: names[k] for a, b, k in e["sigRefs"]}, {"=": "Eq"})
+
+    def test_outside_the_library_as_lean_prints_it(self):
+        # No docs row: Lean's printing at the pin, the version that is reviewed.
+        e, _ = outside_entry("Int.add_one_le_of_lt", self.root)
+        self.assertEqual(e["sig"], "Int.add_one_le_of_lt {a b : Int} (H : a < b) : a + 1 ≤ b")
+        self.assertNotIn("docs", e)
 
     def test_the_others_as_lean_prints_them(self):
         self.assertEqual(entry("Fixture.triple", self.root)["sig"], "Fixture.triple (n : Nat) : Nat")

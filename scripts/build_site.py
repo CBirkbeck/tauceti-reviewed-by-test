@@ -46,6 +46,8 @@ def build(dataset: Path, store: Path, out: Path, settings: dict, source: Path | 
         write(data / "names" / f"{k}.json", rows)
     for mi in range(site.project_modules):
         write(data / "m" / f"{mi}.json", site.module_file(mi))
+    for mi in range(site.project_modules, len(site.modules)):
+        write(data / "u" / f"{mi}.json", site.outside_module_file(mi))
     write(data / "modules.json", site.modules)
     names, titles = site.search()
     write(data / "search.json", names)

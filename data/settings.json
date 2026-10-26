@@ -10,7 +10,8 @@
   "repo": "TauCetiProject/TauCeti",
   "root": "TauCeti",
   "docs": "https://taucetiproject.org/docs",
-  "docs_branch": "docgen"
+  "docs_branch": "docgen",
+  "upstream_docs": "https://leanprover-community.github.io/mathlib4_docs"
  },
  "extractor": {
   "repo": "CBirkbeck/extractor",

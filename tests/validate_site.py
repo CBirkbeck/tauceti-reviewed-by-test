@@ -327,6 +327,10 @@ def review(browser, url, errors):
     suggested.locator("summary").click()
     expect("Suggested by @example" in suggested.inner_text(), "which opens to who suggested it")
     page = visit(browser, url, "#/d/Int", errors)
+    # Outside the library too, the statement asked about (asked for on 2026-10-26: `zero_smul` showed none):
+    # Lean's printing at the version the library pins, where Mathlib's docs do not say the same.
+    expect(page.locator(".lean pre").first.inner_text() == "inductive Int : Type", "outside the library, its statement")
+    expect("As Lean prints it at the version Fixture uses" in page.locator(".lean-note").inner_text(), "and where it is from")
     box = page.locator(".review")
     expect("from the Test imports store" in box.inner_text(), "an imported review names its store")
     expect(box.locator(".actions button").all_inner_texts() == ["Yes", "No"] and page.locator(".map").count() == 0,
@@ -701,6 +705,19 @@ def smoke(browser, url, errors):
             page.wait_for_function(f"document.querySelectorAll('.map .node').length > {before} || document.querySelector('.map-note.on')")
         page = visit(browser, url, "#/d/" + name, errors, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         expect(page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), f"{name}: nothing is wider than a phone")
+    outside_statements(browser, url, errors)
+
+
+def outside_statements(browser, url, errors):
+    """A declaration outside the library that someone reviewed shows its statement too (`zero_smul` showed
+    none on 2026-10-26), as the site's data has it."""
+    page = visit(browser, url, "#/", errors)
+    for name in page.evaluate("async () => Object.keys(await TauData.upstream()).slice(0, 2)"):
+        page = visit(browser, url, "#/d/" + name, errors)
+        kw, sig = page.evaluate("async n => { const d = await TauData.decl(n); return [d.entry ? d.entry.kw || '' : '', d.entry ? d.entry.sig || '' : '']; }", name)
+        expect(bool(sig), f"{name}: a statement outside the library")
+        shown = " ".join(page.locator(".lean pre").first.inner_text().split())
+        expect(shown == " ".join(f"{kw} {sig}".split()), f"{name}: its statement shown as the site's data has it")
 
 
 def main(argv: list[str]) -> int:

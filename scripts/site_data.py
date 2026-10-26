@@ -33,6 +33,9 @@ POLICIES = (Policy(agents=False), Policy(agents=True))
 STATES = ("unreviewed", "covered", "uncounted", "stale", "problem", "disputed")
 KIND_CODE = {"theorem": "t", "definition": "d", "structure": "s", "class": "c", "inductive": "n",
              "instance": "i", "axiom": "a", "opaque": "o"}
+#: The keyword a declaration outside the library is headed with, which no source of it in the dataset gives.
+KEYWORD = {"theorem": "theorem", "definition": "def", "structure": "structure", "class": "class",
+           "inductive": "inductive", "instance": "instance", "axiom": "axiom", "opaque": "opaque"}
 #: The kinds whose text past the statement is shown, as the docs show it: a definition's value (the docs'
 #: Equations), a structure's or inductive type's fields. A theorem's proof and an instance's value are not.
 VALUE_KINDS = frozenset({"definition", "opaque", "structure", "class", "inductive"})
@@ -159,9 +162,12 @@ class Site:
         self.modules = self._modules()
         self.mod_index = {m[0]: i for i, m in enumerate(self.modules)}
         self.by_module: dict[str, list[Decl]] = defaultdict(list)
+        self.outside_by_module: dict[str, list[Decl]] = defaultdict(list)
         for d in ds.decls:
             if d.is_project:
                 self.by_module[d.module].append(d)
+            elif d.module:
+                self.outside_by_module[d.module].append(d)
         self.states = {ds.by_name[name].id: tuple(STATES.index(self.ev.decl_state(name, p)) for p in POLICIES)
                        for name in self.ev.by_decl if name in ds.by_name}
 
@@ -275,13 +281,7 @@ class Site:
     def entry(self, d: Decl, names: dict[str, int]) -> dict:
         i, name = d.id, d.name
         e: dict = {"id": i, "name": name, "k": KIND_CODE.get(d.kind, "o"), "doc": self.docstrings.get(name, "")}
-        docs = self.ds.facet_row("docs-signature", name)
-        sig = docs or self.ds.facet_row("signature", name)
-        if sig:
-            # As the docs head it: their own header, or Lean's with a structure's parents (`extends P`) put
-            # before the colon of its type.
-            e["sig"], refs = (docs["text"], docs.get("refs") or []) if docs else header(sig)
-            e["sigRefs"] = self.links(refs, names)
+        sig = self.statement(e, name, names)
         src = self.ds.facet_row("source", name)
         if src:
             e["kw"], e["line"] = src.get("keyword", ""), [src["start"][0], src["end"][0]]
@@ -309,6 +309,32 @@ class Site:
             if tests:
                 e["tests"] = tests
         return e
+
+    def statement(self, e: dict, name: str, names: dict[str, int]) -> bool:
+        """Put a declaration's signature into its entry ``e``, as the docs head it: their own header (and
+        `docs`), else Lean's with a structure's parents (`extends P`) put before the colon of its type.
+        Whether it has one."""
+        docs = self.ds.facet_row("docs-signature", name)
+        sig = docs or self.ds.facet_row("signature", name)
+        if not sig:
+            return False
+        e["sig"], refs = (docs["text"], docs.get("refs") or []) if docs else header(sig)
+        e["sigRefs"] = self.links(refs, names)
+        if docs:
+            e["docs"] = 1
+        return True
+
+    def outside_module_file(self, mi: int) -> dict:
+        """`u/<mi>.json`, for a module outside the library: each of its declarations in the dataset with its
+        signature, which its page and its card show."""
+        name = self.modules[mi][0]
+        names: dict[str, int] = {}
+        decls = []
+        for d in sorted(self.outside_by_module.get(name, []), key=lambda d: d.name):
+            e = {"id": d.id, "name": d.name, "k": KIND_CODE.get(d.kind, "o"), "kw": KEYWORD.get(d.kind, "")}
+            self.statement(e, d.name, names)
+            decls.append(e)
+        return {"name": name, "names": list(names), "decls": decls}
 
     def signature_row(self, name: str) -> dict | None:
         """The signature the site shows of a declaration: as the API docs show it (the facet docs-signature,

@@ -164,5 +164,82 @@ class FacetTests(unittest.TestCase):
         self.assertFalse((d / "facets" / "docs-signature.jsonl").exists())
 
 
+class OutsideTests(unittest.TestCase):
+    """Declarations outside the library, from Mathlib's docs (which hold Lean's, Batteries' and Aesop's too).
+    Those show Mathlib's latest version, not the one the dataset pins, so a header is taken only where it
+    says what Lean prints at the pin: the same text, namespaces, universes and spacing aside, and the same
+    constants linked."""
+
+    MODULE = "Mathlib.Algebra.GroupWithZero.Action.Defs"
+    #: Lean's printing at the pin (the dataset's signature facet), as the extractor wrote them.
+    ZERO = {"decl": "zero_smul",
+            "text": "zero_smul.{u_2, u_7} (M₀ : Type u_2) {A : Type u_7} [Zero M₀] [Zero A] [SMulWithZero M₀ A] (m : A) :\n  0 • m = 0",
+            "refs": [[53, 57, "Zero"], [63, 67, "Zero"], [72, 84, "SMulWithZero"], [105, 106, "HSMul.hSMul"], [109, 110, "Eq"]]}
+    SMUL = {"decl": "smul_zero",
+            "text": "smul_zero.{u_1, u_7} {M : Type u_1} {A : Type u_7} [Zero A] [SMulZeroClass M A] (a : M) : a • 0 = 0",
+            "refs": [[52, 56, "Zero"], [61, 74, "SMulZeroClass"], [92, 93, "HSMul.hSMul"], [96, 97, "Eq"]]}
+
+    def dataset(self, *lean: dict) -> Path:
+        d = Path(tempfile.mkdtemp())
+        (d / "facets").mkdir()
+        decls = [{"name": "TauCeti.reverseRowBump_eq_some_iff", "module": "M.Row", "scope": "project"},
+                 {"name": "zero_smul", "module": self.MODULE, "scope": "upstream"},
+                 {"name": "smul_zero", "module": self.MODULE, "scope": "upstream"},
+                 {"name": "Nat.gone", "module": "Init.Gone", "scope": "upstream"}]
+        (d / "decls.jsonl").write_text("".join(json.dumps(x) + "\n" for x in decls), encoding="utf-8")
+        (d / "facets" / "signature.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in lean),
+                                                      encoding="utf-8")
+        meta = {"library": {"commit": BUILT}, "facets": [{"name": "signature", "file": "facets/signature.jsonl"}]}
+        (d / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+        return d
+
+    def run_it(self, d: Path, unread: bool = False) -> dict:
+        pages = {("https://example.org/docs", "M.Row"): "RowInsertion.html",
+                 ("https://example.org/mathlib", self.MODULE): "MathlibActionDefs.html"}
+
+        def fetch(docs: str, module: str) -> str | None:
+            if unread and docs.endswith("/mathlib") and module == self.MODULE:
+                raise OSError("the page did not come")
+            page = pages.get((docs, module))
+            return fixture(page) if page else None
+        settings = {"library": {"repo": "o/r", "docs": "https://example.org/docs",
+                                "upstream_docs": "https://example.org/mathlib"}}
+        return dsig.run(d, settings, fetch=fetch, changed=lambda old, new: set(), jobs=2)
+
+    def facet(self, d: Path) -> dict:
+        rows = [json.loads(line) for line in (d / "facets" / "docs-signature.jsonl").read_text(encoding="utf-8").splitlines()]
+        return {r["decl"]: r for r in rows}
+
+    def test_a_header_that_says_what_lean_prints_at_the_pin(self):
+        d = self.dataset(self.ZERO, self.SMUL)
+        r = self.run_it(d)
+        self.assertEqual(self.facet(d)["zero_smul"]["text"],
+                         "zero_smul (M₀ : Type u_2) {A : Type u_7} [Zero M₀] [Zero A] [SMulWithZero M₀ A] (m : A) :\n  0 • m = 0")
+        self.assertIn("smul_zero", self.facet(d))
+        self.assertIn("TauCeti.reverseRowBump_eq_some_iff", self.facet(d))  # the library's own, as before
+        self.assertEqual((r["outside"]["rows"], r["outside"]["disagree"], r["outside"]["missing"]), (2, 0, ["Init.Gone"]))
+
+    def test_a_header_of_another_version_is_left_out(self):
+        # Mathlib changed the statement since the pin: Lean's printing at the pin is what the site shows.
+        changed = {**self.SMUL, "text": self.SMUL["text"].replace("a • 0 = 0", "a • 0 = 0 + 0")}
+        d = self.dataset(self.ZERO, changed)
+        r = self.run_it(d)
+        self.assertNotIn("smul_zero", self.facet(d))
+        self.assertEqual(r["outside"]["disagree"], 1)
+
+    def test_other_constants_are_another_statement(self):
+        other = {**self.SMUL, "refs": [[52, 56, "Zero"], [61, 74, "SMulWithZero"], [92, 93, "HSMul.hSMul"], [96, 97, "Eq"]]}
+        d = self.dataset(self.ZERO, other)
+        self.run_it(d)
+        self.assertNotIn("smul_zero", self.facet(d))
+
+    def test_pages_of_mathlibs_docs_that_do_not_come_block_nothing(self):
+        d = self.dataset(self.ZERO, self.SMUL)
+        r = self.run_it(d, unread=True)
+        self.assertTrue(r["written"])
+        self.assertEqual(sorted(self.facet(d)), ["TauCeti.reverseRowBump_eq_some_iff"])
+        self.assertEqual(r["outside"]["unread"], [self.MODULE])
+
+
 if __name__ == "__main__":
     unittest.main()

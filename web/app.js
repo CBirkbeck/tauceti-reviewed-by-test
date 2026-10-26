@@ -505,7 +505,8 @@
     if (!d) return VIEWS.missing(name, gen, 'No declaration of that name is in this build.');
     const n = d.node, project = !!(n.flags & FLAG.PROJECT), lib = meta.library.name;
     const up = project ? {} : ((await TauData.upstream())[name] || {});
-    const e = d.entry || up;
+    // Outside the library: its signature from its module's file, its records and what rests on it from upstream.json.
+    const e = project ? (d.entry || {}) : {...up, ...(d.entry || {})};
     const row = named.find(r => r.decl === name);
     const modName = d.module ? d.module.name : ((await TauData.modules())[n.mod] || [''])[0];
     const home = modName.split('.')[0] || 'Lean';
@@ -546,8 +547,9 @@
     const doc = e.doc && (row ? afterLead(e.doc, row.name) : cut || !n.title ? e.doc : afterTitle(e.doc, n.title));
     if (doc && doc.trim()) parts.push(md(doc, 'prose'));
     if (e.sig || e.stmt) {
-      // What the docs show: the signature Lean prints, section variables included, its names linked; a
-      // definition's value folded (the docs' Equations), a structure's fields; never a proof.
+      // What the docs show: their own header where they have one (`docs`), else the signature Lean prints at
+      // the pin, section variables included, its names linked; a definition's value folded (the docs'
+      // Equations), a structure's fields; never a proof.
       const lean = el('div', 'lean');
       if (e.sig) lean.append(signature(e.kw, e.sig, e.sigRefs || [], d.module.names || []));
       else { const pre = el('pre'); pre.textContent = e.stmt; lean.append(pre); }
@@ -560,8 +562,12 @@
       }
       if (e.cut && d.module) { const c = el('div', 'cut'); c.append('The text goes on: ', ext(URLS.source(meta, d.module.path, e.line), 'read it in the source')); lean.append(c); }
       const sec = el('section', 'section');
+      // Outside the library, Mathlib's docs show its latest version: theirs only where it says what Lean prints
+      // at the version the library uses (scripts/docs_signatures.py).
+      const from = e.docs ? (project ? 'As the docs show it' : `As Mathlib's docs show it, the same as at the version ${lib} uses`)
+        : (project ? 'As Lean prints it (the docs have no header for it)' : `As Lean prints it at the version ${lib} uses`);
       sec.append(el('h3', null, 'In Lean'), lean,
-                 el('p', 'lean-note', 'As the docs show it, with no proof. Hover over a name to see what it is, then over the names in its card; hover over a variable to see its type. Click a name to open it.'));
+                 el('p', 'lean-note', `${from}, with no proof. Hover over a name to see what it is, then over the names in its card; hover over a variable to see its type. Click a name to open it.`));
       parts.push(sec);
     }
     // The review box.
@@ -1337,14 +1343,14 @@
     const card = el('div', 'tip');
     card.append(el('div', 't-name', `${n.name} · ${KIND_WORD[n.kind] || 'Declaration'}${project ? '' : ' · outside ' + meta.library.name}`));
     if (n.title) { const t = el('div', 't-title'); t.append(mdInline(n.title)); card.append(t); }
-    if (project && e.sig) {
+    if (e.sig) {
       const lean = el('div', 'lean');
       lean.append(signature(e.kw, e.sig, e.sigRefs || [], d.module.names || []));
       if (e.rest) lean.append(await valueBlock(e.rest, n));
       card.append(lean);
       const s = el('div'); s.append(stateBadge(stateOf(n), true)); card.append(s);
-    } else {
-      if (n.brief) card.append(el('div', 't-stmt', n.brief));
+    } else if (n.brief) card.append(el('div', 't-stmt', n.brief));
+    if (!project) {
       const mod = ((await TauData.modules())[n.mod] || [''])[0];
       if (mod.split('.')[0] === 'Mathlib') card.append(ext(URLS.mathlib(name, mod), "Mathlib's docs ↗", 't-link'));
     }
