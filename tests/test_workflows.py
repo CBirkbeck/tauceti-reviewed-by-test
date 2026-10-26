@@ -21,6 +21,18 @@ def runs(job: dict) -> str:
     return "\n".join(s.get("run", "") for s in steps(job))
 
 
+LEVELS = {"none": 0, "read": 1, "write": 2}
+
+
+def asked(wf: dict) -> dict[str, int]:
+    """The most a workflow asks of its token for each scope, at the top or in any of its jobs."""
+    out: dict[str, int] = {}
+    for block in [wf.get("permissions")] + [job.get("permissions") for job in wf["jobs"].values()]:
+        for scope, level in (block or {}).items():
+            out[scope] = max(out.get(scope, 0), LEVELS[level])
+    return out
+
+
 class DatasetWorkflowTests(unittest.TestCase):
     def test_dataset_extracts_with_the_pinned_series_and_publishes(self):
         wf = load("dataset.yml")
@@ -80,6 +92,25 @@ class VoyagerWorkflowTests(unittest.TestCase):
         self.assertIn("needs.dataset.result == 'success' || needs.dataset.result == 'skipped'", jobs["site"]["if"])
         self.assertEqual(named["with"], {"site": False})
         self.assertEqual(named["secrets"], "inherit")
+
+
+class PermissionTests(unittest.TestCase):
+    def test_a_called_workflow_is_granted_what_it_asks_for(self):
+        # GitHub refuses to start a run whose called workflow asks for more than the calling job grants
+        # (`startup_failure`, no job runs): on 2026-10-25 dataset.yml asked for issues: write while
+        # follow.yml's dataset job granted only contents, and the site stopped following Tau Ceti.
+        for f in sorted(WORKFLOWS.glob("*.yml")):
+            wf = load(f.name)
+            for name, job in wf["jobs"].items():
+                called = job.get("uses", "")
+                if not called.startswith("./.github/workflows/"):
+                    continue
+                granted = job.get("permissions", wf.get("permissions"))
+                if granted is None:
+                    continue  # the repository's default token, which the files do not say
+                for scope, level in asked(load(Path(called).name)).items():
+                    self.assertGreaterEqual(LEVELS[granted.get(scope, "none")], level,
+                                            f"{f.name}: {name} calls {called}, which asks for {scope}")
 
 
 class ConditionTests(unittest.TestCase):

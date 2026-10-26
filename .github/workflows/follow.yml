@@ -52,6 +52,7 @@ jobs:
     uses: ./.github/workflows/dataset.yml
     permissions:
       contents: write
+      issues: write  # dataset.yml asks for it; without it GitHub refuses to start the run
   named:
     needs: [pin, dataset]
     if: "!cancelled() && needs.pin.outputs.moved == 'true' && needs.dataset.result == 'success'"
