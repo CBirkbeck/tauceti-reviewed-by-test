@@ -60,6 +60,20 @@ class ApplyEditsTests(unittest.TestCase):
     def test_the_new_text_cannot_end_the_comment(self):
         self.refused([{"old": "is `n + n`.", "new": "is. -/ #eval 1 /-"}], "comment delimiters")
         self.refused([{"old": "is `n + n`.", "new": "is `n + n`, as in \"twice\"."}], "double quote")
+        self.refused([{"old": "for `n > 0`.", "new": "for `n > 0`. -/"}], "comment delimiters")
+
+    def test_the_comment_own_delimiters_quoted_at_both_ends_stay(self):
+        # A model quotes the closing `-/` (or the opening `/--`) in both texts, as on 2026-10-26: the
+        # delimiter stays where it was, so the edit changes only what lies between.
+        new, err = apply_edits(LEAN, [{"old": "It is never `0` for `n > 0`. -/",
+                                       "new": "It is `0` exactly at `n = 0`. -/"}])
+        self.assertIsNone(err)
+        self.assertIn("/-- **The thing** is `n + n`.\n\nIt is `0` exactly at `n = 0`. -/\ndef thing", new)
+        new, err = apply_edits(LEAN, [{"old": "/-- **The thing** is", "new": "/-- **The doubling** is"}])
+        self.assertIsNone(err)
+        self.assertIn("/-- **The doubling** is `n + n`.", new)
+        self.refused([{"old": "for `n > 0`. -/", "new": "for `n > 0`. -/ #eval 1 /- -/"}], "comment delimiters")
+        self.refused([{"old": "-/", "new": "-/"}], "empty")
 
     def test_lines_stay_short(self):
         self.refused([{"old": "is `n + n`.", "new": "is " + "very " * 25 + "long."}], "100 characters")

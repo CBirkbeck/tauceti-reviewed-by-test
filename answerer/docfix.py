@@ -7,10 +7,14 @@ comment (`/-- … -/` or `/-! … -/`): the new text has no comment delimiters, 
 code, and no double quotes (Tau Ceti's source guard refuses them in comments). Lines stay within
 100 characters. `apply_edits` checks all this on the file as it is on the library's `main`; the
 file is then built (only comments changed, but a build is cheap) before the branch is pushed.
+
+A model may quote the doc comment's own closing `-/` (or opening `/--`, `/-!`) at the same end of
+both texts. That delimiter stays where it was, so it is left out of the edit before the checks.
 """
 from __future__ import annotations
 
 MAX_EDITS, MAX_LEN, MAX_LINE = 3, 3000, 100
+OPENERS, CLOSER = ("/--", "/-!"), "-/"
 
 
 def doc_spans(text: str) -> list[tuple[int, int]]:
@@ -49,6 +53,16 @@ def inside(spans: list[tuple[int, int]], start: int, end: int) -> bool:
     return any(s <= start and end <= e for s, e in spans)
 
 
+def unquote(old: str, new: str) -> tuple[str, str]:
+    """`old` and `new` without a doc comment delimiter that both quote at the same end."""
+    if old.endswith(CLOSER) and new.endswith(CLOSER):
+        old, new = old[:-len(CLOSER)], new[:-len(CLOSER)]
+    for d in OPENERS:
+        if old.startswith(d) and new.startswith(d):
+            old, new = old[len(d):], new[len(d):]
+    return old, new
+
+
 def apply_edits(text: str, edits: list[dict]) -> tuple[str | None, str | None]:
     """The file with `edits` made, or None and why not."""
     if not edits:
@@ -56,7 +70,7 @@ def apply_edits(text: str, edits: list[dict]) -> tuple[str | None, str | None]:
     if len(edits) > MAX_EDITS:
         return None, f"at most {MAX_EDITS} edits"
     for e in edits:
-        old, new = e.get("old") or "", e.get("new") or ""
+        old, new = unquote(e.get("old") or "", e.get("new") or "")
         if not old:
             return None, "an edit's old text is empty"
         if len(old) > MAX_LEN or len(new) > MAX_LEN:
