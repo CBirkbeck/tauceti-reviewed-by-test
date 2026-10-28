@@ -38,6 +38,6 @@ jobs:
         uses: ./.github/actions/intake
         with:
           store: evidence
-          sweep: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--sweep-days 14' || '--sweep-open' }}
+          sweep: ${{ github.event_name == 'schedule' && '--sweep-days 14' || '--sweep-open' }}
           pages-workflow: 'pages.yml'
           ref: v0.7.2
