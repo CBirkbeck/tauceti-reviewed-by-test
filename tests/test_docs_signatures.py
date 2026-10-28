@@ -83,6 +83,70 @@ class HeaderTests(unittest.TestCase):
             self.assertTrue(0 < a < b <= len(row["text"]), (a, b, const))
 
 
+class FieldTests(unittest.TestCase):
+    """A structure's or a class's fields, as the docs list them under its header: those of its parents
+    first (inherited), then its own, each `name binders : type`, with a docstring when it has one
+    (asked for on 2026-10-28: a structure's header alone says only `: Type`)."""
+
+    def fields(self, page: str, name: str) -> list[dict]:
+        return rows(page)[name]["fields"]
+
+    def test_a_structures_fields_its_parents_first(self):
+        fs = self.fields("Cat.html", "TauCeti.PointRepresentationCat")
+        self.assertEqual([f["text"] for f in fs],
+                         ["carrier : Type w", "isAddCommMonoid : AddCommMonoid ↑self.toSemimoduleCat",
+                          "isModule : Module R ↑self.toSemimoduleCat", "representation : HopfAlgebra.PointRepresentation"])
+        self.assertEqual([bool(f.get("inherited")) for f in fs], [True, True, True, False])
+        self.assertEqual(fs[3]["doc"], "The natural point action on the underlying module.")
+        self.assertNotIn("doc", fs[0])
+        self.assertEqual(linked(fs[0])["carrier"], "SemimoduleCat.carrier")  # an inherited field names its parent's
+        self.assertEqual(linked(fs[1])["toSemimoduleCat"], "TauCeti.PointRepresentationCat.toSemimoduleCat")
+        self.assertEqual(linked(fs[3])["HopfAlgebra.PointRepresentation"], "TauCeti.HopfAlgebra.PointRepresentation")
+
+    def test_mathlibs_docs_and_their_binders(self):
+        # Mathlib's docs put `   :  ` between a field and its type, and a field's own binders after its name.
+        self.assertEqual([f["text"] for f in self.fields("MathlibModularForms.html", "ModularForm")],
+                         ["toFun : UpperHalfPlane → ℂ",
+                          "slash_action_eq' (γ : GL (Fin 2) ℝ) : γ ∈ Γ → SlashAction.map k γ self.toFun = self.toFun",
+                          "holo' : MDiff ⇑self.toSlashInvariantForm",
+                          "bdd_at_cusps' {c : OnePoint ℝ} (hc : IsCusp c Γ) : c.IsBoundedAt self.toFun k"])
+
+    def test_a_class(self):
+        fs = self.fields("MathlibModularForms.html", "ModularFormClass")
+        self.assertEqual([f["text"] for f in fs],
+                         ["slash_action_eq (f : F) (γ : GL (Fin 2) ℝ) : γ ∈ Γ → SlashAction.map k γ ⇑f = ⇑f",
+                          "holo (f : F) : MDiff ⇑f",
+                          "bdd_at_cusps (f : F) {c : OnePoint ℝ} (hc : IsCusp c Γ) : c.IsBoundedAt (⇑f) k"])
+        self.assertEqual([bool(f.get("inherited")) for f in fs], [True, False, False])
+        self.assertEqual(linked(fs[2])["IsCusp"], "IsCusp")
+
+    def test_a_long_type_broken_as_the_docs_break_it_and_code_in_a_docstring(self):
+        fs = self.fields("Unramified.html", "TauCeti.IsUnramified")
+        self.assertEqual(fs[0], {**fs[0], "text": "ramificationIndex_eq_one : ramificationIndex K L = 1",
+                                 "doc": "The ramification index of an unramified extension is `1`."})
+        self.assertEqual(fs[1]["text"],
+                         "isSeparable_residueField : Algebra.IsSeparable (IsLocalRing.ResidueField ↥(ValuativeRel.valuation K).integer)\n"
+                         "    (IsLocalRing.ResidueField ↥(ValuativeRel.valuation L).integer)")
+        for f in fs:
+            for a, b, const in f["refs"]:
+                self.assertTrue(0 <= a < b <= len(f["text"]), (a, b, const))
+
+    def test_under_a_constructor_of_its_own_name(self):
+        # `structure BrauerAlgebra … where ofCoeff :: coeff : …`: the docs list the fields under `ofCoeff :: (`.
+        fs = self.fields("Brauer.html", "TauCeti.BrauerAlgebra")
+        self.assertEqual(fs, [{**fs[0], "text": "coeff : BrauerDiagram k →₀ R",
+                               "doc": "The coefficients of an element of the Brauer algebra in the diagram basis."}])
+
+    def test_only_structures_and_classes_have_them(self):
+        self.assertNotIn("fields", rows("RowInsertion.html")["TauCeti.reverseRowBump_eq_some_iff"])
+        self.assertNotIn("fields", rows("AlbertAlgebra.html")["TauCeti.AlbertAlgebra.instDistribMulAction"])
+
+    def test_where_the_page_comes_from(self):
+        self.assertEqual(dsig.parse(fixture("MathlibModularForms.html")).blob,
+                         ("leanprover-community/mathlib4", "cc5a8f804aa0eabe95091bf318bef6c1c353f78e",
+                          "Mathlib/NumberTheory/ModularForms/Basic.lean"))
+
+
 class FacetTests(unittest.TestCase):
     """The facet written into a dataset: what the docs have, page by page, for the dataset's declarations."""
 
@@ -232,6 +296,60 @@ class OutsideTests(unittest.TestCase):
         d = self.dataset(self.ZERO, other)
         self.run_it(d)
         self.assertNotIn("smul_zero", self.facet(d))
+
+    #: Lean's printing of ModularForm at the pin, from the dataset of 36f24f5d94cc.
+    FORM = {"decl": "ModularForm", "extends": [{"refs": [[0, 18, "SlashInvariantForm"]], "text": "SlashInvariantForm Γ k"}],
+            "refs": [[17, 25, "Subgroup"], [27, 29, "Matrix.GeneralLinearGroup"], [31, 34, "Fin"], [38, 39, "Real"],
+                     [47, 48, "Int"]],
+            "text": "ModularForm (Γ : Subgroup (GL (Fin 2) ℝ)) (k : ℤ) : Type"}
+    FORMS = "Mathlib.NumberTheory.ModularForms.Basic"
+    FILE = ("leanprover-community/mathlib4", "Mathlib/NumberTheory/ModularForms/Basic.lean")
+    PIN = "2cabef97b63d3275776b8b060d802de6a6fa1055"
+
+    def fields_run(self, files: dict) -> tuple[dict, dict]:
+        """The ModularForm page of Mathlib's docs, built at cc5a8f80, read with Mathlib pinned at PIN, where
+        `files` gives the module's file at each revision (`raw`)."""
+        d = self.dataset(self.FORM)
+        decls = (d / "decls.jsonl").read_text(encoding="utf-8")
+        (d / "decls.jsonl").write_text(decls + json.dumps({"name": "ModularForm", "module": self.FORMS, "scope": "upstream"}) + "\n",
+                                       encoding="utf-8")
+        pages = {("https://example.org/mathlib", self.FORMS): "MathlibModularForms.html",
+                 ("https://example.org/docs", "M.Row"): "RowInsertion.html"}
+        asked = []
+
+        def raw(repo: str, rev: str, path: str) -> str | None:
+            asked.append((repo, rev, path))
+            return files.get(rev)
+        settings = {"library": {"repo": "o/r", "docs": "https://example.org/docs",
+                                "upstream_docs": "https://example.org/mathlib"}}
+        r = dsig.run(d, settings, fetch=lambda docs, m: fixture(pages[(docs, m)]) if (docs, m) in pages else None,
+                     changed=lambda old, new: set(), jobs=2, pins={self.FILE[0]: self.PIN}, raw=raw)
+        self.assertTrue(all((repo, path) == self.FILE for repo, _, path in asked))
+        return self.facet(d)["ModularForm"], r
+
+    def test_a_structures_fields_where_its_file_is_the_same_at_the_pin(self):
+        row, r = self.fields_run({self.PIN: "the file", "cc5a8f804aa0eabe95091bf318bef6c1c353f78e": "the file"})
+        self.assertEqual([f["text"] for f in row["fields"]][2], "holo' : MDiff ⇑self.toSlashInvariantForm")
+        self.assertEqual(r["outside"]["unfielded"], 0)
+
+    def test_not_where_its_file_changed_since(self):
+        row, r = self.fields_run({self.PIN: "the file", "cc5a8f804aa0eabe95091bf318bef6c1c353f78e": "the file, changed"})
+        self.assertNotIn("fields", row)
+        self.assertTrue(row["text"].startswith("ModularForm (Γ : Subgroup (GL (Fin 2) ℝ)) (k : ℤ) extends"))  # the header stays
+        self.assertEqual(r["outside"]["unfielded"], 1)
+        row, _ = self.fields_run({"cc5a8f804aa0eabe95091bf318bef6c1c353f78e": "the file"})  # the pin's did not come
+        self.assertNotIn("fields", row)
+
+    def test_the_pins_are_the_librarys_packages_and_its_lean(self):
+        d = Path(tempfile.mkdtemp())
+        (d / "lake-manifest.json").write_text(json.dumps({"packages": [
+            {"name": "mathlib", "url": "https://github.com/leanprover-community/mathlib4", "rev": self.PIN},
+            {"name": "batteries", "url": "https://github.com/leanprover-community/batteries.git", "rev": "b" * 40}]}),
+            encoding="utf-8")
+        (d / "lean-toolchain").write_text("leanprover/lean4:v4.36.0-rc1\n", encoding="utf-8")
+        self.assertEqual(dsig.pins_of(d), {"leanprover-community/mathlib4": self.PIN,
+                                           "leanprover-community/batteries": "b" * 40, "leanprover/lean4": "v4.36.0-rc1"})
+        self.assertEqual(dsig.pins_of(None), {})
 
     def test_pages_of_mathlibs_docs_that_do_not_come_block_nothing(self):
         d = self.dataset(self.ZERO, self.SMUL)

@@ -190,9 +190,14 @@ class DocsSignatureTests(unittest.TestCase):
         refs = [[cls.DOCS.index("Nat"), cls.DOCS.index("Nat") + 3, "Nat"], [cls.DOCS.index("<"), cls.DOCS.index("<") + 1, "LT.lt"],
                 [cls.DOCS.index("triple n"), cls.DOCS.index("triple n") + 6, "Fixture.triple"]]
         outside = {"decl": "Eq.symm", "text": cls.OUTSIDE, "refs": [[cls.OUTSIDE.index("="), cls.OUTSIDE.index("=") + 1, "Eq"]]}
+        pos = {"decl": "Fixture.Pos", "text": "Fixture.Pos :\n  Type", "refs": [],
+               "fields": [{"text": "val : Nat", "refs": [[6, 9, "Nat"]]},
+                          {"text": "pos : 0 < self.val", "refs": [[8, 9, "LT.lt"]], "doc": "It is `positive`."}]}
+        constraint = {"decl": "Lean.Omega.Constraint", "text": "Lean.Omega.Constraint :\n  Type", "refs": [],
+                      "fields": [{"text": "lowerBound : Option Int", "refs": [[20, 23, "Int"]], "inherited": True}]}
         (dataset / "facets" / "docs-signature.jsonl").write_text(
-            json.dumps({"decl": "Fixture.triple_pos", "text": cls.DOCS, "refs": refs}) + "\n"
-            + json.dumps(outside) + "\n", encoding="utf-8")
+            "".join(json.dumps(r) + "\n" for r in ({"decl": "Fixture.triple_pos", "text": cls.DOCS, "refs": refs},
+                                                    outside, pos, constraint)), encoding="utf-8")
         meta = json.loads((dataset / "meta.json").read_text(encoding="utf-8"))
         meta["facets"].append({"name": "docs-signature", "file": "facets/docs-signature.jsonl", "schema": "docs-signature/1"})
         (dataset / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
@@ -231,6 +236,18 @@ class DocsSignatureTests(unittest.TestCase):
     def test_the_others_as_lean_prints_them(self):
         self.assertEqual(entry("Fixture.triple", self.root)["sig"], "Fixture.triple (n : Nat) : Nat")
 
+    def test_a_structures_fields_as_the_docs_list_them(self):
+        e, names = entry("Fixture.Pos", self.root), module_of("Fixture.Pos", self.root)["names"]
+        self.assertEqual([f["t"] for f in e["fields"]], ["val : Nat", "pos : 0 < self.val"])
+        self.assertEqual((e["fields"][1]["d"], "d" in e["fields"][0], "i" in e["fields"][0]), ("It is `positive`.", False, False))
+        self.assertEqual({f["t"][a:b]: names[k] for f in e["fields"] for a, b, k in f["r"]}, {"Nat": "Nat", "<": "LT"})
+        self.assertNotIn("rest", e)  # the docs' fields stand for the source's text
+
+    def test_and_outside_the_library(self):
+        e, names = outside_entry("Lean.Omega.Constraint", self.root)
+        self.assertEqual([(f["t"], f.get("i")) for f in e["fields"]], [("lowerBound : Option Int", 1)])
+        self.assertEqual([names[k] for _, _, k in e["fields"][0]["r"]], ["Int"])
+
 
 class EntryTests(unittest.TestCase):
     def test_the_source(self):
@@ -238,6 +255,9 @@ class EntryTests(unittest.TestCase):
         self.assertEqual((e["kw"], e["line"]), ("def", [15, 16]))
         self.assertNotIn("stmt", e)  # the signature stands for the statement
         self.assertTrue(e["rest"].startswith(":= n + n + n"))  # a definition's value, as the docs' Equations
+        pos = entry("Fixture.Pos")  # without the docs' fields, a structure's from its source
+        self.assertTrue(pos["rest"].startswith("where\n  val : Nat"))
+        self.assertNotIn("fields", pos)
 
     def test_what_the_docs_show(self):
         # The signature as Lean prints it (section variables included), each name its declaration, from

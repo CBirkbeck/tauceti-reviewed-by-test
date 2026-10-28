@@ -14,14 +14,19 @@ For each module of the library, its page `<docs>/<Module/Path>.html`, and on it 
 (a docs page keeps the indentation of a line break and drops the break: a run of n spaces is a break and
 n - 1 spaces), with `refs` [start, stop, constant] in code points for each name the header links (its own
 name aside). A page built at an older commit whose module has changed since is left out, as is a module
-the docs do not have: their declarations keep the extractor's signature, and are counted. Fields and
-constructors, which the docs show inside their structure or type, keep theirs too.
+the docs do not have: their declarations keep the extractor's signature, and are counted. Constructors,
+which the docs show inside their type, keep theirs too. A structure's or a class's row has its fields
+(`fields`), as the docs list them under its header (asked for on 2026-10-28, when a structure's page said
+only `: Type`): its parents' first (`inherited`), then its own, each `name binders : type` with its `refs`,
+and its docstring (`doc`).
 
 With `library.upstream_docs` set (Mathlib's docs, which hold Lean's, Batteries' and Aesop's too), the
 declarations outside the library get the same from those docs' pages. Those show Mathlib's latest version,
 not the one the dataset pins, so a header is taken only where it says what Lean prints at the pin (the same
 text, namespaces, universes and spacing aside, and the same constants linked): elsewhere Lean's printing at
-the pin stands. A page of those docs that does not come stops nothing.
+the pin stands. Its fields come with it only where the file the page was built from is the same at the
+revision the library pins (its lake-manifest.json, and lean-toolchain for Lean's own). A page of those docs
+that does not come stops nothing.
 
 Exit 0 when the facet is written; 1 when more pages than --max-unread could not be read, and then nothing
 is written; 2 on bad input.
@@ -47,10 +52,13 @@ from common import header, load_settings  # noqa: E402
 FACET = {"name": "docs-signature", "file": "facets/docs-signature.jsonl", "schema": "docs-signature/1",
          "description": "each declaration's header as Tau Ceti's API docs show it (`name (x : α) … :\\n  β`, from its "
                         "module's page; scripts/docs_signatures.py), with `refs` for the names it links, as in the "
-                        "signature facet; what the site shows"}
+                        "signature facet, and a structure's or class's `fields` as the docs list them; what the site "
+                        "shows"}
 #: Tags without an end tag, which never enclose text.
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 SPACES = re.compile(r"\s+")
+#: A link to a source file at a commit, `https://github.com/<owner>/<name>/blob/<commit>/<path>#L…`.
+SOURCE = re.compile(r"https://github\.com/([^/]+/[^/]+)/blob/([0-9a-f]{40})/([^#?]+)")
 
 
 def constant(href: str) -> str | None:
@@ -67,15 +75,20 @@ def constant(href: str) -> str | None:
 
 
 class DocsPage(HTMLParser):
-    """A docs page's headers, as rows of the facet by declaration name, and the commit its source links name."""
+    """A docs page's headers, as rows of the facet by declaration name, with a structure's or a class's
+    fields (`fields`); the commit its source links name, and the file at it (`blob`: repository, commit,
+    path)."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.rows: dict[str, dict] = {}
         self.commit: str | None = None
+        self.blob: tuple[str, str, str] | None = None
         self.decl: str | None = None
-        self.stack: list[tuple[str, str | None, str | None]] | None = None  # inside a header: (tag, part, constant)
-        self.chars: list[tuple[str, str, str | None]] = []
+        self.what: str | None = None  # what is being read: "header", "field" or "doc" (a field's docstring)
+        self.inherited = False  # whether the field being read is a parent's
+        self.stack: list[tuple[str, str | None, str | None]] | None = None  # inside one of them: (tag, part, constant)
+        self.chars: list[tuple[str, str, str | None, int]] = []  # (character, part, constant, depth)
 
     def handle_starttag(self, tag: str, attrs: list) -> None:
         a = dict(attrs)
@@ -83,17 +96,33 @@ class DocsPage(HTMLParser):
             m = BLOB.search(a.get("href") or "")
             if m:
                 self.commit = m.group(1)
+                s = SOURCE.search(a.get("href") or "")
+                self.blob = (s.group(1), s.group(2), s.group(3)) if s else None
         cls = (a.get("class") or "").split()
         if self.stack is None:
+            row = self.rows.get(self.decl) if self.decl else None
             if tag == "div" and "decl" in cls and a.get("id"):
                 self.decl = a["id"]
             elif tag == "div" and "decl_header" in cls and self.decl:
-                self.stack, self.chars = [("div", None, None)], []
+                self.read("header")
+            elif row is not None and tag == "ul" and ("structure_fields" in cls or "structure_ext_fields" in cls):
+                row.setdefault("fields", [])  # `structure_ext_fields`: under a constructor of its own name (`ofCoeff ::`)
+            elif row is not None and "fields" in row and tag == "li" and "structure_field" in cls:
+                self.inherited = "inherited_field" in cls
+            elif row is not None and "fields" in row and tag == "div" and "structure_field_info" in cls:
+                self.read("field")
+            elif row is not None and row.get("fields") and tag == "div" and "structure_field_doc" in cls:
+                self.read("doc")
             return
         if tag in VOID:
             return
         part = next((p for c, p in (("decl_kind", "kind"), ("decl_name", "name"), ("decl_type", "type")) if c in cls), None)
         self.stack.append((tag, part, constant(a.get("href") or "") if tag == "a" else None))
+        if self.what == "doc" and tag == "code":
+            self.chars.append(("`", "doc", None, 0))
+
+    def read(self, what: str) -> None:
+        self.what, self.stack, self.chars = what, [("div", None, None)], []
 
     def handle_endtag(self, tag: str) -> None:
         if self.stack is None or tag in VOID:
@@ -102,16 +131,27 @@ class DocsPage(HTMLParser):
             self.stack.pop()
         if self.stack:
             self.stack.pop()
+            if self.what == "doc" and tag in ("code", "p"):
+                self.chars.append(("`" if tag == "code" else "\n\n", "doc", None, 0))
         if not self.stack:
-            self.rows[self.decl] = assemble(self.chars)
-            self.stack, self.decl = None, None
+            row = self.rows.get(self.decl)
+            if self.what == "header":
+                self.rows[self.decl] = assemble([(ch, part, const) for ch, part, const, _ in self.chars])
+            elif self.what == "field":
+                f = assemble_field(self.chars)
+                row["fields"].append({**f, "inherited": True} if self.inherited else f)
+            elif self.what == "doc":
+                doc = field_doc(self.chars)
+                if doc:
+                    row["fields"][-1]["doc"] = doc
+            self.stack, self.what = None, None
 
     def handle_data(self, data: str) -> None:
         if self.stack is None:
             return
         part = next((p for _, p, _ in reversed(self.stack) if p), "args")
         const = next((c for _, _, c in reversed(self.stack) if c), None)
-        self.chars.extend((ch, part, const) for ch in data)
+        self.chars.extend((ch, part, const, len(self.stack)) for ch in data)
 
 
 def collapse(chars: list[tuple[str, str | None]]) -> list[tuple[str, str | None]]:
@@ -165,7 +205,11 @@ def assemble(chars: list[tuple[str, str, str | None]]) -> dict:
         out += [(" ", None)] + args
     if any(not ch.isspace() for ch, _ in kind):
         out += [("\n", None)] + broken(kind)
-    text = "".join(ch for ch, _ in out)
+    return linked_text(out)
+
+
+def linked_text(out: list[tuple[str, str | None]]) -> dict:
+    """Characters, each with the constant its link names, as a text and its refs [start, stop, constant]."""
     refs, start = [], None
     for i, (_, const) in enumerate(out + [(None, None)]):
         if start is not None and const != out[start][1]:
@@ -173,7 +217,24 @@ def assemble(chars: list[tuple[str, str, str | None]]) -> dict:
             start = None
         if start is None and const is not None:
             start = i
-    return {"text": text, "refs": refs}
+    return {"text": "".join(ch for ch, _ in out), "refs": refs}
+
+
+def assemble_field(chars: list[tuple[str, str, str | None, int]]) -> dict:
+    """A field as the docs list it, `name binders : type`, and its refs: its name and binders on one line,
+    its type's lines broken as the docs' printer broke them. The colon between them is the first one in the
+    field's own text, outside every binder (` : ` in these docs, `   :  ` in Mathlib's)."""
+    at = next((i for i, (ch, _, _, depth) in enumerate(chars) if ch == ":" and depth == 1), len(chars))
+    head = collapse([(ch, const) for ch, _, const, _ in chars[:at]])
+    kind = [(ch, const) for ch, _, const, _ in chars[at + 1:]]
+    out = head + [(" ", None), (":", None), (" ", None)] + broken(kind)[2:]
+    return linked_text(out)
+
+
+def field_doc(chars: list[tuple[str, str, str | None, int]]) -> str:
+    """A field's docstring as plain Markdown: its paragraphs, and its code in backticks."""
+    text = "".join(ch for ch, *_ in chars)
+    return "\n\n".join(p for p in (SPACES.sub(" ", p).strip() for p in text.split("\n\n")) if p)
 
 
 def parse(html: str) -> DocsPage:
@@ -200,6 +261,45 @@ def fetch_page(docs: str, module: str, tries: int = 4) -> str | None:
                 raise
         time.sleep(2 ** i)
     raise AssertionError("unreachable")
+
+
+def fetch_raw(repo: str, rev: str, path: str, tries: int = 4) -> str | None:
+    """A file of a GitHub repository at a revision, or None when it has none there."""
+    url = f"https://raw.githubusercontent.com/{repo}/{rev}/{urllib.parse.quote(path)}"
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(url, timeout=90) as r:
+                return r.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            if e.code == 404 or i == tries - 1:
+                return None
+        except OSError:
+            if i == tries - 1:
+                return None
+        time.sleep(2 ** i)
+    return None
+
+
+def pins_of(source: Path | None) -> dict[str, str]:
+    """The revision of each repository the library builds on, by `owner/name`, at the library's checkout
+    `source`: its Lake packages' (lake-manifest.json) and Lean's (lean-toolchain)."""
+    out: dict[str, str] = {}
+    if source is None:
+        return out
+    try:
+        for p in json.loads((source / "lake-manifest.json").read_text(encoding="utf-8")).get("packages", []):
+            m = re.match(r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$", p.get("url") or "")
+            if m and p.get("rev"):
+                out[m.group(1)] = p["rev"]
+    except (OSError, ValueError):
+        pass
+    try:
+        repo, _, rev = (source / "lean-toolchain").read_text(encoding="utf-8").strip().partition(":")
+        if rev:
+            out[repo] = rev
+    except OSError:
+        pass
+    return out
 
 
 def jsonl(path: Path):
@@ -244,29 +344,54 @@ def agrees(docs: dict, lean: dict | None) -> bool:
     return normal(docs["text"]) == normal(text) and {c for *_, c in docs["refs"]} == {c for *_, c in refs}
 
 
-def outside_rows(dataset: Path, names: dict[str, set[str]], docs: str, fetch, jobs: int) -> tuple[list[dict], dict]:
+def same_file(page: DocsPage, pins: dict[str, str], raw) -> bool:
+    """Whether the file a page of other docs was built from is, at that build, what it is at the pin: then
+    what the page lists of a declaration in it, its fields, is the pin's too."""
+    if page.blob is None or page.blob[0] not in pins:
+        return False
+    repo, commit, path = page.blob
+    if pins[repo] == commit:
+        return True
+    there = raw(repo, commit, path)
+    return there is not None and there == raw(repo, pins[repo], path)
+
+
+def outside_rows(dataset: Path, names: dict[str, set[str]], docs: str, fetch, jobs: int,
+                 pins: dict[str, str] | None = None, raw=fetch_raw) -> tuple[list[dict], dict]:
     """The rows for the declarations outside the library, from docs that show another version than the
-    dataset pins (Mathlib's latest): a header only where it says what Lean prints at the pin."""
+    dataset pins (Mathlib's latest): a header only where it says what Lean prints at the pin, and with it a
+    structure's or a class's fields only where its file is the same at the pin as on the page (`pins`: the
+    pinned revision of each repository)."""
     wanted = set().union(*names.values()) if names else set()
     lean = {r["decl"]: r for r in jsonl(dataset / "facets" / "signature.jsonl") if r["decl"] in wanted}
     pages, missing, unread = read_pages(fetch, docs, names, jobs)
-    rows, disagree = [], 0
+    # Asked once a page, of the pages with fields to give, all at once: a thousand or so, two files each.
+    fielded = sorted(m for m, p in pages.items() if any("fields" in p.rows[n] for n in names[m] & p.rows.keys()))
+    with cf.ThreadPoolExecutor(jobs) as pool:
+        same = dict(zip(fielded, pool.map(lambda m: same_file(pages[m], pins or {}, raw), fielded)))
+    rows, disagree, unfielded = [], 0, 0
     for m, p in sorted(pages.items()):
         for n in sorted(names[m] & p.rows.keys()):
-            if agrees(p.rows[n], lean.get(n)):
-                rows.append({"decl": n, **p.rows[n]})
-            else:
+            if not agrees(p.rows[n], lean.get(n)):
                 disagree += 1
+                continue
+            row = {"decl": n, **p.rows[n]}
+            if "fields" in row and not same.get(m):
+                del row["fields"]
+                unfielded += 1
+            rows.append(row)
     return rows, {"modules": len(names), "pages": len(pages), "rows": len(rows), "disagree": disagree,
-                  "missing": sorted(missing), "unread": sorted(unread)}
+                  "unfielded": unfielded, "missing": sorted(missing), "unread": sorted(unread)}
 
 
 def run(dataset: Path, settings: dict, source: Path | None = None, fetch=fetch_page, changed=None,
-        jobs: int = 16, max_unread: int = 20) -> dict:
+        jobs: int = 16, max_unread: int = 20, pins: dict[str, str] | None = None, raw=fetch_raw) -> dict:
     """Write the facet into ``dataset`` from the docs' pages of its library's modules, and, with
     `library.upstream_docs` set, of the other modules too; what was read, left out and missed.
     ``changed(old, new)`` is the paths that differ between two commits of the library, None when that cannot
-    be told. Only the library's pages that do not come can stop it: outside, Lean's printing stands in."""
+    be told. Only the library's pages that do not come can stop it: outside, Lean's printing stands in.
+    ``pins`` is the revision of each repository the library builds on (by default, read from ``source``);
+    ``raw(repo, rev, path)`` a file of one at a revision."""
     meta = json.loads((dataset / "meta.json").read_text(encoding="utf-8"))
     commit, docs = meta["library"]["commit"], settings["library"]["docs"].rstrip("/")
     if changed is None:
@@ -293,7 +418,8 @@ def run(dataset: Path, settings: dict, source: Path | None = None, fetch=fetch_p
         return out
     upstream = (settings["library"].get("upstream_docs") or "").rstrip("/")
     if upstream:
-        more, out["outside"] = outside_rows(dataset, others, upstream, fetch, jobs)
+        more, out["outside"] = outside_rows(dataset, others, upstream, fetch, jobs,
+                                            pins_of(source) if pins is None else pins, raw)
         rows += more
     (dataset / "facets").mkdir(exist_ok=True)
     with (dataset / FACET["file"]).open("w", encoding="utf-8") as f:
@@ -314,7 +440,8 @@ def summary(r: dict) -> str:
             "" if "outside" not in r else
             f" Outside the library: {r['outside']['rows']} declarations as Mathlib's docs show them, from "
             f"{r['outside']['pages']} of {r['outside']['modules']} modules' pages; {r['outside']['disagree']} headers "
-            f"that say otherwise than Lean at the pin, which keep Lean's printing; {len(r['outside']['missing'])} "
+            f"that say otherwise than Lean at the pin, which keep Lean's printing; {r['outside']['unfielded']} "
+            f"structures and classes without their fields, their file changed since the pin; {len(r['outside']['missing'])} "
             f"modules those docs do not have; {len(r['outside']['unread'])} pages that did not come."))
 
 

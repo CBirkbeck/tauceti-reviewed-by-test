@@ -5,6 +5,7 @@
   const {el, link, ext, md, mdInline, kindClass, kindPill, KIND_WORD, stateBadge, STATE_TEXT, URLS, FORMS, issueBody, ANSWERS, SUGGEST,
          SUGGEST_TEST, questionWord, date, plural, who, shortName, plain} = TauRender;
   const {FLAG, STATES} = TauData;
+  const CARD_FIELDS = 8;  // the fields a name's hover card lists; its page lists them all
   const $ = id => document.getElementById(id);
   const main = $('main');
   let generation = 0, ready = false, current = '';
@@ -318,6 +319,24 @@
   }
   /* A definition's value, a structure's fields or an inductive type's constructors, as the source has them,
      the names of what it rests on linked: by full name, else by last component when only one fits. */
+  /* A structure's or class's fields as the docs list them under its header (`e.fields`): its parents' first, in
+     grey, then its own; each `name binders : type` with its names linked, then its docstring (`docs`). */
+  function fieldsBlock(fields, names, docs) {
+    const box = el('div', 'fields');
+    fields.forEach(f => {
+      const row = el('div', f.i ? 'field inherited' : 'field'), pre = signature('', f.t, f.r || [], names);
+      if (f.i) pre.title = 'From what it extends';
+      row.append(pre);
+      if (docs && f.d) row.append(md(f.d, 'field-doc'));
+      box.append(row);
+    });
+    return box;
+  }
+  function fieldsSummary(fields) {
+    const own = fields.filter(f => !f.i).length, from = fields.length - own;
+    return `Fields: ${own} of its own` + (from ? `, ${from} from what it extends` : '');
+  }
+
   async function valueBlock(rest, n) {
     const deps = await TauData.nodes((n.m || []).concat(n.p || []));
     const byName = new Set(deps.map(x => x.name)), byLast = new Map();
@@ -553,7 +572,12 @@
       const lean = el('div', 'lean');
       if (e.sig) lean.append(signature(e.kw, e.sig, e.sigRefs || [], d.module.names || []));
       else { const pre = el('pre'); pre.textContent = e.stmt; lean.append(pre); }
-      if (e.rest) {
+      if (e.fields) {
+        const det = el('details');
+        det.open = true;
+        det.append(el('summary', null, fieldsSummary(e.fields)), fieldsBlock(e.fields, d.module.names || [], true));
+        lean.append(det);
+      } else if (e.rest) {
         const what = n.kind === 'inductive' ? 'Constructors' : (n.kind === 'structure' || n.kind === 'class') ? 'Fields' : 'Definition';
         const det = el('details'), body = await valueBlock(e.rest, n);
         det.open = what !== 'Definition';
@@ -1346,7 +1370,10 @@
     if (e.sig) {
       const lean = el('div', 'lean');
       lean.append(signature(e.kw, e.sig, e.sigRefs || [], d.module.names || []));
-      if (e.rest) lean.append(await valueBlock(e.rest, n));
+      if (e.fields) {
+        lean.append(fieldsBlock(e.fields.slice(0, CARD_FIELDS), d.module.names || [], false));
+        if (e.fields.length > CARD_FIELDS) lean.append(el('div', 'cut', `and ${plural(e.fields.length - CARD_FIELDS, 'more field')}`));
+      } else if (e.rest) lean.append(await valueBlock(e.rest, n));
       card.append(lean);
       const s = el('div'); s.append(stateBadge(stateOf(n), true)); card.append(s);
     } else if (n.brief) card.append(el('div', 't-stmt', n.brief));
