@@ -717,6 +717,41 @@ def smoke(browser, url, errors):
     outside_statements(browser, url, errors)
 
 
+@check
+def fields(browser, url, errors):
+    """A structure's or class's fields, as the docs list them under its header (asked for on 2026-10-28, when a
+    structure's page said only `: Type`): its parents' first, in grey, then its own, each with its docstring; a
+    name's card lists them too. The fixture's docs list none, so its module's file is given some here."""
+    def give(page):
+        def answer(route):
+            resp = route.fetch()
+            data = resp.json()
+            names = data["names"]
+            if "Nat" not in names:
+                names.append("Nat")
+            for e in data["decls"]:
+                if e["name"] == "Fixture.Pos":
+                    e["fields"] = [{"t": "carrier : Type", "r": [], "i": 1}, {"t": "val : Nat", "r": [[6, 9, names.index("Nat")]]},
+                                   {"t": "pos : 0 < self.val", "r": [], "d": "It is `positive`."}]
+                    e.pop("rest", None)
+            route.fulfill(response=resp, json=data)
+        page.route("**/data/m/*.json", answer)
+    page = visit(browser, url, "#/d/Fixture.Pos", errors, before=give)
+    box = page.locator(".lean details[open]", has_text="Fields")
+    expect(box.count() == 1, "the fields, open under the header")
+    expect(box.locator("summary").inner_text() == "Fields: 2 of its own, 1 from what it extends", "how many, and whose")
+    expect(box.locator(".field pre").all_inner_texts() == ["carrier : Type", "val : Nat", "pos : 0 < self.val"],
+           "each as the docs list it, its parents' first")
+    expect(box.locator(".field.inherited pre").all_inner_texts() == ["carrier : Type"], "a parent's in grey")
+    expect(box.locator(".field a.ref", has_text="Nat").get_attribute("href") == "#/d/Nat", "their names link")
+    expect(box.locator(".field-doc").inner_text().strip() == "It is positive.", "a field's docstring")
+    page = visit(browser, url, "#/d/Fixture.one", errors, before=give)
+    page.locator(".lean a.ref", has_text="Fixture.Pos").first.hover()
+    page.wait_for_selector(".tip .fields")
+    expect(page.locator(".tip .fields .field pre").all_inner_texts() == ["carrier : Type", "val : Nat", "pos : 0 < self.val"],
+           "a name's card lists them too")
+
+
 def outside_statements(browser, url, errors):
     """A declaration outside the library that someone reviewed shows its statement too (`zero_smul` showed
     none on 2026-10-26), as the site's data has it."""

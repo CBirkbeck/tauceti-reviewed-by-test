@@ -312,7 +312,7 @@ class Site:
             if span:
                 stmt, rest = split_statement(span[2])
                 stmt = "" if sig else stmt  # the signature stands for it
-                rest = rest if d.kind in VALUE_KINDS else ""
+                rest = rest if d.kind in VALUE_KINDS and "fields" not in e else ""  # the docs' fields stand for it
                 if stmt:
                     e["stmt"] = stmt[:TEXT_CAP]
                 if rest:
@@ -335,8 +335,9 @@ class Site:
 
     def statement(self, e: dict, name: str, names: dict[str, int]) -> bool:
         """Put a declaration's signature into its entry ``e``, as the docs head it: their own header (and
-        `docs`), else Lean's with a structure's parents (`extends P`) put before the colon of its type.
-        Whether it has one."""
+        `docs`), else Lean's with a structure's parents (`extends P`) put before the colon of its type; and a
+        structure's or class's fields as the docs list them (`fields`: each `t`, its text, `r`, its links,
+        `i` when a parent's, `d`, its docstring). Whether it has a signature."""
         docs = self.ds.facet_row("docs-signature", name)
         sig = docs or self.ds.facet_row("signature", name)
         if not sig:
@@ -345,6 +346,10 @@ class Site:
         e["sigRefs"] = self.links(refs, names)
         if docs:
             e["docs"] = 1
+            if docs.get("fields"):
+                e["fields"] = [{"t": f["text"], "r": self.links(f.get("refs") or [], names),
+                                **({"i": 1} if f.get("inherited") else {}), **({"d": f["doc"]} if f.get("doc") else {})}
+                               for f in docs["fields"]]
         return True
 
     def outside_module_file(self, mi: int) -> dict:
