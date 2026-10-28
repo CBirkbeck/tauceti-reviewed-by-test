@@ -1,0 +1,76 @@
+# evidence-store's intake action (LeanTrustBuilders/evidence-store/intake, at v0.7.2) with one change: what
+# else it reads is the `sweep` input. `--sweep-open` reads the event's own issue and the evidence issues still
+# open (scripts/evidence_intake.py says why); `--sweep-days 14` is evidence-store's own. Moving `ref`, keep the
+# rest as evidence-store's action has it.
+name: Evidence intake
+description: >-
+  Turns issues opened with the evidence forms, and the comments on them, into S3 records in the
+  repository's evidence store; commits them, then replies on the issues.
+inputs:
+  store:
+    description: The store's directory.
+    default: evidence
+  sweep:
+    description: >-
+      What it reads besides the event's issue: `--sweep-open`, the evidence issues still open, or
+      `--sweep-days N`, those updated in the last N days.
+    default: '--sweep-days 14'
+  pages-workflow:
+    description: A workflow to run once records were added (to rebuild a page), or empty.
+    default: ''
+  ref:
+    description: The revision of evidence-store to run.
+    default: v0.7.2
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: evidence-store
+      shell: bash
+      run: pip install -q "git+https://github.com/LeanTrustBuilders/evidence-store@${{ inputs.ref }}"
+    - name: Read issues and comments, and commit the records
+      id: push
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ github.event.repository.default_branch || github.ref_name }}
+        SWEEP: ${{ inputs.sweep }}
+      run: |
+        # An event's checkout is the branch as it was when the event fired, which can be before the
+        # records of the previous run. So: start from the branch's tip, read, commit, push; and if
+        # someone pushed in between, do it all again. Intake is idempotent, so a second reading only
+        # adds what the store still lacks.
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        for attempt in 1 2 3 4 5; do
+          git fetch -q origin "$BRANCH"
+          git checkout -q -B "$BRANCH" "origin/$BRANCH"
+          # SWEEP is one word or two, so unquoted.
+          python scripts/evidence_intake.py intake --repo "$GITHUB_REPOSITORY" --store "${{ inputs.store }}" \
+            --event "$GITHUB_EVENT_PATH" --event-name "$GITHUB_EVENT_NAME" \
+            $SWEEP --outcome "$RUNNER_TEMP/outcome.json"
+          if [ -z "$(git status --porcelain -- "${{ inputs.store }}")" ]; then
+            exit 0
+          fi
+          git add -- "${{ inputs.store }}"
+          git commit -qm "evidence: $(jq '.records | length' "$RUNNER_TEMP/outcome.json") records from issues"
+          if git push -q origin "$BRANCH"; then
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          sleep $((attempt * 3))
+        done
+        exit 1
+    - name: Reply on the issues
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: evidence-store apply --repo "$GITHUB_REPOSITORY" --outcome "$RUNNER_TEMP/outcome.json"
+    - name: Rebuild the page
+      if: steps.push.outputs.pushed == 'true' && inputs.pages-workflow != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh workflow run "${{ inputs.pages-workflow }}" -R "$GITHUB_REPOSITORY" --ref "${{ github.event.repository.default_branch || github.ref_name }}"

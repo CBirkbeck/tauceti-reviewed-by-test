@@ -35,8 +35,9 @@ jobs:
       # The intake evidence-intake.yml runs, with the same inputs; it reads the issue afresh, label and all.
       - name: Intake, now that it can read it
         if: steps.label.outputs.labelled == 'true'
-        uses: LeanTrustBuilders/evidence-store/intake@v0.7.2
+        uses: ./.github/actions/intake
         with:
           store: evidence
+          sweep: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--sweep-days 14' || '--sweep-open' }}
           pages-workflow: 'pages.yml'
           ref: v0.7.2

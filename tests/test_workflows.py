@@ -150,8 +150,38 @@ class PagesWorkflowTests(unittest.TestCase):
 
     def test_intake_rebuilds_the_site(self):
         intake = load("evidence-intake.yml")["jobs"]["intake"]
-        self.assertEqual(next(s for s in steps(intake) if "evidence-store/intake" in s.get("uses", ""))["with"]["pages-workflow"],
-                         "pages.yml")
+        self.assertEqual(intake_step(intake)["with"]["pages-workflow"], "pages.yml")
+
+
+ACTIONS = WORKFLOWS.parent / "actions"
+
+
+def intake_step(job: dict) -> dict:
+    return next(s for s in steps(job) if s.get("uses") == "./.github/actions/intake")
+
+
+class IntakeTests(unittest.TestCase):
+    def test_an_event_reads_the_open_issues_and_the_schedule_the_last_14_days(self):
+        wf = load("evidence-intake.yml")
+        self.assertEqual(wf["on"]["schedule"], [{"cron": "23 */6 * * *"}])
+        self.assertEqual(intake_step(wf["jobs"]["intake"])["with"]["sweep"],
+                         "${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') "
+                         "&& '--sweep-days 14' || '--sweep-open' }}")
+
+    def test_the_action_is_evidence_stores_with_that_sweep(self):
+        action = yaml.safe_load((ACTIONS / "intake" / "action.yml").read_text(encoding="utf-8"))
+        self.assertEqual(action["runs"]["using"], "composite")
+        self.assertEqual(action["inputs"]["sweep"]["default"], "--sweep-days 14")
+        self.assertEqual(intake_step(load("evidence-intake.yml")["jobs"]["intake"])["with"]["ref"], "v0.7.2")
+        named = {s.get("name"): s for s in action["runs"]["steps"]}
+        self.assertEqual(named["evidence-store"]["run"],
+                         'pip install -q "git+https://github.com/LeanTrustBuilders/evidence-store@${{ inputs.ref }}"')
+        push = named["Read issues and comments, and commit the records"]
+        self.assertEqual(push["env"]["SWEEP"], "${{ inputs.sweep }}")
+        self.assertIn("python scripts/evidence_intake.py intake", push["run"])
+        self.assertIn("$SWEEP --outcome", push["run"])
+        self.assertIn("evidence-store apply", named["Reply on the issues"]["run"])
+        self.assertIn('gh workflow run "${{ inputs.pages-workflow }}"', named["Rebuild the page"]["run"])
 
 
 class LabelWorkflowTests(unittest.TestCase):
@@ -164,8 +194,7 @@ class LabelWorkflowTests(unittest.TestCase):
         label = next(s for s in steps(job) if s.get("id") == "label")
         self.assertIn("pip install -q -r requirements.txt", label["run"])  # evidence-store's own titles too
         self.assertIn('python scripts/label_issue.py --event "$GITHUB_EVENT_PATH" --repo "$GITHUB_REPOSITORY"', label["run"])
-        intake = lambda j: next(s for s in steps(j) if "evidence-store/intake" in s.get("uses", ""))
-        mine, theirs = intake(job), intake(load("evidence-intake.yml")["jobs"]["intake"])
+        mine, theirs = intake_step(job), intake_step(load("evidence-intake.yml")["jobs"]["intake"])
         self.assertEqual(mine["if"], "steps.label.outputs.labelled == 'true'")
         self.assertEqual((mine["uses"], mine["with"]), (theirs["uses"], theirs["with"]), "the same intake, pinned alike")
 
