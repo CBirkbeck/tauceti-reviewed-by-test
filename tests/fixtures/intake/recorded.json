@@ -1,0 +1,150 @@
+{
+ "agent-accept": {
+  "issue": 556,
+  "record": {
+   "at": "2026-10-26T22:02:32Z",
+   "by": {
+    "agent": {
+     "model": "claude-fable-5-1",
+     "session": "named-reading-guide-2026-10-26",
+     "tool": "Claude Code"
+    },
+    "identity": {
+     "id": "CBirkbeck",
+     "kind": "github"
+    },
+    "involvement": "contributor",
+    "kind": "agent"
+   },
+   "checked": {
+    "choice": "checked",
+    "convention": "checked",
+    "edge-cases": "checked",
+    "generality": "checked",
+    "junk": "unchecked",
+    "naming": "checked",
+    "object": "checked",
+    "vacuous": "checked"
+   },
+   "id": "d10f03e360607f5b",
+   "kind": "review",
+   "origin": {
+    "kind": "issue",
+    "ref": "CBirkbeck/tauceti-reviewed-by-test#556"
+   },
+   "rubric": "ltb-rubric/1",
+   "schema": "ltb-evidence/2",
+   "subject": {
+    "aspect": "definition",
+    "commit": "b257e0ff255355b2b692c1311d061d2b4dc84e53",
+    "hasher": {
+     "local": "ltb-local/3",
+     "meaning": "ltb-meaning/1"
+    },
+    "hashes": {
+     "local": "b0cfbc160df6e240",
+     "meaning": "9233cb9981a4620d"
+    },
+    "module": "TauCeti.AlgebraicTopology.Sphere.HomotopyGroup",
+    "name": "TauCeti.homotopyGroupSphereAddEquiv",
+    "package": "TauCeti",
+    "toolchain": "leanprover/lean4:v4.36.0-rc1"
+   },
+   "text": "Correctly stated; compared with Hatcher, Corollary 4.25 (with Corollary 4.9 for the connectivity it rests on) and Stage 8.3 of TauCetiRoadmap/AlgebraicTopology, which lists no tagged Check for it (Checks: as listed in the Codex review). What follows is a reading guide for a mathematician who does not read Lean, saying why the [Lean declaration](https://github.com/TauCetiProject/TauCeti/blob/b257e0ff255355b2b692c1311d061d2b4dc84e53/TauCeti/AlgebraicTopology/Sphere/HomotopyGroup.lean#L106) is the classical statement.\n\n**The sphere and the degree.** `E` is a real inner product space (`[NormedAddCommGroup E] [InnerProductSpace ℝ E]`), and `b`, an orthonormal basis indexed by `Fin (n + 3)`, is how the statement says `dim E = n + 3`: no separate dimension hypothesis is needed, and the basis is also the datum fixing the sign below. `Metric.sphere 0 1` is `{v : ‖v‖ = 1}`, so it is `S^{n+2}`, and `x` is a point of it (`↑` makes the subset a space). Writing the degree as `n + 2` for a natural number `n` is Lean's way of saying \"every degree `≥ 2`\", Hatcher's hypothesis for the Hurewicz isomorphism; `π₁(S¹) ≅ ℤ` is not claimed here.\n\n**The group.** `π_ (n + 2) X x` is Mathlib's cubical homotopy group: homotopy classes, relative to the boundary, of maps of the cube `I^{n+2}` sending its boundary to `x`. Mathlib builds its product by pulling back path composition in an iterated loop space, where the product is written in the reverse of the textbook order; in degrees `≥ 2` the group is abelian (Mathlib's `commGroup` instance), so the order is immaterial here. `Additive` only renames that product as addition, so that it can be compared with the additive group `ℤ`, and `≃+` is an isomorphism of abelian groups.\n\n**Which isomorphism it is.** A `def` whose type is an isomorphism is a construction, and `homotopyGroupSphereAddEquiv_apply` says which: a class `[g]` goes to the Hurewicz image `g_*[I^{n+2}] ∈ H_{n+2}(S^{n+2}; ℤ)` (cubical homology, compared with singular homology), then reduced homology is identified with unreduced, which is harmless in degree `n + 2 > 0`, and finally `H̃_{n+2}(S^{n+2}; ℤ) ≅ ℤ` is the generator determined by `b` through iterated suspension down to the `0`-sphere `{±b 0}`, where the generator is `[−b 0] − [b 0]`. Reordering or reflecting `b` changes the isomorphism by a sign; its existence and the group it identifies do not depend on `b` or on `x`. The Hurewicz hypothesis that `π_k(S^{n+2}, x)` is trivial for all `k < n + 2`, including path-connectedness (`k = 0`) and simple connectivity (`k = 1`), is discharged inside the definition from the sphere's connectivity, so the only arguments are `b` and `x`.\n\n**A concrete instance.** `E = ℝ³` with its standard basis and `n = 0`: `π₂(S², x) ≃+ ℤ`, with the class of the identity map of `S²`, a generator by Hatcher's Corollary 4.25, going to `±1`, the sign fixed by the orientation of the basis. That `E` lives in the lowest universe (`Type`) is harmless: every finite-dimensional real inner product space is isometric to one there.\n\nNot checked: the proof of the Hurewicz theorem and the sphere homology, which Lean checks; not re-elaborated locally: the site's dataset marks no sorry and CI builds every file.",
+   "verdict": "accept"
+  },
+  "reply": "Recorded review `d10f03e360607f5b` of `TauCeti.homotopyGroupSphereAddEquiv` at `b257e0ff2553` by Claude Code (claude-fable-5-1) via CBirkbeck (meaning hash `9233cb9981a4620d`).\n\nIt is recorded as an AI agent's review: each reader chooses whether those count. If `TauCeti.homotopyGroupSphereAddEquiv`, or anything it rests on, changes, it goes stale, and the page says so. Comment `/withdraw` here to take it back."
+ },
+ "person-accept": {
+  "issue": 557,
+  "record": {
+   "at": "2026-10-27T18:00:43Z",
+   "by": {
+    "identity": {
+     "id": "CBirkbeck",
+     "kind": "github"
+    },
+    "involvement": "unknown",
+    "kind": "person"
+   },
+   "id": "1f3c1bff317b38e7",
+   "kind": "review",
+   "origin": {
+    "kind": "issue",
+    "ref": "CBirkbeck/tauceti-reviewed-by-test#557"
+   },
+   "schema": "ltb-evidence/2",
+   "subject": {
+    "aspect": "statement",
+    "commit": "c9811d71d4ecdf1307d85904c1edb03581599e00",
+    "hasher": {
+     "local": "ltb-local/3",
+     "meaning": "ltb-meaning/1"
+    },
+    "hashes": {
+     "local": "0d0916c4ad054e3d",
+     "meaning": "af157f91a392b416"
+    },
+    "module": "TauCeti.NumberTheory.ModularForms.EisensteinSeries.WeightTwo.Normalized",
+    "name": "TauCeti.EisensteinSeries.normalizedCharG2MFRaise_mem_modFormCharSpace",
+    "package": "TauCeti",
+    "toolchain": "leanprover/lean4:v4.36.0-rc1"
+   },
+   "verdict": "accept"
+  },
+  "reply": "Recorded review `1f3c1bff317b38e7` of `TauCeti.EisensteinSeries.normalizedCharG2MFRaise_mem_modFormCharSpace` at `c9811d71d4ec` by CBirkbeck (meaning hash `af157f91a392b416`).\n\nIt counts from now on. If `TauCeti.EisensteinSeries.normalizedCharG2MFRaise_mem_modFormCharSpace`, or anything it rests on, changes, it goes stale, and the page says so. Comment `/withdraw` here to take it back."
+ },
+ "test": {
+  "issue": 103,
+  "record": {
+   "at": "2026-10-25T11:22:51Z",
+   "by": {
+    "agent": {
+     "model": "GPT-6.1 Sol",
+     "session": "density-review-2026-10-25",
+     "tool": "Codex"
+    },
+    "identity": {
+     "id": "raresbuhai",
+     "kind": "github"
+    },
+    "involvement": "outsider",
+    "kind": "agent"
+   },
+   "id": "74696906bafd388e",
+   "kind": "test",
+   "origin": {
+    "kind": "issue",
+    "ref": "CBirkbeck/tauceti-reviewed-by-test#103"
+   },
+   "schema": "ltb-evidence/2",
+   "subject": {
+    "aspect": "definition",
+    "commit": "271e1af4dd54c50b9192cf3e213b7686843a0b3a",
+    "hasher": {
+     "local": "ltb-local/3",
+     "meaning": "ltb-meaning/1"
+    },
+    "hashes": {
+     "local": "2807dfe6e68c294d",
+     "meaning": "099f64368cea3b4d"
+    },
+    "module": "TauCeti.NumberTheory.NumberField.DirichletDensityBounds",
+    "name": "NumberField.Set.IsUpperDirichletDensityBound",
+    "package": "TauCeti",
+    "toolchain": "leanprover/lean4:v4.36.0-rc1"
+   },
+   "test": {
+    "commit": "271e1af4dd54c50b9192cf3e213b7686843a0b3a",
+    "hashes": {
+     "local": "e43831209cb3914f",
+     "meaning": "2c28f5fa56ce4cee"
+    },
+    "module": "TauCeti.NumberTheory.ArithmeticDirichletSeries.DirichletDensity.Negligible",
+    "name": "NumberField.Set.isUpperDirichletDensityBound_iff_of_finite_symmDiff"
+   },
+   "text": "Direct finite-change check for this definition: every proposed upper Dirichlet-density bound is preserved under finite symmetric difference, without assuming either density exists."
+  },
+  "reply": "Recorded test `NumberField.Set.isUpperDirichletDensityBound_iff_of_finite_symmDiff` `74696906bafd388e` of `NumberField.Set.IsUpperDirichletDensityBound` at `271e1af4dd54` by Codex (GPT-6.1 Sol) via raresbuhai (meaning hash `099f64368cea3b4d`).\n\nLean checks it at every commit: the page shows it as passing while it is there without `sorry`. Comment `/withdraw` here to take it back."
+ }
+}

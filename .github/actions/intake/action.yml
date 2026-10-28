@@ -1,7 +1,8 @@
-# evidence-store's intake action (LeanTrustBuilders/evidence-store/intake, at v0.7.2) with one change: what
-# else it reads is the `sweep` input. `--sweep-open` reads the event's own issue and the evidence issues still
-# open (scripts/evidence_intake.py says why); `--sweep-days 14` is evidence-store's own. Moving `ref`, keep the
-# rest as evidence-store's action has it.
+# evidence-store's intake action (LeanTrustBuilders/evidence-store/intake, at v0.7.2) with two changes, both
+# through scripts/evidence_intake.py, which says why. What else it reads is the `sweep` input: `--sweep-open`
+# reads the event's own issue and the evidence issues still open, and finishes those an earlier run left
+# undone; `--sweep-days 14` is evidence-store's own. And it replies issue by issue, so that a reply GitHub
+# refuses leaves only its own issue open. Moving `ref`, keep the rest as evidence-store's action has it.
 name: Evidence intake
 description: >-
   Turns issues opened with the evidence forms, and the comments on them, into S3 records in the
@@ -67,7 +68,7 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
-      run: evidence-store apply --repo "$GITHUB_REPOSITORY" --outcome "$RUNNER_TEMP/outcome.json"
+      run: python scripts/evidence_intake.py apply --repo "$GITHUB_REPOSITORY" --outcome "$RUNNER_TEMP/outcome.json"
     - name: Rebuild the page
       if: steps.push.outputs.pushed == 'true' && inputs.pages-workflow != ''
       shell: bash

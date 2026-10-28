@@ -180,7 +180,7 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(push["env"]["SWEEP"], "${{ inputs.sweep }}")
         self.assertIn("python scripts/evidence_intake.py intake", push["run"])
         self.assertIn("$SWEEP --outcome", push["run"])
-        self.assertIn("evidence-store apply", named["Reply on the issues"]["run"])
+        self.assertIn("python scripts/evidence_intake.py apply", named["Reply on the issues"]["run"])
         self.assertIn('gh workflow run "${{ inputs.pages-workflow }}"', named["Rebuild the page"]["run"])
 
 
