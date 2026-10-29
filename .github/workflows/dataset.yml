@@ -62,10 +62,11 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h / | tail -1
+      # With its whole history, which scripts/roadmaps.py blames.
       - name: Tau Ceti at the commit
         if: steps.published.outputs.done != 'true'
         run: |
-          git clone -q --filter=blob:none https://github.com/TauCetiProject/TauCeti "$RUNNER_TEMP/TauCeti"
+          git clone -q https://github.com/TauCetiProject/TauCeti "$RUNNER_TEMP/TauCeti"
           git -C "$RUNNER_TEMP/TauCeti" checkout -q "$COMMIT"
           cat "$RUNNER_TEMP/TauCeti/lean-toolchain"
       - name: Lean
@@ -131,6 +132,13 @@ jobs:
             --body-file "$RUNNER_TEMP/signatures.md" || true
           echo "::error::the dataset's signatures differ from the docs: not published"
           exit 1
+      # Each declaration's roadmap, which the Reviewed page filters by (asked for on 2026-10-29): of the PRs that
+      # last changed its lines, by their roadmap labels. Without it the dataset is published all the same.
+      - name: Each declaration's roadmap
+        if: steps.published.outputs.done != 'true'
+        run: |
+          python3 scripts/roadmaps.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti" \
+            || echo "::warning::this dataset has no roadmaps: scripts/roadmaps.py failed"
       - name: Publish
         if: steps.published.outputs.done != 'true'
         run: |

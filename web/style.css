@@ -165,11 +165,9 @@ a.chip:hover { border-color: var(--accent); text-decoration: none; }
 .seg button { padding: 6px 12px; border: 0; background: var(--surface); color: var(--muted); font-size: 14px; cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button.on { background: var(--accent); color: var(--accent-ink); }
-.select { padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 14px; }
+.select { max-width: 100%; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 14px; }
 .filter-input { flex: 1; min-width: 200px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 14px; }
 .filter-input::placeholder { color: var(--faint); }
-.switch { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--muted); cursor: pointer; }
-.switch input { accent-color: var(--accent); }
 
 /* Home, Browse. */
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin: 18px 0; }

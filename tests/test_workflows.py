@@ -61,6 +61,20 @@ class DatasetWorkflowTests(unittest.TestCase):
         self.assertLess(at("scripts/docs_signatures.py"), at("scripts/check_signatures.py"))
         self.assertLess(at("scripts/docs_signatures.py"), names.index("Publish"))
 
+    def test_each_declarations_roadmap_before_the_publishing(self):
+        job = load("dataset.yml")["jobs"]["extract"]
+        names, text = [s.get("name", "") for s in steps(job)], [s.get("run", "") for s in steps(job)]
+        at = lambda command: next(i for i, t in enumerate(text) if command in t)  # noqa: E731
+        step = text[at("scripts/roadmaps.py")]
+        self.assertIn('python3 scripts/roadmaps.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti"', step)
+        self.assertLess(at("scripts/check_signatures.py"), at("scripts/roadmaps.py"))
+        self.assertLess(at("scripts/roadmaps.py"), names.index("Publish"))
+        self.assertIn("|| echo \"::warning::", step)  # without its roadmaps, a dataset is published all the same
+        # git blame reads the library's history: a whole clone, not a blobless or a shallow one.
+        clone = text[at("git clone")]
+        self.assertNotIn("--filter", clone)
+        self.assertNotIn("--depth", clone)
+
     def test_follow_pins_extracts_and_prunes(self):
         wf = load("follow.yml")
         self.assertEqual(wf["on"]["schedule"], [{"cron": "*/20 * * * *"}])  # has docgen moved?

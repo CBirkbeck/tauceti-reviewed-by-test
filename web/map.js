@@ -195,7 +195,7 @@
     return {coords, paths, width: width + 40, height: rows.length * ROW + 40};
   }
 
-  function markup(g, P, ai, o) {
+  function markup(g, P, o) {
     let s = '<g class="vp">';
     g.edges.forEach((e, i) => {
       if (P.paths[i]) s += `<path class="edge${e.proof ? ' proof' : ''}" data-a="${esc(e.a)}" data-b="${esc(e.b)}" d="${P.paths[i]}"/>`;
@@ -209,7 +209,7 @@
           `<title>${n.open ? 'Show them' : 'More than the map keeps: see the lists below'}</title></g>`;
         continue;
       }
-      const project = !!(n.flags & FLAG.PROJECT), state = n.state[ai ? 1 : 0];
+      const project = !!(n.flags & FLAG.PROJECT), state = n.state[0];
       // Its arrow: ↑ or ↓ while there is more to unfold that way, − to fold what it unfolded.
       const arrow = !project || n.role === 'center' ? '' : o.opened.has(n.id) ? '−'
         : o.empty.has(n.id + n.role) || !unfolds(n, g.byId, o) ? '' : n.role === 'up' ? '↑' : '↓';
@@ -301,13 +301,12 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && leaveFull) leaveFull(); });
 
   /* Draws the map of `center` (a TauData node) in `host`; `entry` is its module entry, null for a
-     declaration outside the library. `opts.ai()` says whether the reader counts AI reviews; `opts.lib`
-     is the library's name. */
+     declaration outside the library. `opts.lib` is the library's name. */
   function draw(host, center, entry, opts) {
     // Resting on nothing of the library but on something outside it, it opens with what it rests on outside
     // (asked for on 2026-10-26: the Kronecker symbol's map was empty above it).
     const o = {proof: false, mathlib: !center.ml && center.nm > 0, opened: new Set(), all: new Set(), added: new Map(), empty: new Set()};
-    const ai = (opts && opts.ai) || (() => false), lib = (opts && opts.lib) || 'the library';
+    const lib = (opts && opts.lib) || 'the library';
     host.replaceChildren();
     const box = el('div', 'map'), tools = el('div', 'map-tools'), canvas = el('div', 'map-canvas'), note = el('div', 'map-note');
     note.setAttribute('role', 'status');
@@ -383,7 +382,7 @@
       const wide = canvas.getBoundingClientRect().width || 700;
       canvas.style.setProperty('--h', Math.round(Math.max(240, Math.min(560, P.height * Math.min(1.2, wide / P.width) + 30))) + 'px');
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.innerHTML = markup(g, P, ai(), o); // names escaped; titles escaped; everything else ours
+      svg.innerHTML = markup(g, P, o); // names escaped; titles escaped; everything else ours
       canvas.replaceChildren(svg);
       const at = P.coords.get(String(center.id));
       scene = {vp: svg.querySelector('.vp'), size: P, centerAt: at && {x: at.x + labelOf(center).length * 3.2 + 25, y: at.y + H / 2}};

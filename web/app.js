@@ -9,11 +9,9 @@
   const $ = id => document.getElementById(id);
   const main = $('main');
   let generation = 0, ready = false, current = '';
-  let ai = false;
-  try { ai = localStorage.getItem('tauceti-review:ai') === '1'; } catch (e) { /* no storage: the default */ }
-  const pick = pair => pair[ai ? 1 : 0];
-  const stateOf = n => pick(n.state);
-  const rowState = r => STATES[pick(r.s)] || 'unreviewed';
+  // A declaration's review state with people's reviews counted: one that AI agents alone reviewed says so ("AI only").
+  const stateOf = n => n.state[0];
+  const rowState = r => STATES[r.s[0]] || 'unreviewed';
   const count = n => Number(n).toLocaleString('en');
 
   /* --- addresses ---------------------------------------------------------------------------------- */
@@ -64,19 +62,6 @@
     return [[meta.library.name, '#/browse'], [area, '#/area/' + encodeURIComponent(area)],
             ...(tail !== area ? [[tail, '#/m/' + encodeURIComponent(module)]] : [])];
   }
-  /* Whether AI agents' reviews count: kept for the reader, and every page redrawn when it changes. */
-  function aiSwitch() {
-    const label = el('label', 'switch'), box = el('input');
-    box.type = 'checkbox'; box.id = 'ai'; box.checked = ai;
-    box.addEventListener('change', () => {
-      ai = box.checked;
-      try { localStorage.setItem('tauceti-review:ai', ai ? '1' : '0'); } catch (e) { /* not kept */ }
-      route();
-    });
-    label.append(box, 'Count AI reviews');
-    label.title = "Count AI agents' reviews as reviews; otherwise only people's count";
-    return label;
-  }
 
   /* --- lists ---------------------------------------------------------------------------------------- */
   /* A declaration in a list: what it is called or says, what it states, its Lean name, and its review
@@ -118,9 +103,8 @@
   function coverageBar(members, people, withAi, problems) {
     const wrap = el('span', 'cov'), bar = el('span', 'bar');
     const part = (n, cls) => { if (n > 0) { const i = el('i', cls); i.style.width = (100 * n / members).toFixed(1) + '%'; bar.append(i); } };
-    const counted = ai ? withAi : people;
-    part(counted, 'b-done'); part(ai ? 0 : withAi - people, 'b-ai'); part(problems, 'b-problem');
-    wrap.append(bar, `${counted}/${members}`);
+    part(people, 'b-done'); part(withAi - people, 'b-ai'); part(problems, 'b-problem');
+    wrap.append(bar, `${people}/${members}`);
     wrap.title = `Rests on ${plural(members, 'declaration')} of Tau Ceti: ${people} reviewed by people` +
       (withAi > people ? `, ${withAi - people} more by AI agents only` : '') + (problems ? `, ${problems} with an open problem` : '');
     return wrap;
@@ -406,7 +390,7 @@
     const results = rows.filter(r => r.what === 'result').length;
     const by = st => rows.filter(r => rowState(r) === st).length;
     const summary = el('p', 'summary', [`${count(rows.length)} named`, plural(results, 'result'), plural(rows.length - results, 'definition'),
-      `${count(by('covered') + by('disputed'))} reviewed${ai ? ', counting AI agents' : ' by people'}`,
+      `${count(by('covered') + by('disputed'))} reviewed by people`, `${count(by('uncounted'))} by AI agents only`,
       `${count(by('unreviewed'))} not reviewed yet`].join(' · '));
     // Filters: kind, area, state, order, words; each area a list.
     const st = {what: 'all', area: '', state: '', sort: 'new', q: ''};
@@ -432,7 +416,7 @@
     filters.append(seg, select([['', 'Every area'], ...areas.map(a => [a, a])], 'area', 'Area'),
                    select([['', 'Any review state'], ['covered', 'Reviewed'], ['unreviewed', 'Not reviewed yet'],
                            ['uncounted', 'Reviewed by AI only'], ['stale', 'Reviewed on an earlier version'], ['problem', 'Answered no']], 'state', 'Review state'),
-                   select([['new', 'Newest first'], ['name', 'By name'], ['imp', 'Most built upon']], 'sort', 'Order'), q, aiSwitch());
+                   select([['new', 'Newest first'], ['name', 'By name'], ['imp', 'Most built upon']], 'sort', 'Order'), q);
     const found = el('p', 'faint small'), groups = el('div');
     function draw() {
       let list = rows.filter(r => (st.what === 'all' || r.what === st.what) && (!st.area || r.area === st.area) &&
@@ -455,7 +439,8 @@
   };
 
   /* Every declaration someone has answered for, newest answer first, with its answers counted: the yeses of
-     this version and the noes still open, people apart from AI agents, and how many no longer stand. */
+     this version and the noes still open, people apart from AI agents, and how many no longer stand. Found by
+     answer, by who answered (people, AI agents, or one AI model), by how many answers stand, by roadmap. */
   VIEWS.reviewed = async (arg, gen) => {
     const [meta, rows] = await Promise.all([TauData.meta(), TauData.reviewed()]);
     const nodes = new Map((await TauData.nodes(rows.map(r => r.id))).map(n => [n.id, n]));
@@ -466,9 +451,12 @@
       '"is it correctly stated?" for, the latest answer first. Open one to read it and its answers, and to answer it yourself.');
     const summary = el('p', 'summary', [plural(rows.length, 'declaration'), `${count(rows.filter(r => sum(r.yes)).length)} with a yes`,
       `${count(rows.filter(r => sum(r.no)).length)} with a no still open`].join(' · '));
-    const st = {answer: 'all', who: 'anyone', q: ''};
-    // Who answered: [people, AI agents] summed, or one of them.
-    const of = pair => st.who === 'people' ? pair[0] : st.who === 'ai' ? pair[1] : sum(pair);
+    const st = {answer: 'all', who: 'anyone', model: '', many: '', roadmap: '', q: ''};
+    // Its answers of a kind (yes, no, earlier) as [people, AI agents], one model's alone when one is chosen, and
+    // how many of them count: people's, AI agents', or both.
+    const SLOT = {yes: 0, no: 1, earlier: 2};
+    const pairOf = (r, key) => st.model ? [0, ((r.models || {})[st.model] || [0, 0, 0])[SLOT[key]]] : r[key];
+    const of = (r, key) => { const pair = pairOf(r, key); return st.who === 'people' ? pair[0] : st.who === 'ai' ? pair[1] : sum(pair); };
     const filters = el('div', 'filters'), seg = el('div', 'seg');
     [['all', 'All'], ['yes', 'Yes'], ['no', 'No']].forEach(([k, t]) => {
       const b = el('button', k === st.answer ? 'on' : '', t);
@@ -476,39 +464,65 @@
       b.addEventListener('click', () => { st.answer = k; seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); draw(); });
       seg.append(b);
     });
-    const whoSelect = el('select', 'select');
-    whoSelect.setAttribute('aria-label', 'Answered by');
-    [['anyone', 'Answered by anyone'], ['people', 'By people'], ['ai', 'By AI agents']].forEach(([v, t]) => {
-      const o = el('option', null, t); o.value = v; whoSelect.append(o);
+    const select = (options, label, change) => {
+      const s = el('select', 'select'); s.setAttribute('aria-label', label);
+      options.forEach(([v, t]) => { const o = el('option', null, t); o.value = v; s.append(o); });
+      s.addEventListener('change', () => { change(s.value); draw(); });
+      return s;
+    };
+    // How many of these declarations each AI model answered for, and how many each roadmap has.
+    const among = keys => { const m = new Map(); rows.forEach(r => keys(r).forEach(k => m.set(k, (m.get(k) || 0) + 1))); return m; };
+    const models = among(r => Object.keys(r.models || {})), roadmaps = among(r => r.roadmap ? [r.roadmap] : []);
+    // Who answered: anyone, people, AI agents, or one AI model, those that answered for most first.
+    const whoSelect = select([['anyone', 'Answered by anyone'], ['people', 'By people'], ['ai', 'By AI agents']], 'Answered by', v => {
+      st.model = v.startsWith('model:') ? v.slice(6) : '';
+      st.who = st.model ? 'ai' : v;
     });
-    whoSelect.addEventListener('change', () => { st.who = whoSelect.value; draw(); });
+    if (models.size) {
+      const group = el('optgroup');
+      group.label = 'By one AI model';
+      [...models].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).forEach(([m, n]) => {
+        const o = el('option', null, `${m} (${count(n)})`); o.value = 'model:' + m; group.append(o);
+      });
+      whoSelect.append(group);
+    }
+    // How many answers stand, of those counted: this version's yeses and the noes still open.
+    const manySelect = select([['', 'Any number of answers'], ['1', 'Exactly one answer'], ['2', 'Two or more answers'],
+                               ['3', 'Three or more answers']], 'How many answers', v => { st.many = v; });
+    // The roadmap a declaration of the library belongs to (scripts/roadmaps.py), when the dataset says.
+    const roadmapSelect = roadmaps.size ? select([['', 'Every roadmap'], ...[...roadmaps].sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([m, n]) => [m, `${m} (${count(n)})`])], 'Roadmap', v => { st.roadmap = v; }) : null;
     const q = el('input', 'filter-input');
     q.type = 'search'; q.placeholder = 'Filter by name or words'; q.setAttribute('aria-label', 'Filter');
     let typing = null;
     q.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => { st.q = q.value.toLowerCase(); draw(); }, 150); });
-    filters.append(seg, whoSelect, q);
+    filters.append(...[seg, whoSelect, manySelect, roadmapSelect, q].filter(Boolean));
     // Its answers, beside it: ✓ for the yeses, ✗ for the noes, and the date of the latest.
     const tallies = r => {
       const box = el('span', 'answers');
       if (r.from) box.append(el('span', 'badge', r.from));  // outside the library: Mathlib
-      const part = (answer, pair) => {
-        if (!of(pair)) return;
-        const s = el('span', 'answer ' + answer);
-        s.append(sign(answer), [pair[0] && st.who !== 'ai' ? plural(pair[0], 'person', 'people') : '',
-                                pair[1] && st.who !== 'people' ? `${pair[1]} AI` : ''].filter(Boolean).join(' · '));
+      const part = (answer, key) => {
+        if (!of(r, key)) return;
+        const [people, agents] = pairOf(r, key), s = el('span', 'answer ' + answer);
+        s.append(sign(answer), [people && st.who !== 'ai' ? plural(people, 'person', 'people') : '',
+                                agents && st.who !== 'people' ? `${agents} AI` : ''].filter(Boolean).join(' · '));
         box.append(s);
       };
-      part('yes', r.yes);
-      part('no', r.no);
-      if (of(r.earlier)) box.append(el('span', 'answer earlier', plural(of(r.earlier), 'earlier answer')));
+      part('yes', 'yes');
+      part('no', 'no');
+      if (of(r, 'earlier')) box.append(el('span', 'answer earlier', plural(of(r, 'earlier'), 'earlier answer')));
       box.append(el('span', null, date(r.at)));
       return box;
     };
     const found = el('p', 'faint small'), listBox = el('div');
     function draw() {
-      const list = rows.filter(r => nodes.has(r.id) &&
-        (st.answer === 'yes' ? of(r.yes) : st.answer === 'no' ? of(r.no) : of(r.yes) + of(r.no) + of(r.earlier)) &&
-        (!st.q || (r.name + ' ' + (nodes.get(r.id).title || '')).toLowerCase().includes(st.q)));
+      const list = rows.filter(r => {
+        if (!nodes.has(r.id) || (st.roadmap && r.roadmap !== st.roadmap)) return false;
+        const standing = of(r, 'yes') + of(r, 'no');
+        return (st.answer === 'yes' ? of(r, 'yes') : st.answer === 'no' ? of(r, 'no') : standing + of(r, 'earlier')) &&
+          (!st.many || (st.many === '1' ? standing === 1 : standing >= Number(st.many))) &&
+          (!st.q || (r.name + ' ' + (nodes.get(r.id).title || '')).toLowerCase().includes(st.q));
+      });
       found.textContent = plural(list.length, 'declaration');
       listBox.replaceChildren(itemList(list, r => nodeItem(nodes.get(r.id), tallies(r)), 50,
                                        rows.length ? 'None of them, with these filters.' : 'Nothing has been answered yet.'));
@@ -629,7 +643,7 @@
     if (!project) parts.push(el('p', 'faint', `What it rests on is not followed outside ${lib}.`));
     setNav('');
     show(...parts);
-    if (project) TauMap.draw(mapHost, n, d.entry, {ai: () => ai, lib});
+    if (project) TauMap.draw(mapHost, n, d.entry, {lib});
   };
 
   /* The review box, as the site had it in September (scripts/build_site.py before the rebuild), asking one
@@ -1294,7 +1308,8 @@
                   'No pull request.'),
             p('Correctly stated means that it says what it should: it is the intended notion, or states the intended result, as its ',
               'name, its docstring and the literature say. Not that its proof is right: Lean checks that.'),
-            p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first.'),
+            p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first, and finds ' +
+              'them by answer, by who answered (people, AI agents, or one AI model), by how many answers stand, and by roadmap.'),
             ...(outside.length ? [p(`${outside.join(' and ')}'s declarations are answered for here too: open one from a declaration of ${lib} `,
               `that uses it, or by its Lean name in Search. Its page links to Mathlib's docs, and its review box asks the same `,
               `question, of the version ${lib} builds on.`)] : [])),

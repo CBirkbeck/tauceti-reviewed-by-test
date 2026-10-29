@@ -114,9 +114,7 @@ def named(browser, url, errors):
     page = visit(browser, url, "#/named", errors)
     expect(page.locator(".list > li").count() == 2, "both announcements are listed")
     expect([h.split("\n")[0] for h in page.locator("main h2").all_inner_texts()] == ["Basic", "Uses"], "grouped by area")
-    page.check("#ai")
-    page.wait_for_function("TauReview.ready && document.querySelector('#ai') && document.querySelector('#ai').checked")
-    expect(page.evaluate("localStorage.getItem('tauceti-review:ai')") == "1", "counting AI reviews is kept")
+    expect(page.locator("#ai").count() == 0, "no switch to count AI reviews: one reviewed by AI agents alone says so")
     page.click("[data-what=definition]")
     expect(page.locator(".list > li").count() == 1 and "Being double" in page.locator(".list > li").inner_text(), "the definitions filter")
     page.click(".list > li a")
@@ -552,11 +550,42 @@ def reviewed(browser, url, errors):
     page.click("[data-answer=yes]")
     expect(page.locator(".list > li").count() == 6, "the yeses")
     page.select_option("select[aria-label='Answered by']", "ai")
-    expect(page.locator(".list .item-sub").all_inner_texts() == ["Fixture.triple"], "the AI agents' yeses")
-    expect(page.locator(".list .answer.yes").text_content() == "✓1 AI", "counted as AI")
+    expect(page.locator(".list .item-sub").all_inner_texts() == ["Fixture.triple", "Fixture.triple_pos"], "the AI agents' yeses")
+    expect(page.locator(".list .answer.yes").first.text_content() == "✓1 AI", "counted as AI")
     page.click(".list > li a")
     settle(page, "decl:Fixture.triple")
     expect(page.locator(".review .mark.tally.yes").count() == 1, "an item opens its declaration")
+
+
+@check
+def reviewed_filters(browser, url, errors):
+    page = visit(browser, url, "#/reviewed", errors)
+    names = lambda: page.locator(".list .item-sub").all_inner_texts()  # noqa: E731
+    who, many, roadmap = (f"select[aria-label='{label}']" for label in ("Answered by", "How many answers", "Roadmap"))
+    # One AI model's answers: each model that answered, how many it answered for, the withdrawn one not among them.
+    models = page.locator(who + " optgroup option").all_inner_texts()
+    expect(models == ["claude-opus-5-5 (1)", "GPT-6 Astra (1)"], f"the models that answered ({models})")
+    page.select_option(who, "model:GPT-6 Astra")
+    expect(names() == ["Fixture.triple_pos"], "one model's answers")
+    expect(page.locator(".list .answer.yes").text_content() == "✓1 AI", "counted alone")
+    # How many answers stand: this version's yeses and the noes still open, of whoever is counted.
+    page.select_option(who, "anyone")
+    page.select_option(many, "2")
+    expect(names() == ["Fixture.triple_comm", "Fixture.triple", "Fixture.triple_pos"], "two answers or more")
+    page.select_option(many, "1")
+    expect(names() == ["Int", "Fixture.triple_two", "Fixture.triple_three'"], "exactly one")
+    page.select_option(who, "ai")
+    expect(names() == ["Fixture.triple", "Fixture.triple_pos"], "exactly one from an AI agent")
+    page.select_option(many, "3")
+    expect(names() == [] and "None of them" in page.locator("main").inner_text(), "three or more: none")
+    # A roadmap's declarations: each roadmap, how many of its declarations have been answered for.
+    page.select_option(who, "anyone")
+    page.select_option(many, "")
+    expect(page.locator(roadmap + " option").all_inner_texts() == ["Every roadmap", "Arithmetic (3)", "Doubling (2)"], "the roadmaps")
+    page.select_option(roadmap, "Doubling")
+    expect(names() == ["Fixture.double_triple", "Fixture.double"], "a roadmap's declarations, their earlier answers too")
+    page.click("[data-answer=yes]")
+    expect(names() == [], "neither with a yes for this version")
 
 
 @check

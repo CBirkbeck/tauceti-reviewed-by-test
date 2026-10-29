@@ -132,10 +132,13 @@ and `python -m answerer run --dry-run` to see what it would do.
 ## What the site shows
 
 - **Named**: Voyager's announcements, each with its review state and how much of what it rests on in
-  Tau Ceti has been reviewed. Voyager is the only source of names.
+  Tau Ceti has been reviewed. Voyager is the only source of names. A review state counts people's
+  reviews; one reviewed by AI agents alone says so ("AI only"). Since 2026-10-29 there is no switch to
+  count AI agents' reviews as people's.
 - **Reviewed**: every declaration answered for, the latest answer first, with its yeses and noes
-  counted (people apart from AI agents), Mathlib's marked; filters for yes or no, and for people or AI
-  agents.
+  counted (people apart from AI agents), Mathlib's marked; filters for yes or no, for people, AI agents
+  or one AI model, for how many answers stand (this version's yeses and the noes still open), and for
+  the roadmap a declaration of Tau Ceti belongs to (below; asked for on 2026-10-29).
 - **A declaration**: its docstring and Lean source (hover over a name for its card: what it is, its signature
   with its names linked, a definition's value; a name in a card opens its own card, and so on; a
   variable shows its type and lights up its uses), links to the API docs, the source and Voyager's
@@ -207,6 +210,16 @@ nothing compared them with the docs. Now:
   `data/signature-exceptions.json`;
 - the browser check of every build reads, on real pages, that what is shown is the dataset's signature;
 - the extractor's own test checks that binders keep their types and a structure says what it extends.
+
+**Each declaration's roadmap** is the facet `roadmap`, which the Dataset workflow adds
+(`scripts/roadmaps.py`, a few minutes) from Tau Ceti's PR labels, `roadmap/<Area>`, which are complete:
+each line of a declaration is credited to the PR that last changed it (`git blame --first-parent` at the
+dataset's commit; every commit of Tau Ceti's main names its PR), and the declaration belongs to the
+roadmap credited with most of its lines, on a tie the one that changed a line last. `roadmap/none`
+(infrastructure, dependencies, cross-cutting work), `roadmap/Unknown` (an attribution missing or
+invalid) and a commit that names no PR credit nothing. At 36f24f5d, 98% of the reviewed declarations of
+Tau Ceti had a roadmap; Mathlib's have none. When the labels cannot be read the dataset is published
+without the facet, and the Reviewed page has no roadmap filter until the next one.
 
 ## Files
 

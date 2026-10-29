@@ -339,11 +339,19 @@ class PageFilesTests(unittest.TestCase):
         self.assertEqual(rows["Fixture.double"]["earlier"], [1, 0])            # a yes of an earlier version
         self.assertEqual((rows["Fixture.one"]["no"], rows["Fixture.one"]["earlier"]), ([0, 0], [1, 0]))  # a no resolved
         self.assertEqual(rows["Fixture.triple"]["id"], node_id("Fixture.triple"))
+        # The AI agents' answers by model, [yeses, noes, earlier]: the yes withdrawn under its model's family name is
+        # not one. A declaration only people answered for has none.
+        self.assertEqual(rows["Fixture.triple"]["models"], {"claude-opus-5-5": [1, 0, 0]})
+        self.assertEqual((rows["Fixture.triple_pos"]["yes"], rows["Fixture.triple_pos"]["models"]), ([1, 1], {"GPT-6 Astra": [1, 0, 0]}))
+        self.assertNotIn("models", rows["Fixture.triple_two"])
+        # The roadmap a declaration of the library belongs to, the dataset's facet `roadmap`, where it has one.
+        self.assertEqual([rows[n].get("roadmap") for n in ("Fixture.triple", "Fixture.double", "Fixture.one")],
+                         ["Arithmetic", "Doubling", None])
         # Outside the library, a package the settings name (Mathlib on the site; Init.Data here), its package said.
         self.assertEqual((rows["Int"]["yes"], rows["Int"]["from"]), ([1, 0], "Init"))
         self.assertNotIn("from", rows["Fixture.triple"])
         m = data("meta.json")
-        self.assertEqual((m["counts"]["reviewed"], m["counts"]["accepts"]), (len(rows), {"people": 6, "ai": 1}))
+        self.assertEqual((m["counts"]["reviewed"], m["counts"]["accepts"]), (len(rows), {"people": 6, "ai": 2}))
         self.assertEqual(m["review"], {"outside": ["Init.Data"]})
 
     def test_signing_in_only_where_the_settings_say(self):

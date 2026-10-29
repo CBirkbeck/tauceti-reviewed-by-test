@@ -177,6 +177,8 @@ class Site:
         self.rev = self.g.reverse()
         self.docstrings = {name: rows[0].get("text", "") for name, rows in ds.facet("docstring").items()}
         self.sorry = {name for name, rows in ds.facet("axioms").items() if rows[0].get("sorry")}
+        # The roadmap each declaration of the library belongs to (scripts/roadmaps.py), where it has one.
+        self.roadmaps = {name: rows[0]["roadmap"] for name, rows in ds.facet("roadmap").items()}
         self.named = self._named()
         self.mdocs = docs_mod.module_docs(ds)
         self.project_modules = len(ds.modules)
@@ -440,24 +442,32 @@ class Site:
         """Every declaration the site asks about that someone has answered for, yes (a review's acceptance)
         or no (its problem), the latest answer first, with its answers counted as [people, AI agents]: the
         yeses of this version, the noes still open, and the answers that no longer stand (a yes of an earlier
-        version, a no resolved). An answer withdrawn, or superseded by its answerer's later one, is left out."""
+        version, a no resolved). An answer withdrawn, or superseded by its answerer's later one, is left out.
+        The AI agents' answers again by model (`models`: each model's [yeses, noes, those no longer standing]),
+        and the roadmap it belongs to (`roadmap`), where it has one."""
         rows = []
         for name in self.ev.by_decl:
             d = self.ds.by_name.get(name)
             if d is None or not self.answerable(d):
                 continue
-            yes, no, earlier, last = [0, 0], [0, 0], [0, 0], ""
+            yes, no, earlier, models, last = [0, 0], [0, 0], [0, 0], {}, ""
             for v in views.views_on(self.ev, name, "review"):
                 if v.get("verdict") not in ("accept", "problem") or not v["inForce"]:
                     continue
                 k = 1 if v["by"]["kind"] == "agent" else 0
                 if v["verdict"] == "accept":
-                    (yes if v["applies"] else earlier)[k] += 1
+                    j = 0 if v["applies"] else 2
                 else:
-                    (no if v["state"] == "open" else earlier)[k] += 1
+                    j = 1 if v["state"] == "open" else 2
+                (yes, no, earlier)[j][k] += 1
+                model = (v["by"].get("agent") or {}).get("model") if k else None
+                if model:
+                    models.setdefault(model, [0, 0, 0])[j] += 1
                 last = max(last, v["at"])
             if last:
                 rows.append({"id": d.id, "name": name, "yes": yes, "no": no, "earlier": earlier, "at": last,
+                             **({"models": models} if models else {}),
+                             **({"roadmap": self.roadmaps[name]} if name in self.roadmaps else {}),
                              **({} if d.is_project else {"from": (d.module or "").split(".")[0]})})
         return sorted(rows, key=lambda r: (r["at"], r["name"]), reverse=True)
 

@@ -2,14 +2,16 @@
 """A small site built from the suite's fixture (tests/fixtures, from LeanTrustBuilders/specs and
 LeanTrustBuilders/extractor, Apache-2.0): the declarations of its version B and their sources, the
 records of the suite's conformance vectors (made against version A), Voyager's announcements of two of
-its declarations, an AI agent's review, a no still open, a suggestion of what could be better, a listed
-test, a proposed test, and a review of an upstream declaration in a store this one imports. The unit tests and the browser check read it.
+its declarations, two AI models' reviews, a no still open, a suggestion of what could be better, a listed
+test, a proposed test, a review of an upstream declaration in a store this one imports, and the roadmaps
+of some declarations (the facet `roadmap`). The unit tests and the browser check read it.
 
   python3 tests/fixture_site.py OUT
 """
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -17,6 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "scripts"))
 import build_site  # noqa: E402
+import roadmaps  # noqa: E402
 import voyager  # noqa: E402
 
 from evidence_core import records as rec  # noqa: E402
@@ -46,6 +49,11 @@ PERSON = {"kind": "person", "identity": {"kind": "github", "id": "example"}}
 AGENT = {"kind": "agent", "identity": {"kind": "github", "id": "example"},
          "agent": {"tool": "Claude Code", "model": "claude-opus-5-5"}}
 SOMEONE = {"kind": "person", "identity": {"kind": "github", "id": "someone"}}
+#: A second AI model, which answers for another declaration.
+ASTRA = {"kind": "agent", "identity": {"kind": "github", "id": "example"}, "agent": {"tool": "Codex", "model": "GPT-6 Astra"}}
+#: The roadmaps of some declarations, as scripts/roadmaps.py credits them: the others have none.
+ROADMAPS = {"Fixture.triple": "Arithmetic", "Fixture.triple_pos": "Arithmetic", "Fixture.triple_comm": "Arithmetic",
+            "Fixture.double": "Doubling", "Fixture.double_triple": "Doubling"}
 
 
 #: Why the no on `Fixture.one` was closed: two paragraphs, as an answer to a no can run.
@@ -55,9 +63,9 @@ INTENDED = ("`Pos` admits `0` on purpose: it is the predicate, and the theorems 
 
 def extra_records(ds: Dataset) -> list[dict]:
     """What the vectors lack: an AI agent's review (and the same review under its model's family name,
-    withdrawn), a no still open (as the form records one), a suggestion (the question form's record), a
-    listed test, a proposed test, and why the vectors' no on `Fixture.one` (closed as invalid, without a
-    word) behaves as intended."""
+    withdrawn), another model's review of another declaration, a no still open (as the form records one), a
+    suggestion (the question form's record), a listed test, a proposed test, and why the vectors' no on
+    `Fixture.one` (closed as invalid, without a word) behaves as intended."""
     key = lambda name: rec.subject_from_decl(ds.by_name[name], ds)
     issue = lambda n: {"kind": "issue", "ref": f"example/fixture-store#{n}"}
     one = next(r["id"] for r in rec.load(FIXTURES / "records.jsonl")
@@ -76,6 +84,8 @@ def extra_records(ds: Dataset) -> list[dict]:
          "at": "2026-10-24T12:00:00Z", "origin": issue(16)},
         {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple"), "verdict": "accept", "by": AGENT,
          "text": "Compared with its definition, `n + n + n`.", "at": "2026-10-22T10:00:00Z", "origin": issue(11)},
+        {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple_pos"), "verdict": "accept", "by": ASTRA,
+         "text": "`triple n` is `3 * n`, positive when `n` is.", "at": "2026-10-21T08:00:00Z", "origin": issue(17)},
         {"schema": rec.SCHEMA, "kind": "review", "subject": key("Fixture.triple_comm"), "verdict": "problem",
          "category": "other", "rubric": "ltb-rubric/1", "by": SOMEONE, "at": "2026-10-23T09:00:00Z", "origin": issue(14),
          "text": "Its name says commutativity, but it states `triple b = b + b + b`: the definition, unfolded."},
@@ -99,9 +109,17 @@ def imported_store(ds: Dataset, cache: Path) -> None:
     (cache / "imports.json").write_text(json.dumps([{"repo": "example/imports", "path": "evidence", "commit": "c0ffee"}]))
 
 
+def with_roadmaps(dataset: Path, out: Path) -> Path:
+    """A copy of ``dataset`` with the facet `roadmap` as scripts/roadmaps.py writes it, of ROADMAPS."""
+    shutil.copytree(dataset, out)
+    roadmaps.write(out, [{"decl": d, "roadmap": r, "lines": [2, 2]} for d, r in sorted(ROADMAPS.items())])
+    return out
+
+
 def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None = None,
           dataset: Path = DATASET) -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="fixture-site-"))
+    dataset = with_roadmaps(dataset, tmp / "dataset")
     ds = Dataset.load(dataset)
     store = Store.init(tmp / "evidence", {**default_config("example/fixture-store", "Fixture", "Fixture"),
                                            "imports": [{"repo": "example/imports"}]})
