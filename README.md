@@ -137,8 +137,9 @@ and `python -m answerer run --dry-run` to see what it would do.
   count AI agents' reviews as people's.
 - **Reviewed**: every declaration answered for, the latest answer first, with its yeses and noes
   counted (people apart from AI agents), Mathlib's marked; filters for yes or no, for people, AI agents
-  or one AI model, for how many answers stand (this version's yeses and the noes still open), and for
-  the roadmap a declaration of Tau Ceti belongs to (below; asked for on 2026-10-29).
+  or one AI model, and for the roadmap a declaration of Tau Ceti belongs to (below; asked for on
+  2026-10-29); and an order with most answers standing first (this version's yeses and the noes still
+  open, of those counted), which since 2026-10-30 replaces the filter by how many.
 - **A declaration**: its docstring and Lean source (hover over a name for its card: what it is, its signature
   with its names linked, a definition's value; a name in a card opens its own card, and so on; a
   variable shows its type and lights up its uses), links to the API docs, the source and Voyager's

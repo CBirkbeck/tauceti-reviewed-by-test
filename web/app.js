@@ -440,7 +440,8 @@
 
   /* Every declaration someone has answered for, newest answer first, with its answers counted: the yeses of
      this version and the noes still open, people apart from AI agents, and how many no longer stand. Found by
-     answer, by who answered (people, AI agents, or one AI model), by how many answers stand, by roadmap. */
+     answer, by who answered (people, AI agents, or one AI model), by roadmap; those with most answers standing
+     first on request. */
   VIEWS.reviewed = async (arg, gen) => {
     const [meta, rows] = await Promise.all([TauData.meta(), TauData.reviewed()]);
     const nodes = new Map((await TauData.nodes(rows.map(r => r.id))).map(n => [n.id, n]));
@@ -451,7 +452,7 @@
       '"is it correctly stated?" for, the latest answer first. Open one to read it and its answers, and to answer it yourself.');
     const summary = el('p', 'summary', [plural(rows.length, 'declaration'), `${count(rows.filter(r => sum(r.yes)).length)} with a yes`,
       `${count(rows.filter(r => sum(r.no)).length)} with a no still open`].join(' · '));
-    const st = {answer: 'all', who: 'anyone', model: '', many: '', roadmap: '', q: ''};
+    const st = {answer: 'all', who: 'anyone', model: '', order: 'latest', roadmap: '', q: ''};
     // Its answers of a kind (yes, no, earlier) as [people, AI agents], one model's alone when one is chosen, and
     // how many of them count: people's, AI agents', or both.
     const SLOT = {yes: 0, no: 1, earlier: 2};
@@ -486,9 +487,9 @@
       });
       whoSelect.append(group);
     }
-    // How many answers stand, of those counted: this version's yeses and the noes still open.
-    const manySelect = select([['', 'Any number of answers'], ['1', 'Exactly one answer'], ['2', 'Two or more answers'],
-                               ['3', 'Three or more answers']], 'How many answers', v => { st.many = v; });
+    // The latest answer first, or those with most answers standing first: this version's yeses and the noes
+    // still open, of those counted; among as many, the latest first.
+    const orderSelect = select([['latest', 'Latest answer first'], ['most', 'Most answers first']], 'Order', v => { st.order = v; });
     // The roadmap a declaration of the library belongs to (scripts/roadmaps.py), when the dataset says.
     const roadmapSelect = roadmaps.size ? select([['', 'Every roadmap'], ...[...roadmaps].sort((a, b) => a[0].localeCompare(b[0]))
       .map(([m, n]) => [m, `${m} (${count(n)})`])], 'Roadmap', v => { st.roadmap = v; }) : null;
@@ -496,7 +497,7 @@
     q.type = 'search'; q.placeholder = 'Filter by name or words'; q.setAttribute('aria-label', 'Filter');
     let typing = null;
     q.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => { st.q = q.value.toLowerCase(); draw(); }, 150); });
-    filters.append(...[seg, whoSelect, manySelect, roadmapSelect, q].filter(Boolean));
+    filters.append(...[seg, whoSelect, roadmapSelect, orderSelect, q].filter(Boolean));
     // Its answers, beside it: ✓ for the yeses, ✗ for the noes, and the date of the latest.
     const tallies = r => {
       const box = el('span', 'answers');
@@ -516,13 +517,14 @@
     };
     const found = el('p', 'faint small'), listBox = el('div');
     function draw() {
+      const standing = r => of(r, 'yes') + of(r, 'no');
       const list = rows.filter(r => {
         if (!nodes.has(r.id) || (st.roadmap && r.roadmap !== st.roadmap)) return false;
-        const standing = of(r, 'yes') + of(r, 'no');
-        return (st.answer === 'yes' ? of(r, 'yes') : st.answer === 'no' ? of(r, 'no') : standing + of(r, 'earlier')) &&
-          (!st.many || (st.many === '1' ? standing === 1 : standing >= Number(st.many))) &&
+        return (st.answer === 'yes' ? of(r, 'yes') : st.answer === 'no' ? of(r, 'no') : standing(r) + of(r, 'earlier')) &&
           (!st.q || (r.name + ' ' + (nodes.get(r.id).title || '')).toLowerCase().includes(st.q));
       });
+      // The rows come latest first, and a sort keeps that order among those with as many answers.
+      if (st.order === 'most') list.sort((a, b) => standing(b) - standing(a));
       found.textContent = plural(list.length, 'declaration');
       listBox.replaceChildren(itemList(list, r => nodeItem(nodes.get(r.id), tallies(r)), 50,
                                        rows.length ? 'None of them, with these filters.' : 'Nothing has been answered yet.'));
@@ -1308,8 +1310,8 @@
                   'No pull request.'),
             p('Correctly stated means that it says what it should: it is the intended notion, or states the intended result, as its ',
               'name, its docstring and the literature say. Not that its proof is right: Lean checks that.'),
-            p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first, and finds ' +
-              'them by answer, by who answered (people, AI agents, or one AI model), by how many answers stand, and by roadmap.'),
+            p('The ', link('#/reviewed', 'Reviewed'), ' page lists every declaration answered so far, the latest first or those ' +
+              'with most answers first, and finds them by answer, by who answered (people, AI agents, or one AI model), and by roadmap.'),
             ...(outside.length ? [p(`${outside.join(' and ')}'s declarations are answered for here too: open one from a declaration of ${lib} `,
               `that uses it, or by its Lean name in Search. Its page links to Mathlib's docs, and its review box asks the same `,
               `question, of the version ${lib} builds on.`)] : [])),

@@ -561,26 +561,25 @@ def reviewed(browser, url, errors):
 def reviewed_filters(browser, url, errors):
     page = visit(browser, url, "#/reviewed", errors)
     names = lambda: page.locator(".list .item-sub").all_inner_texts()  # noqa: E731
-    who, many, roadmap = (f"select[aria-label='{label}']" for label in ("Answered by", "How many answers", "Roadmap"))
+    who, order, roadmap = (f"select[aria-label='{label}']" for label in ("Answered by", "Order", "Roadmap"))
     # One AI model's answers: each model that answered, how many it answered for, the withdrawn one not among them.
     models = page.locator(who + " optgroup option").all_inner_texts()
     expect(models == ["claude-opus-5-5 (1)", "GPT-6 Astra (1)"], f"the models that answered ({models})")
     page.select_option(who, "model:GPT-6 Astra")
     expect(names() == ["Fixture.triple_pos"], "one model's answers")
     expect(page.locator(".list .answer.yes").text_content() == "✓1 AI", "counted alone")
-    # How many answers stand: this version's yeses and the noes still open, of whoever is counted.
+    # Those with most answers standing first (this version's yeses and the noes still open, of whoever is counted),
+    # the latest first among as many; there is no filter by how many (the user, 2026-10-30).
     page.select_option(who, "anyone")
-    page.select_option(many, "2")
-    expect(names() == ["Fixture.triple_comm", "Fixture.triple", "Fixture.triple_pos"], "two answers or more")
-    page.select_option(many, "1")
-    expect(names() == ["Int", "Fixture.triple_two", "Fixture.triple_three'"], "exactly one")
-    page.select_option(who, "ai")
-    expect(names() == ["Fixture.triple", "Fixture.triple_pos"], "exactly one from an AI agent")
-    page.select_option(many, "3")
-    expect(names() == [] and "None of them" in page.locator("main").inner_text(), "three or more: none")
+    expect(page.locator("select[aria-label='How many answers']").count() == 0, "no filter by how many answers")
+    latest = names()
+    page.select_option(order, "most")
+    expect(names() == ["Fixture.triple_comm", "Fixture.triple", "Fixture.triple_pos", "Int", "Fixture.triple_two",
+                       "Fixture.triple_three'", "Fixture.one", "Fixture.triple_one", "Fixture.double_zero",
+                       "Fixture.double_triple", "Fixture.double"], f"the most answers first ({names()})")
+    page.select_option(order, "latest")
+    expect(names() == latest and latest.index("Fixture.one") < latest.index("Fixture.triple_two"), "the latest first again")
     # A roadmap's declarations: each roadmap, how many of its declarations have been answered for.
-    page.select_option(who, "anyone")
-    page.select_option(many, "")
     expect(page.locator(roadmap + " option").all_inner_texts() == ["Every roadmap", "Arithmetic (3)", "Doubling (2)"], "the roadmaps")
     page.select_option(roadmap, "Doubling")
     expect(names() == ["Fixture.double_triple", "Fixture.double"], "a roadmap's declarations, their earlier answers too")
