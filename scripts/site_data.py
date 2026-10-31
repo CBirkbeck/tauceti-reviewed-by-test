@@ -75,13 +75,13 @@ TYPE_ARGUMENT = re.compile(r"\([^()\[\]{}:]+ : (?:Type|Sort)(?:\*|\s+[^\s()]+|\s
 UNIVERSES = re.compile(r"\.\{[\w\s,+()]*\}")
 
 
-def brief(name: str, sig: dict | None, cap: int = BRIEF_CAP) -> str:
-    """What a declaration states, short enough for a list: its signature (the S2 facet) on one line,
-    without its name, its implicit arguments, the arguments that only introduce a type and universe
-    annotations, each name in it by its last component. When that is too long, its instance arguments
-    go first, then its other arguments ("… " says so), then the end of the line."""
+def signature_parts(name: str, sig: dict | None) -> tuple[list[tuple[str, str]], str]:
+    """A signature (the S2 facet) cut as `brief` reads it: the binder groups it opens with, each as (its opening
+    bracket, its text), and what it states after them, past the colon. Each is on one line, its names by their last
+    component and without universe annotations. The groups end where the brackets do not balance, and the rest is
+    then what it states."""
     if not sig or not sig.get("text"):
-        return ""
+        return [], ""
     text = sig["text"]
     # A name printed in full, its universes too (`Foo.Bar.{u}`), by its last component.
     short = {start: (stop, const.rsplit(".", 1)[1]) for start, stop, const in sig.get("refs") or []
@@ -115,8 +115,24 @@ def brief(name: str, sig: dict | None, cap: int = BRIEF_CAP) -> str:
             break
         groups.append((text[i], i, j + 1))
         i = j + 1
-    stated = piece(i + 1 if text.startswith(":", i) else i, n)
-    kept = [(c, p) for c, p in ((c, piece(a, b)) for c, a, b in groups if c in "([") if not TYPE_ARGUMENT.fullmatch(p)]
+    return [(c, piece(a, b)) for c, a, b in groups], piece(i + 1 if text.startswith(":", i) else i, n)
+
+
+def binder_groups(name: str, sig: dict | None) -> list[tuple[str, str]]:
+    """The binder groups a signature opens with, in order, each as (its opening bracket, its text), as `brief` reads
+    them: `("(", "(h : x ≠ 0)")`, `("[", "[CommRing R]")`, the implicit `{…}` and `⦃…⦄` too."""
+    return signature_parts(name, sig)[0]
+
+
+def brief(name: str, sig: dict | None, cap: int = BRIEF_CAP) -> str:
+    """What a declaration states, short enough for a list: its signature (the S2 facet) on one line,
+    without its name, its implicit arguments, the arguments that only introduce a type and universe
+    annotations, each name in it by its last component. When that is too long, its instance arguments
+    go first, then its other arguments ("… " says so), then the end of the line."""
+    if not sig or not sig.get("text"):
+        return ""
+    groups, stated = signature_parts(name, sig)
+    kept = [(c, p) for c, p in groups if c in "([" and not TYPE_ARGUMENT.fullmatch(p)]
     for keep in ("([", "(", ""):
         chosen = [p for c, p in kept if c in keep]
         line = ("… " if len(chosen) < len(kept) else "") + (" ".join(chosen) + " : " + stated if chosen else stated)

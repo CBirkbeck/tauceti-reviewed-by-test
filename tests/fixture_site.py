@@ -224,10 +224,11 @@ def with_roadmaps(dataset: Path, out: Path) -> Path:
     return out
 
 
-def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None = None,
-          dataset: Path = DATASET, more: list[dict] = ()) -> dict:
-    """The fixture's site in ``out``; ``more`` are records for its store besides the fixture's own."""
-    tmp = Path(tempfile.mkdtemp(prefix="fixture-site-"))
+def inputs(tmp: Path, dataset: Path = DATASET, more: list[dict] = (),
+           announcements: list[dict] = ANNOUNCEMENTS) -> tuple[Path, Path, Path]:
+    """What a build of the fixture's site reads, laid out in ``tmp``: the dataset (a copy, with the facet `roadmap`),
+    the store and the stores it imports. ``more`` are records for the store besides the fixture's own, and
+    ``announcements`` Voyager's, recorded after them."""
     dataset = with_roadmaps(dataset, tmp / "dataset")
     ds = Dataset.load(dataset)
     store = Store.init(tmp / "evidence", {**default_config("example/fixture-store", "Fixture", "Fixture"),
@@ -235,10 +236,17 @@ def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None 
     store.add(rec.load(FIXTURES / "records.jsonl"))
     store.add(extra_records(ds))
     store.add(list(more))
-    store.add(voyager.named_records(ANNOUNCEMENTS, ds, store, SETTINGS["voyager"]))
+    store.add(voyager.named_records(list(announcements), ds, store, SETTINGS["voyager"]))
     imported_store(ds, tmp / "imports")
-    return build_site.build(dataset, tmp / "evidence", Path(out), settings or SETTINGS, source=SOURCE,
-                            imports=tmp / "imports", budget_mb=budget_mb, cap=cap)
+    return dataset, tmp / "evidence", tmp / "imports"
+
+
+def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None = None,
+          dataset: Path = DATASET, more: list[dict] = ()) -> dict:
+    """The fixture's site in ``out``; ``more`` are records for its store besides the fixture's own."""
+    dataset, store, imports = inputs(Path(tempfile.mkdtemp(prefix="fixture-site-")), dataset, more)
+    return build_site.build(dataset, store, Path(out), settings or SETTINGS, source=SOURCE, imports=imports,
+                            budget_mb=budget_mb, cap=cap)
 
 
 if __name__ == "__main__":
