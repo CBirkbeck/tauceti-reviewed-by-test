@@ -1,8 +1,9 @@
 """Everything the site's pages show, as JSON, laid out from the dataset (S2), the evidence store (S3)
 and what evidence-core computes from them. Nothing here judges a record or a declaration:
 evidence-core does (statuses, threads, where a declaration stands, coverage, the review queue, the
-dependency graphs summarized for readers). This module only arranges what it says, sharded so that a
-page loads only what it shows (web/data.js reads it)."""
+dependency graphs summarized for readers), and scripts/standard.py does for the standard review of a
+declaration (its current text and who approved it). This module only arranges what they say, sharded so
+that a page loads only what it shows (web/data.js reads it)."""
 from __future__ import annotations
 
 import re
@@ -19,12 +20,15 @@ from evidence_core.coverage import Evidence, Policy, coverage, queue
 from evidence_core.dataset import Dataset, Decl
 from evidence_core.graphs import Graphs, is_auxiliary, is_machinery
 from evidence_core.source import Sources, split_statement
+from evidence_core.status import Status, classify
 from evidence_core.store import Store, with_imports
 
+import standard
 from common import fnv_shard, header
 
 NODE_SHARD = 2048
 NAME_SHARDS = 64
+STANDARD_SHARDS = 256
 CAP = 60
 TEXT_CAP = 4000
 #: People only, and people with AI agents; every other switch at evidence-core's default.
@@ -329,7 +333,7 @@ class Site:
         if routine:
             e["nRoutine"] = routine
         if name in self.ev.by_decl:
-            e["records"] = views.views_on(self.ev, name)
+            e["records"] = self.views_on(name)
             tests = [self.test_view(t) for t in self.ev.tests(name)]
             if tests:
                 e["tests"] = tests
@@ -389,6 +393,61 @@ class Site:
                 "by": views.by_view(r.get("by", {})), "at": r.get("at", ""), "url": rec.origin_url(r.get("origin")),
                 "challenge": bool(t.get("challenge"))}
 
+    # --- the standard review -----------------------------------------------------------------------
+
+    def record_view(self, r: dict, s: Status, name: str) -> dict:
+        """One record about ``name`` as the pages list it (evidence-core's view), but a record of the standard
+        review as a line: ``std`` says what it did, and its text is left off. The page reads the current text, and
+        no other, from `standard/<k>.json`, so that the history of a review stays in the store."""
+        v = views.record_view(self.ev, r, s, name)
+        if standard.kind_of(r):
+            v["std"], v["text"] = standard.act(r), ""
+        return v
+
+    def views_on(self, name: str, kind: str | None = None) -> list[dict]:
+        """The views (`record_view`) of every record about a declaration, of one kind if given."""
+        return [self.record_view(r, s, name) for r, s in self.ev.records_on(name, kind)]
+
+    def seen(self, name: str) -> list[standard.Seen]:
+        """The records about a declaration as the standard review reads them, each with whether it applies to the
+        declaration as it is, was withdrawn, and was superseded by its reviewer's later review. A review stays
+        superseded when the review that superseded it is withdrawn since: evidence-core's `superseded_by` says so,
+        and the Reviewed page counts its yeses by it."""
+        ev, out = self.ev, []
+        for r, s in ev.records_on(name):
+            # evidence-core takes every comment for current: a comment applies as its own subject does.
+            applies = classify(r.get("subject") or {}, self.ds).applies if r["kind"] == "comment" else s.applies
+            out.append(standard.Seen(r, applies, ev.state(r["id"]) == "withdrawn", r["id"] in ev.superseded_by))
+        return out
+
+    @staticmethod
+    def standard_view(s: dict) -> dict:
+        """A standard review (`standard.summary`) as its shard holds it: the current text and its version, who wrote it,
+        when and where, whether it is current and whether writing it approved it, the AI agents that approved it
+        (latest first, each with what it checked) and how many approved an earlier text."""
+        r = s["record"]
+        by = lambda x: views.by_view(x.get("by", {}))
+        return {"text": s["text"], "version": s["version"], "at": r.get("at", ""), "by": by(r),
+                "approving": s["approving"], "url": rec.origin_url(r.get("origin")), "current": s["current"],
+                "approvers": [{"by": by(a.record), "at": a.record.get("at", ""),
+                               "checked": a.record.get("checked") or {}, "url": rec.origin_url(a.record.get("origin"))}
+                              for a in s["approvers"]],
+                "earlier": s["earlier"]}
+
+    def standard_shards(self) -> dict[int, dict[str, dict]]:
+        """`standard/<k>.json` for every k: the standard review of each declaration the site asks about that has a
+        version, those outside the library too, by name in the shard of its name (`fnv_shard`, as names are sharded).
+        A shard no name falls in is empty, since the page asks for the shard of any declaration."""
+        out: dict[int, dict[str, dict]] = {k: {} for k in range(STANDARD_SHARDS)}
+        for name in self.ev.by_decl:
+            d = self.ds.by_name.get(name)
+            if d is None or not self.answerable(d):
+                continue
+            review = standard.summary(self.seen(name))
+            if review:
+                out[fnv_shard(name, STANDARD_SHARDS)][name] = self.standard_view(review)
+        return out
+
     def upstream(self) -> dict[str, dict]:
         """The declarations outside the library that some record is about (from the imported stores),
         by name: their records, and what of the library rests on them."""
@@ -397,7 +456,7 @@ class Site:
             d = self.ds.by_name.get(name)
             if d is None or d.is_project:
                 continue
-            e: dict = {"records": views.views_on(self.ev, name)}
+            e: dict = {"records": self.views_on(name)}
             for key, ids in (("builtOn", self.rev.built_on[d.id]), ("facts", self.rev.facts[d.id]),
                              ("usedIn", self.rev.used_in[d.id])):
                 if ids:
@@ -451,7 +510,7 @@ class Site:
             if d is None or not self.answerable(d):
                 continue
             yes, no, earlier, models, last = [0, 0], [0, 0], [0, 0], {}, ""
-            for v in views.views_on(self.ev, name, "review"):
+            for v in self.views_on(name, "review"):
                 if v.get("verdict") not in ("accept", "problem") or not v["inForce"]:
                     continue
                 k = 1 if v["by"]["kind"] == "agent" else 0
@@ -473,7 +532,7 @@ class Site:
 
     def activity(self) -> dict:
         ev = self.ev
-        recent = [views.record_view(ev, r, s, name) for name, rows in ev.by_decl.items() for r, s in rows
+        recent = [self.record_view(r, s, name) for name, rows in ev.by_decl.items() for r, s in rows
                   if not is_voyagers(r)]
         recent.sort(key=lambda v: (v["at"], v["id"]), reverse=True)
         opened = lambda kind, verdict=None: [v for v in recent if v["kind"] == kind and v["state"] == "open"
@@ -527,5 +586,5 @@ class Site:
                 "imports": [{"name": r["name"], "repo": r["repo"], "commit": r.get("commit"), "records": r["records"]}
                             for r in self.inp.imports],
                 "counts": counts, "areas": self.areas(),
-                "shards": {"nodes": NODE_SHARD, "names": NAME_SHARDS},
+                "shards": {"nodes": NODE_SHARD, "names": NAME_SHARDS, "standard": STANDARD_SHARDS},
                 "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}

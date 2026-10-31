@@ -12,7 +12,9 @@ import build_site  # noqa: E402
 import common  # noqa: E402
 import fixture_site  # noqa: E402
 import site_data  # noqa: E402
+import standard  # noqa: E402
 
+from evidence_core import records as rec  # noqa: E402
 from evidence_core.dataset import Dataset  # noqa: E402
 
 OUT: Path
@@ -56,12 +58,17 @@ def outside_entry(name: str, root: Path | None = None) -> tuple[dict, list]:
     return next(e for e in f["decls"] if e["name"] == name), f["names"]
 
 
+def std(name: str, root: Path | None = None) -> dict:
+    """The standard review of a declaration: its entry in its shard of `standard/`."""
+    return data(f"standard/{common.fnv_shard(name, 256)}.json", root)[name]
+
+
 class MetaTests(unittest.TestCase):
     def test_the_build(self):
         m = data("meta.json")
         self.assertEqual(m["library"]["commit"], "B")
         self.assertEqual(m["counts"]["declarations"], 21)
-        self.assertEqual(m["shards"], {"nodes": 2048, "names": 64})
+        self.assertEqual(m["shards"], {"nodes": 2048, "names": 64, "standard": 256})
         self.assertEqual(m["store"], {"repo": "example/fixture-store", "name": "Fixture", "bulk": 1})
         self.assertEqual([(i["name"], i["commit"]) for i in m["imports"]], [("Test imports", "c0ffee")])
         self.assertEqual(m["areas"], [["Basic", 15, 1], ["Uses", 4, 1], ["Notation", 2, 0]])
@@ -285,7 +292,8 @@ class EntryTests(unittest.TestCase):
     def test_statuses_reach_the_page(self):
         status = lambda name: [v["status"] for v in entry(name)["records"] if v["kind"] == "review"]
         self.assertEqual(status("Fixture.double_zero"), ["stale-underneath"])
-        self.assertEqual(status("Fixture.double"), ["stale"])
+        # the person's yes, and an AI agent's standard review: both made for version A
+        self.assertEqual(status("Fixture.double"), ["stale", "stale"])
         renamed = [v for v in entry("Fixture.triple_three'")["records"] if v["kind"] == "review"][0]
         self.assertEqual((renamed["status"], renamed["renamedFrom"]), ("renamed", "Fixture.triple_three"))
         problem = [v for v in entry("Fixture.one")["records"] if v["kind"] == "review"][0]
@@ -333,25 +341,32 @@ class PageFilesTests(unittest.TestCase):
         # Every declaration answered for, the latest answer first, its answers as [people, AI agents]: the
         # yeses of this version, the noes still open, and those that no longer stand.
         rows = {r["name"]: r for r in data("reviewed.json")}
-        self.assertEqual(data("reviewed.json")[0]["name"], "Fixture.triple_comm")
+        # Voyager's approval of 10-27 is the latest answer.
+        self.assertEqual(data("reviewed.json")[0]["name"], "Fixture.triple")
         self.assertEqual((rows["Fixture.triple_comm"]["yes"], rows["Fixture.triple_comm"]["no"]), ([1, 0], [1, 0]))
-        self.assertEqual(rows["Fixture.triple"]["yes"], [1, 1])                # a person and an AI agent
-        self.assertEqual(rows["Fixture.double"]["earlier"], [1, 0])            # a yes of an earlier version
+        # A person, and three AI agents: the one who wrote the standard review, the one who edited it, and the one who
+        # approved the edit. AGENT's yes from before its edit, which the edit superseded, is not a fourth.
+        self.assertEqual(rows["Fixture.triple"]["yes"], [1, 3])
+        # A yes of an earlier version, and an AI agent's standard review of one.
+        self.assertEqual(rows["Fixture.double"]["earlier"], [1, 1])
         self.assertEqual((rows["Fixture.one"]["no"], rows["Fixture.one"]["earlier"]), ([0, 0], [1, 0]))  # a no resolved
         self.assertEqual(rows["Fixture.triple"]["id"], node_id("Fixture.triple"))
         # The AI agents' answers by model, [yeses, noes, earlier]: the yes withdrawn under its model's family name is
         # not one. A declaration only people answered for has none.
-        self.assertEqual(rows["Fixture.triple"]["models"], {"claude-opus-5-5": [1, 0, 0]})
+        self.assertEqual(rows["Fixture.triple"]["models"],
+                         {"claude-opus-5-5": [1, 0, 0], "GPT-6 Astra": [1, 0, 0], "claude-fable-5-1": [1, 0, 0]})
+        # The migration's review is held for the owner, a comment: no yes of its model's.
         self.assertEqual((rows["Fixture.triple_pos"]["yes"], rows["Fixture.triple_pos"]["models"]), ([1, 1], {"GPT-6 Astra": [1, 0, 0]}))
         self.assertNotIn("models", rows["Fixture.triple_two"])
         # The roadmap a declaration of the library belongs to, the dataset's facet `roadmap`, where it has one.
         self.assertEqual([rows[n].get("roadmap") for n in ("Fixture.triple", "Fixture.double", "Fixture.one")],
                          ["Arithmetic", "Doubling", None])
         # Outside the library, a package the settings name (Mathlib on the site; Init.Data here), its package said.
-        self.assertEqual((rows["Int"]["yes"], rows["Int"]["from"]), ([1, 0], "Init"))
+        self.assertEqual((rows["Int"]["yes"], rows["Int"]["from"]), ([1, 1], "Init"))
         self.assertNotIn("from", rows["Fixture.triple"])
         m = data("meta.json")
-        self.assertEqual((m["counts"]["reviewed"], m["counts"]["accepts"]), (len(rows), {"people": 6, "ai": 2}))
+        # The AI agents' yeses: Fixture.triple's three, ASTRA's on Fixture.triple_pos, and the one on Int.
+        self.assertEqual((m["counts"]["reviewed"], m["counts"]["accepts"]), (len(rows), {"people": 6, "ai": 5}))
         self.assertEqual(m["review"], {"outside": ["Init.Data"]})
 
     def test_signing_in_only_where_the_settings_say(self):
@@ -365,6 +380,9 @@ class PageFilesTests(unittest.TestCase):
         root = OUT / "inside-only"
         fixture_site.build(root, settings={**fixture_site.SETTINGS, "review_outside": []})
         self.assertNotIn("Int", {r["name"] for r in data("reviewed.json", root)})
+        # Nor has it a standard review; the library's own declarations keep theirs.
+        self.assertNotIn("Int", data(f"standard/{common.fnv_shard('Int', 256)}.json", root))
+        self.assertIn("Fixture.triple", data(f"standard/{common.fnv_shard('Fixture.triple', 256)}.json", root))
 
     def test_a_cap_keeps_the_totals(self):
         root = OUT / "capped"
@@ -375,6 +393,120 @@ class PageFilesTests(unittest.TestCase):
     def test_the_budget(self):
         with self.assertRaises(build_site.SiteTooLarge):
             fixture_site.build(OUT / "over", budget_mb=0)
+
+
+class StandardReviewTests(unittest.TestCase):
+    """A declaration's standard review is one text with the AI agents that approved it (`standard/<k>.json`); the
+    history of how it came to be stays in the store."""
+
+    def test_the_fixtures_texts_pass_the_check(self):
+        texts = (fixture_site.TRIPLE_V1, fixture_site.TRIPLE_V2, fixture_site.DOUBLE_V1, fixture_site.TRIPLE_POS_V1,
+                 fixture_site.INT_V1)
+        self.assertEqual([standard.check(t) for t in texts], [[]] * len(texts))
+        edit = standard.check(fixture_site.TRIPLE_V2, parent=fixture_site.TRIPLE_V1, note="Adds a reference.")
+        self.assertEqual(edit, [])
+        self.assertIn('<img src=x onerror="window.pwned=1">', fixture_site.TRIPLE_V2)
+
+    def test_the_current_text_and_its_approvers(self):
+        s = std("Fixture.triple")
+        self.assertEqual(s["version"], standard.version_of(fixture_site.TRIPLE_V2))
+        self.assertEqual(s["text"], fixture_site.TRIPLE_V2)
+        self.assertEqual([a["by"]["agent"]["model"] for a in s["approvers"]], ["claude-fable-5-1", "claude-opus-5-5"])
+        self.assertEqual((s["earlier"], s["current"], s["approving"]), (1, True, True))
+        self.assertEqual(s["approvers"][0]["checked"]["choice"], "na")
+
+    def test_who_wrote_it_when_and_where(self):
+        s = std("Fixture.triple")
+        self.assertEqual((s["by"]["kind"], s["by"]["agent"]["model"], s["at"]),
+                         ("agent", "claude-opus-5-5", "2026-10-26T10:00:00Z"))
+        self.assertEqual([a["at"] for a in s["approvers"]], ["2026-10-27T10:00:00Z", "2026-10-26T10:00:00Z"])
+        self.assertEqual(s["approvers"][0]["by"]["agent"]["tool"], "Voyager")
+        # A record of a line of the bulk issue links to its comment: the line is left off.
+        for record in (s, *s["approvers"]):
+            self.assertRegex(record["url"], r"^https://github\.com/example/fixture-store/issues/1#issuecomment-\d+$")
+        # The page reads these keys, and the shard holds no others.
+        self.assertEqual(set(s), {"text", "version", "at", "by", "approving", "url", "current", "approvers", "earlier"})
+        self.assertEqual(set(s["approvers"][0]), {"by", "at", "checked", "url"})
+
+    def test_out_of_date_and_held(self):
+        # Written for version A of `double`, which has changed: nothing that applies approves it.
+        s = std("Fixture.double")
+        self.assertEqual((s["text"], s["current"], s["approving"], s["approvers"], s["earlier"]),
+                         (fixture_site.DOUBLE_V1, False, True, [], 1))
+        # The migration's review of `triple_pos` is held for the owner: it approves nothing, and ASTRA's yes, in the
+        # earlier form of review, stays an earlier approval.
+        s = std("Fixture.triple_pos")
+        self.assertEqual((s["text"], s["current"], s["approving"], s["approvers"], s["earlier"]),
+                         (fixture_site.TRIPLE_POS_V1, True, False, [], 1))
+        self.assertEqual(s["by"]["agent"]["tool"], "Tau Ceti review migration")
+
+    def test_outside_the_library_too(self):
+        s = std("Int")
+        self.assertEqual((s["text"], s["current"], s["approving"], s["earlier"]), (fixture_site.INT_V1, True, True, 0))
+        self.assertEqual([a["by"]["agent"]["model"] for a in s["approvers"]], ["claude-opus-5-5"])
+
+    def test_every_shard_is_written(self):
+        files = sorted(p.name for p in (OUT / "site" / "data" / "standard").iterdir())
+        self.assertEqual(files, sorted(f"{k}.json" for k in range(256)))
+        self.assertEqual(data("meta.json")["shards"]["standard"], 256)
+        # Each name is in the shard of its hash, and only those with a version are in any.
+        held = {name: k for k in range(256) for name in data(f"standard/{k}.json")}
+        names = ("Fixture.triple", "Fixture.double", "Fixture.triple_pos", "Int")
+        self.assertEqual(held, {n: common.fnv_shard(n, 256) for n in names})
+
+    def test_history_stays_off_the_page(self):
+        # A record of the standard review is one line wherever records are listed: what it did, and no text.
+        for views in (entry("Fixture.triple")["records"], data("activity.json")["recent"]):
+            mine = [v for v in views if v["decl"] == "Fixture.triple"]
+            self.assertEqual(sorted((v["std"], v["text"]) for v in mine if "std" in v),
+                             [("approved", ""), ("edited", ""), ("wrote", "")])
+            # The others keep their words.
+            self.assertIn("Compared with its definition, `n + n + n`.", [v["text"] for v in mine if "std" not in v])
+        # A held version is a comment; one outside the library is in upstream.json.
+        held = entry("Fixture.triple_pos")["records"]
+        self.assertEqual([(v["kind"], v["std"], v["text"]) for v in held if "std" in v], [("comment", "wrote", "")])
+        outside = data("upstream.json")["Int"]["records"]
+        self.assertEqual([(v["std"], v["text"]) for v in outside if "std" in v], [("wrote", "")])
+        recent = [v for v in data("activity.json")["recent"] if v["decl"] == "Int"]
+        self.assertEqual([(v["std"], v["text"]) for v in recent if "std" in v], [("wrote", "")])
+        # And of all the site's data, the shards alone hold the text of a review.
+        data_dir = OUT / "site" / "data"
+        holding = {p.relative_to(data_dir).parent.name for p in data_dir.rglob("*.json")
+                   if standard.HEADINGS[0] in p.read_text(encoding="utf-8")}
+        self.assertEqual(holding, {"standard"})
+
+
+class StandardEdgeTests(unittest.TestCase):
+    """What the fixture's own records do not hold, read from a build with two more records: a held version made
+    for version A of `double`, and AGENT's withdrawal of its edit of `triple`."""
+
+    @classmethod
+    def setUpClass(cls):
+        yes = fixture_site.vector("Fixture.double")
+        cls.held = {"schema": rec.SCHEMA, "kind": "comment", "subject": yes["subject"], "by": fixture_site.MIGRATION,
+                    "text": fixture_site.DOUBLE_V1.replace("twice", "two times"), "standard": {"spec": standard.SPEC},
+                    "links": {"replies_to": yes["id"]}, "at": "2026-10-29T09:00:00Z", "origin": fixture_site.bulk(4108)}
+        edit = next(r for r in fixture_site.extra_records(Dataset.load(fixture_site.DATASET))
+                    if r.get("text") == fixture_site.TRIPLE_V2)
+        undo = {"schema": rec.SCHEMA, "kind": "status", "target": rec.with_id(edit)["id"], "state": "withdrawn",
+                "by": fixture_site.AGENT, "text": "The edit was meant for another declaration.",
+                "at": "2026-10-28T09:00:00Z", "origin": fixture_site.bulk(4107)}
+        cls.root = OUT / "standard-edges"
+        fixture_site.build(cls.root, more=[cls.held, undo])
+
+    def test_a_held_version_is_as_current_as_its_own_subject(self):
+        # evidence-core calls every comment current, but this one was made for version A of `double`.
+        s = std("Fixture.double", self.root)
+        self.assertEqual(s["text"], self.held["text"])
+        self.assertEqual((s["current"], s["approving"], s["approvers"], s["earlier"]), (False, False, [], 1))
+
+    def test_an_edit_withdrawn_is_undone_and_what_it_superseded_stays_out(self):
+        s = std("Fixture.triple", self.root)
+        self.assertEqual(s["version"], standard.version_of(fixture_site.TRIPLE_V1))
+        self.assertEqual([a["by"]["agent"]["model"] for a in s["approvers"]], ["GPT-6 Astra"])
+        # Voyager approved the edit, a text no longer current. AGENT's yes before the edit, which the edit superseded,
+        # does not come back when the edit is withdrawn.
+        self.assertEqual((s["earlier"], s["approving"], s["current"]), (1, True, True))
 
 
 if __name__ == "__main__":

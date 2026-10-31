@@ -44,6 +44,8 @@ def build(dataset: Path, store: Path, out: Path, settings: dict, source: Path | 
         write(data / "nodes" / f"{k}.json", rows)
     for k, rows in site.name_shards().items():
         write(data / "names" / f"{k}.json", rows)
+    for k, reviews in site.standard_shards().items():
+        write(data / "standard" / f"{k}.json", reviews)
     for mi in range(site.project_modules):
         write(data / "m" / f"{mi}.json", site.module_file(mi))
     for mi in range(site.project_modules, len(site.modules)):
