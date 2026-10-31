@@ -143,11 +143,12 @@ def like(a: str, b: str) -> bool:
 
 
 def extends(new: str, old: str) -> bool:
-    """Whether reference `new` is `old` with more said: the squashed text of `old` is inside that of `new`.
-    A clause said after a reference can leave it reading too little like itself for `like`, though nothing
-    of it is gone. A reference with no letter or digit is inside no other."""
-    mine = squash(old)
-    return bool(mine) and mine in squash(new)
+    """Whether reference `new` is `old` with more said: the squashed text of `old` is inside that of `new`,
+    the spaces that taking out punctuation leaves closed up. A clause said after a reference can leave it
+    reading too little like itself for `like`, though nothing of it is gone. A reference with no letter or
+    digit is inside no other."""
+    mine = " ".join(squash(old).split())
+    return bool(mine) and mine in " ".join(squash(new).split())
 
 
 def mentions(item: str, name: str) -> bool:

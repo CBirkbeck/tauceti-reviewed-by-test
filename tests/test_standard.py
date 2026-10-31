@@ -226,9 +226,18 @@ class CheckTests(StandardTests):
         # Its text must be inside, as likeness is read: whatever the case and punctuation.
         new = new.replace("Stacks Project, Tag", "STACKS PROJECT; tag")
         self.assertEqual(standard.check(new, parent=old, note="n"), [])
-        # A reference with no letter or digit is inside no other.
-        old = review(SAYS, refs("- —", TEST), SUBTLE)
-        self.assertNamed(standard.check(review(SAYS, refs("- Another book", TEST), SUBTLE), parent=old, note="n"), "—")
+        # A reference with no letter or digit is inside no other, nor is one of punctuation and spaces.
+        for bare in ("—", "- -", "* *"):
+            old = review(SAYS, refs(f"- {bare}", TEST), SUBTLE)
+            new = review(SAYS, refs("- Another book", TEST), SUBTLE)
+            self.assertNamed(standard.check(new, parent=old, note="n"), f'"{bare}"')
+        # Spaces left where punctuation was taken out, in either, do not keep a reference from being inside another.
+        clause = ", and a clause that makes it read too little like the old"
+        for was, becomes in (("Stacks - Project, Tag 0BSC", "Stacks Project, Tag 0BSC" + clause),
+                             ("Stacks Project, Tag 0BSC", "Stacks Project - Tag 0BSC" + clause)):
+            self.assertFalse(standard.like(was, becomes))
+            old = review(SAYS, refs(f"- {was}", TEST), SUBTLE)
+            self.assertEqual(standard.check(review(SAYS, refs(f"- {becomes}", TEST), SUBTLE), parent=old, note="n"), [])
 
     def test_a_reference_in_any_bullet_is_not_dropped_silently(self):
         edit = review(SAYS, refs(TEST, CHECK), SUBTLE)  # without the reference
