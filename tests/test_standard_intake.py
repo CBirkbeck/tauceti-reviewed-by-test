@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from evidence_core import records as rec
 from evidence_core.dataset import Dataset
 from evidence_core.store import Store
 from evidence_store import cli, forms, github, intake
@@ -39,6 +40,7 @@ None.
 V2 = V1.replace("None.", "On ℕ, `Fixture.triple` never truncates.")
 VER1, VER2 = standard.version_of(V1), standard.version_of(V2)
 NOTE = "adds that it never truncates"
+ZERO = "Its value at 0 is 0."
 BULK = {"number": 1, "labels": [{"name": "evidence:bulk"}]}
 #: AI-REVIEWS.md in the repository the intake runs for: the context's, `o/r`.
 GUIDE = "(https://github.com/o/r/blob/main/AI-REVIEWS.md)."
@@ -278,7 +280,8 @@ class WriteEditTests(IntakeCase):
                        f"Edit: Fixture.triple — {VER1} — {CELLS} — {NOTE}", "~~~review", V2, "~~~")
         out = self.process(both)
         self.assertEqual([r["standard"] for r in out.records], [{"spec": SPEC}])
-        self.assertIn("line 15", self.last(out))
+        self.assertIn("line 15 (`Fixture.triple`): this comment changes the standard review of `Fixture.triple` in "
+                      "another line", self.last(out))
         # Read again, the edit is still refused: the write before it is in the store now.
         self.assertEqual(self.process(both).records, [])
 
@@ -435,6 +438,112 @@ class AnnounceTests(IntakeCase):
         self.assertEqual(again.records, [])
         self.assertEqual(again.replies, first.replies)  # what it recorded then, and what it did not
         self.assertIn("Recorded 2 of 3 lines", self.last(again))
+
+
+class AsOfTests(IntakeCase):
+    """Each run reads every comment of the issue again, the bot's replies among them, as production does. A line is
+    decided as of its comment, so what was refused stays refused however the store moves on, and nothing is recorded
+    late and unsaid (Ruling R12)."""
+
+    def setUp(self):
+        super().setUp()
+        self.issue: list[dict] = []
+
+    def run_all(self):
+        """One run over the issue as it stands; its replies are posted, as `apply` posts them."""
+        out = standard_intake.process(BULK, self.issue, self.ctx)
+        for _, text in out.replies:
+            self.issue.append(bot(30 + len(self.issue), text))
+        return out
+
+    def rerun(self) -> None:
+        """A later run over every comment: it records nothing."""
+        before = len(self.store.records)
+        self.assertEqual(self.run_all().records, [])
+        self.assertEqual(len(Store.load(self.dir / "evidence").records), before)
+
+    def withdraw(self, r: dict, n: int) -> None:
+        """Its author withdraws `r` at the n-th minute, with `/withdraw` on the record's own issue."""
+        on_its_issue = {"kind": "comment", "ref": f"https://github.com/o/r/issues/7#issuecomment-{n}"}
+        self.store.add([intake.status_record(r, "withdrawn", r["by"], f"2026-10-31T10:{n:02d}:00Z", on_its_issue)])
+
+    def test_a_stale_edit_stays_refused_when_the_edit_it_missed_is_withdrawn(self):
+        self.issue += [write(1, A), edit(2, A, VER1), edit(3, B, VER1, V1.replace("None.", ZERO), note="adds the zero")]
+        out = self.run_all()
+        self.assertEqual(len(out.records), 2)  # B's edit named V1 while V2 was current
+        self.withdraw(out.records[1], 4)  # V1 is current again, but B wrote against V2
+        self.rerun()
+
+    def test_a_stale_approval_stays_refused_when_its_version_is_restored(self):
+        self.issue += [write(1, A), edit(2, A, VER1), approve(3, B, VER1),
+                       person(4, f"Restore: Fixture.triple — {VER1} — the edit added nothing true")]
+        out = self.run_all()
+        self.assertEqual([standard.act(r) for r in out.records], ["wrote", "edited", "restored"])  # B's named V1, at V2
+        self.rerun()
+
+    def test_one_comment_makes_one_version_after_withdrawals(self):
+        both = comment(3, B, f"Edit: Fixture.triple — {VER1} — {CELLS} — adds the zero", "~~~review",
+                       V1.replace("None.", ZERO), "~~~",
+                       f"Edit: Fixture.triple — {VER2} — {CELLS} — adds the zero", "~~~review",
+                       V2.replace("truncates.", f"truncates. {ZERO}"), "~~~")
+        self.issue += [write(1, A), edit(2, A, VER1), both]
+        out = self.run_all()
+        # The comment's first Edit named V1 while V2 was current; its second went in.
+        self.assertEqual(len(out.records), 3)
+        self.withdraw(out.records[2], 4)
+        self.withdraw(out.records[1], 5)  # V1 is current again
+        self.rerun()
+
+    def test_a_maintainers_first_write_stays_refused_when_reviews_arrive(self):
+        self.issue += [person(1, "Write: Fixture.double", "~~~review", V1, "~~~")]
+        self.assertEqual(self.run_all().records, [])  # no review of it to reply to
+        self.issue += [comment(2, A, "Reviewed-by: Fixture.double — Twice its argument, as the docs say.")]
+        # The yes, and not the write before it.
+        self.assertEqual([r["kind"] for r in self.run_all().records], ["review"])
+        self.rerun()
+
+    def test_a_comment_makes_one_change_even_when_an_earlier_version_arrives_late(self):
+        vx = V1.replace("three times its argument", "thrice its argument")
+        both = comment(3, B, f"Edit: Fixture.triple — {standard.version_of(vx)} — {CELLS} — adds the zero",
+                       "~~~review", vx.replace("None.", ZERO), "~~~",
+                       f"Edit: Fixture.triple — {VER1} — {CELLS} — {NOTE}", "~~~review", V2, "~~~")
+        self.issue += [write(1, A), both]
+        out = self.run_all()
+        # Its first Edit named a version the store did not hold; its second went in.
+        self.assertEqual(len(out.records), 2)
+        # A version older than the comment reaches the store only now, as the migration's records will; and the
+        # comment's own edit is withdrawn, so that version is current as of the comment's first Edit, and now.
+        wrote = out.records[0]
+        self.store.add([rec.with_id({"schema": rec.SCHEMA, "kind": "comment", "subject": wrote["subject"],
+                                     "by": {"kind": "agent", "agent": {"tool": "Tau Ceti review migration",
+                                                                       "model": "claude-opus-5-5"}},
+                                     "at": "2026-10-31T10:02:00Z", "origin": {"kind": "migration", "ref": "held"},
+                                     "text": vx, "standard": {"spec": SPEC}, "links": {"replies_to": wrote["id"]}})])
+        self.withdraw(out.records[1], 4)
+        self.rerun()  # one change a comment, counting the change its later line made
+
+    def test_a_line_does_not_see_the_lines_after_it(self):
+        own = comment(3, B, f"Approve: Fixture.triple — {VER2} — {CELLS}",
+                      f"Edit: Fixture.triple — {VER1} — {CELLS} — {NOTE}", "~~~review", V2, "~~~")
+        self.issue += [write(1, A), own]
+        # Its approval named the version its own later line makes: there was none to approve as of the approval.
+        self.assertEqual([standard.act(r) for r in self.run_all().records], ["wrote", "edited"])
+        self.rerun()
+
+    def test_a_status_in_the_comments_own_second_does_not_count(self):
+        self.issue += [write(1, A), edit(2, A, VER1)]
+        v2 = self.run_all().records[1]
+        self.withdraw(v2, 3)  # in the second the approval below was posted: not before it
+        self.issue += [approve(3, B, VER1)]
+        self.assertEqual(self.run_all().records, [])  # as of the approval, V2 was current
+        self.rerun()
+
+    def test_comments_in_one_second_go_by_their_ids(self):
+        second = "2026-10-31T10:01:00Z"
+        wrote, ticked = {**write(1, A), "created_at": second}, {**approve(2, B, VER1), "created_at": second}
+        self.issue += [ticked, wrote]  # GitHub gives them in either order; the approval came after the write
+        self.assertEqual([standard.kind_of(r) for r in self.run_all().records], ["version", "approval"])
+        self.rerun()
 
 
 class OldFormTests(IntakeCase):

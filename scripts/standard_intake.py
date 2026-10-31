@@ -20,8 +20,15 @@ A version is named by at least 8 leading hex digits of its hash, and stored in f
 the current version, so one made from a page that the store has moved past is refused, and the reply gives the
 current version. A write is for a declaration with no standard review, an edit must pass `standard.check` against
 the text it replaces, and a restore puts back an earlier text of the store, checked as a first version is. A
-comment makes one change to a declaration's review: its lines share one time, and two versions at one time would
-be ordered by their ids.
+comment makes one change to a declaration's review, counting what any of its lines recorded: its lines share one
+time, and two versions at one time would be ordered by their ids.
+
+A line is decided as of its comment. Every run reads the whole issue again, and a line refused once is read again
+each time; read against the store as it is now, it could go in late and unsaid, with its comment's time, once the
+edit it missed is withdrawn or the version it named restored. So the store a line is read against holds only what
+came before it: a record of a bulk line by its comment's time, that comment's id and its line, and any other record
+or status by its time. A refusal then stays one on every run, unless something older than its comment reaches the
+store only later, as the migration's records will.
 
 An AI's write, edit and approval are accepts that carry the rubric's cells, and each supersedes its reviewer's
 latest earlier accept of the declaration, as evidence-store's accepts do. A maintainer's write, edit or restore
@@ -45,7 +52,7 @@ for every run of its intake.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from evidence_core import records as rec
 from evidence_store import cli, forms, intake
@@ -75,6 +82,8 @@ APPROVE_INSTEAD = ("AI agents now approve or edit the declaration's standard rev
 #: The note on recording an AI agent's yes of the earlier form.
 EARLIER_FORM = ("Recorded as an AI agent's yes of the earlier form: it counts as an approval of an earlier version "
                 "of the standard review. " + APPROVE_INSTEAD)
+#: Where a record of a bulk line came from: its comment's id and the line, at the end of its origin's ref.
+FROM_LINE = re.compile(r"(?:#issuecomment-|/comment/)(\d+)/line/(\d+)$")
 #: The line a reply on the bulk issue ends with, for the comment it answers; and how a later run finds it.
 ANSWERS = "<!-- bulk-reply: {} -->"
 ANSWERED = re.compile(r"<!--\s*bulk-reply:\s*(\d+)\s*-->")
@@ -156,6 +165,17 @@ def commands(text: str) -> list[Command]:
     return out
 
 
+def as_of(ctx: Context, at: str, comment: int, line: int) -> Context:
+    """The context as it stood at line `line` of the comment with id `comment`, made at `at`: its store holds only the
+    records that came before that line. A record of a bulk line comes before it by its comment's time, then that
+    comment's id, then its line; any other record or status, by being older than the comment."""
+    def before(r: dict) -> bool:
+        ref = (r.get("origin") or {}).get("ref", "")
+        m = FROM_LINE.search(ref) if "/line/" in ref else None
+        return (r.get("at", ""), int(m[1]), int(m[2])) < (at, comment, line) if m else r.get("at", "") < at
+    return replace(ctx, store=replace(ctx.store, records=[r for r in ctx.store.records if before(r)]))
+
+
 def may(keyword: str, agent: bool, maintainer: bool) -> str:
     """Why the author of a comment may not give a command of ours; empty when they may."""
     if keyword == "Approve":
@@ -218,8 +238,9 @@ def supersedes(ctx: Context, name: str, by: dict) -> dict:
 def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: Context,
          changed: set[str]) -> tuple[dict | None, str]:
     """The record an `Approve:`, `Write:`, `Edit:` or `Restore:` line asks for, or why it cannot be made: an AI
-    agent's accept, or a person's comment. `changed` holds the declarations whose review the comment has changed
-    already. Raises `DatasetMissing`, as evidence-store's `record_for` does."""
+    agent's accept, or a person's comment. `ctx` is as of the line (`as_of`), and `changed` holds the declarations
+    whose review the comment changes in another line. Raises `DatasetMissing`, as evidence-store's `record_for`
+    does."""
     agent = by["kind"] == "agent"
     refusal = may(cmd.keyword, agent, maintainer)
     if refusal:
@@ -232,8 +253,6 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
     ds, decl = intake.lookup(ctx, name, "")
     if decl is None:
         return None, intake.not_found(name, ds)
-    if cmd.keyword != "Approve" and name in changed:
-        return None, f"this comment has changed the standard review of `{name}` already, and a comment changes it once"
     mine = [r for r in ctx.store.records if (r.get("subject") or {}).get("name") == name]
     versions = [r for r in mine if standard.kind_of(r) == "version"]
     now = current(ctx, versions)
@@ -272,6 +291,9 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
         problems += standard.check(text, parent=now["text"], dropped=cmd.dropped, exists=exists, note=f["note"])
     if problems:
         return None, "; ".join(problems)
+    if cmd.keyword != "Approve" and name in changed:
+        return None, (f"this comment changes the standard review of `{name}` in another line, and a comment "
+                      "changes it once")
     r = {"schema": rec.SCHEMA, "subject": rec.subject_from_decl(decl, ds), "by": by, "at": at, "origin": origin,
          "text": text, "standard": {"spec": standard.SPEC, **s}}
     if agent:
@@ -346,18 +368,20 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
     at = intake.iso(comment.get("created_at", ""))
     maintainer = intake.is_maintainer(ctx, comment)
     cmds = commands(text)
-    made, refused, changed = [], [], set()
+    made, refused = [], []
+    changed = {r["subject"]["name"] for r in ctx.store.records if standard.kind_of(r) == "version"
+               and (r.get("origin") or {}).get("ref", "").startswith(f"{base}/line/")}
     for cmd in cmds:
         ref = f"{base}/line/{cmd.line}"
         had = ctx.store.from_origin(ref)
         if had:
             made += had  # said again if the comment is answered now: the reply that said them was refused
-            changed.update(r["subject"]["name"] for r in had if standard.kind_of(r) == "version")
             continue
         origin = {"kind": "comment", "ref": ref}
+        then = as_of(ctx, at, int(comment.get("id") or 0), cmd.line)
         try:
-            r, why = ours(cmd, by, maintainer, at, origin, ctx, changed) if cmd.keyword in OURS else \
-                theirs(cmd, by, at, origin, ctx)
+            r, why = ours(cmd, by, maintainer, at, origin, then, changed) if cmd.keyword in OURS else \
+                theirs(cmd, by, at, origin, then)
         except intake.DatasetMissing:
             refused.append(f"line {cmd.line}: there is no dataset of the library yet; it will be read again")
             continue
@@ -377,15 +401,16 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
 
 def process(issue: dict, comments: list[dict], ctx: Context, announce: bool = True,
             events: list[dict] = ()) -> Outcome:
-    """evidence-store's `process`, with the bulk issue read here: its comments in order, each answered while no
-    reply of the bot names it and it is newer than the bot's latest reply from before the replies named any."""
+    """evidence-store's `process`, with the bulk issue read here: its comments in the order `as_of` reads them, by
+    time and then id, each answered while no reply of the bot names it and it is newer than the bot's latest reply
+    from before the replies named any."""
     if not intake.is_bulk(issue):
         return THEIR_PROCESS(issue, comments, ctx, announce, events)
     bots = [c for c in comments if (c.get("user") or {}).get("login") in intake.BOTS]
     answered = {n for c in bots for n in ANSWERED.findall(c.get("body") or "")}
     before = max((c.get("created_at", "") for c in bots if not ANSWERED.search(c.get("body") or "")), default="")
     out = Outcome()
-    for c in sorted(comments, key=lambda c: c.get("created_at", "")):
+    for c in sorted(comments, key=lambda c: (c.get("created_at", ""), int(c.get("id") or 0))):
         unanswered = str(c.get("id")) not in answered and c.get("created_at", "") > before
         out.merge(process_bulk_comment(c, issue, ctx, announce and unanswered))
     return out
