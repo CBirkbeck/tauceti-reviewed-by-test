@@ -6,8 +6,10 @@ is, so that the intake, the site build and the migration agree on it: its three 
 check an edit must pass, the rubric cells a tick carries, and which version is current and who approved it.
 It judges nothing about the mathematics.
 
-A version is named by the hash of its text, and the hash is never stored, so an approval made before the
-site shows a new text can still name it. The text is normalized first: GitHub hands back a comment body
+A version is named by the hash of its text. Its record does not store that hash, which is computed from
+the text wherever it is needed, so an approval made before the site shows a new text can still name it;
+what names a version holds its hash in full (an approval's `approves`, an edit's `parent`, a shard's
+`version`). The text is normalized first: GitHub hands back a comment body
 with `\\r\\n` line endings, and an editor leaves trailing spaces, yet the intake must hash such a body to
 the version the agent computed from its own file. mathlib-quality's review_site.py keeps a copy of
 `normalize` and `version_of`, since two repositories cannot share a module; the vector in

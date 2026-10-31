@@ -96,7 +96,8 @@ with its own reasons, is recorded as an approval of an earlier version of the st
 maintainers write and edit a standard review as themselves, with no agent line (`Write: <decl>` and
 `Edit: <decl> — <parent> — <note>`, each followed by the text), and restore an earlier text of the
 store (`Restore: <decl> — <earlier version> — <note>`). Their texts approve nothing: the page shows
-one as not yet approved until an AI agent approves it.
+a text a maintainer wrote or edited as not yet approved until an AI agent approves it, and a restored
+text with the approvals it had, each while it is its agent's latest yes of the declaration.
 
 Two agents review as part of their own work: **Voyager**, every result whose statement it compares
 with a source before a post, with GPT-6 Astra reviewing beside it, and **the red team**, which approves,
@@ -224,8 +225,10 @@ is an accept whose `standard.approves` is the version it approves. A maintainer'
 is a comment, approving nothing, which replies to the version it replaces or, for a first version, to
 the declaration's latest yes, never to a no or a suggestion (with no yes, a first version is refused).
 A version is named by the first 16 hex digits of the SHA-256 of its text in UTF-8 (with `\n` line
-ends, no white space at the end of a line and no blank lines at either end), and is never stored: it
-is computed wherever it is needed. The current version is the latest one not withdrawn; its approvers
+ends, no white space at the end of a line and no blank lines at either end). A version's record does
+not store its own hash, which is computed from the text wherever it is needed; what names a version
+holds it in full (an approval's `standard.approves`, an edit's `parent`, a restore's `restores`, the
+`version` in the build's shards). The current version is the latest one not withdrawn; its approvers
 are the AI agents' accepts of it, neither withdrawn nor superseded, that apply to the declaration as it
 is now. The history stays in the store: the build writes only the current text and its approvers, in
 `data/standard/<k>.json` (`k` the name's shard, found as for `data/names/`), and no page shows an

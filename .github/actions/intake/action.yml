@@ -1,8 +1,10 @@
-# evidence-store's intake action (LeanTrustBuilders/evidence-store/intake, at v0.7.2) with two changes, both
+# evidence-store's intake action (LeanTrustBuilders/evidence-store/intake, at v0.7.2) with three changes, all
 # through scripts/evidence_intake.py, which says why. What else it reads is the `sweep` input: `--sweep-open`
 # reads the event's own issue and the evidence issues still open, and finishes those an earlier run left
-# undone; `--sweep-days 14` is evidence-store's own. And it replies issue by issue, so that a reply GitHub
-# refuses leaves only its own issue open. Moving `ref`, keep the rest as evidence-store's action has it.
+# undone; `--sweep-days 14` is evidence-store's own. It replies issue by issue, so that a reply GitHub
+# refuses leaves only its own issue open. And it reads the bulk issue our way (scripts/standard_intake.py):
+# approvals, writes, edits and restores of the standard review, each comment's reply said once. Moving `ref`,
+# keep the rest as evidence-store's action has it.
 name: Evidence intake
 description: >-
   Turns issues opened with the evidence forms, and the comments on them, into S3 records in the
