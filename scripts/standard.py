@@ -19,14 +19,17 @@ An edit goes live as soon as it passes `check`, so the check is all that stands 
 text every reader sees. It asks that the three parts are there, that a test the text lists exists, and
 that an edit says what it changes and loses no reference, test or example Check without a stated reason.
 A reference that is only reworded counts as kept, by how alike the two read, and so does one with more
-said after it, since the new text then holds the old. A first version, and a restore, which puts back a
+said after it, since the new text then holds the old. A reference keeps one of the parent's by likeness,
+or else two tags of the Stacks Project, which read alike, would let an edit drop either; one that holds
+several whole, references merged, keeps them all. A first version, and a restore, which puts back a
 text that passed the check when it was recorded, are not compared with a parent: they get the first two
 questions only.
 
 Which version is current is read from a declaration's records alone. The caller says, of each, whether it
 applies to the declaration as it is now, was withdrawn, or was superseded by its reviewer's later review
-(`Seen`): the intake reads that from the store, the site build from evidence-core. Only an AI approves. A
-person says yes with the page's form, and that yes is no approval of the text.
+(`Seen`): the intake reads that from the store, the site build from evidence-core. Records go in time by
+`order`, which the intake reads a line's store by too, so that the two agree on records made in one second.
+Only an AI approves. A person says yes with the page's form, and that yes is no approval of the text.
 """
 from __future__ import annotations
 
@@ -51,6 +54,10 @@ CHECK = re.compile(r"^Check\s+\*([^*]+)\*")
 #: A cell: its axis alone, `axis n/a`, or `axis=state`.
 CELL = re.compile(r"^([^\s=]+)(?:\s*=\s*(\S+)|\s+(n/a))?$")
 CELL_STATES = {"checked": "checked", "na": "na", "n/a": "na"}
+#: Where a record of a line of a comment came from, at the end of its origin's ref: the comment's id and the line. The
+#: intake writes it `<comment url>/line/<k>`, the url GitHub's (`…#issuecomment-<id>`) or evidence-store's
+#: (`<repo>#<issue>/comment/<id>`).
+FROM_LINE = re.compile(r"(?:#issuecomment-|/comment/)(\d+)/line/(\d+)$")
 
 
 def normalize(text: str) -> str:
@@ -143,20 +150,68 @@ def squash(text: str) -> str:
     return "".join(c for c in " ".join(text.lower().split()) if c.isalnum() or c == " ")
 
 
-def like(a: str, b: str) -> bool:
-    """Whether two references read alike enough to be one reference reworded (`SIMILAR`). `autojunk` is
-    off: from 200 characters on it sets aside the commonest letters, and a long citation with its title
+def likeness(a: str, b: str) -> float:
+    """How alike two references read, from 0 to 1: `SequenceMatcher`'s ratio of their squashed texts. `autojunk`
+    is off: from 200 characters on it sets aside the commonest letters, and a long citation with its title
     shortened and a page added then reads as nothing like itself."""
-    return SequenceMatcher(None, squash(a), squash(b), autojunk=False).ratio() >= SIMILAR
+    return SequenceMatcher(None, squash(a), squash(b), autojunk=False).ratio()
+
+
+def like(a: str, b: str) -> bool:
+    """Whether two references read alike enough to be one reference reworded (`SIMILAR`)."""
+    return likeness(a, b) >= SIMILAR
+
+
+def plain(ref: str) -> str:
+    """A reference as references are told apart: squashed, and the spaces that taking out its punctuation left
+    closed up."""
+    return " ".join(squash(ref).split())
 
 
 def extends(new: str, old: str) -> bool:
-    """Whether reference `new` is `old` with more said: the squashed text of `old` is inside that of `new`,
-    the spaces that taking out punctuation leaves closed up. A clause said after a reference can leave it
-    reading too little like itself for `like`, though nothing of it is gone. A reference with no letter or
-    digit is inside no other."""
-    mine = " ".join(squash(old).split())
-    return bool(mine) and mine in " ".join(squash(new).split())
+    """Whether reference `new` is `old` with more said: the plain text of `old` is inside that of `new`. A
+    clause said after a reference can leave it reading too little like itself for `like`, though nothing of it
+    is gone. A reference with no letter or digit is inside no other."""
+    mine = plain(old)
+    return bool(mine) and mine in plain(new)
+
+
+def distinct(refs: Sequence[str]) -> list[str]:
+    """The references, each once: two that differ only in case, punctuation or spacing are one."""
+    first: dict[str, str] = {}
+    for ref in refs:
+        first.setdefault(plain(ref), ref)
+    return list(first.values())
+
+
+def kept(old: Sequence[str], new: Sequence[str]) -> set[str]:
+    """The references of a parent, `old`, that those of its edit, `new`, keep. A new reference keeps every old
+    one it holds whole (`extends`), so that references merged into one are all kept. One that holds none keeps
+    at most one by likeness (`like`): two tags of the Stacks Project read alike, and keeping one does not keep
+    the other. The old references go to the new ones they read like in the way that keeps the most of them,
+    each offered first the one most like it; the most alike old references are placed first. A reference
+    given twice counts once."""
+    old, new = distinct(old), distinct(new)
+    whole = {o for o in old if any(extends(n, o) for n in new)}
+    free = [n for n in new if not any(extends(n, o) for o in old)]
+    rest = [o for o in old if o not in whole]
+    score = {(o, n): likeness(o, n) for o in rest for n in free}
+    alike = {o: sorted((n for n in free if score[o, n] >= SIMILAR), key=lambda n: -score[o, n]) for o in rest}
+    keeper: dict[str, str] = {}  # a new reference, and the old one it keeps by likeness
+
+    def place(o: str, tried: set[str]) -> bool:
+        """Gives `o` a new reference like it: a free one, or one whose old reference can move to another."""
+        for n in alike[o]:
+            if n not in tried:
+                tried.add(n)
+                if n not in keeper or place(keeper[n], tried):
+                    keeper[n] = o
+                    return True
+        return False
+
+    for o in sorted(rest, key=lambda o: -max((score[o, n] for n in alike[o]), default=0)):
+        place(o, set())
+    return whole | set(keeper.values())
 
 
 def mentions(item: str, name: str) -> bool:
@@ -168,16 +223,17 @@ def mentions(item: str, name: str) -> bool:
 def losses(old: Items, new: Items, dropped: Sequence[tuple[str, str]]) -> list[str]:
     """What `new` leaves out of `old` that no `dropped` line names, with a reason: a test or a Check is
     named by a line whose item holds its name or tag, a reference by one whose item reads alike. A
-    reference is not left out while a new one reads alike or extends it."""
+    reference is not left out while a new one keeps it (`kept`)."""
     said = [item for item, why in dropped if why.strip()]
     ask = "keep it, or give the reason on a `Dropped:` line that names it"
     problems = [f"the edit drops the test `{name}`: {ask}" for name in dict.fromkeys(old.tests)
                 if name not in new.tests and not any(mentions(item, name) for item in said)]
     problems += [f"the edit drops the Check *{tag}*: {ask}" for tag in dict.fromkeys(old.checks)
                  if tag not in new.checks and not any(mentions(item, tag) for item in said)]
-    problems += [f'the edit drops the reference "{ref}": {ask}' for ref in dict.fromkeys(old.references)
-                 if not any(like(ref, other) or extends(other, ref) for other in new.references)
-                 and not any(like(ref, item) for item in said)]
+    refs = distinct(old.references)
+    keeps = kept(refs, new.references)
+    problems += [f'the edit drops the reference "{ref}": {ask}' for ref in refs
+                 if ref not in keeps and not any(like(ref, item) for item in said)]
     return problems
 
 
@@ -297,18 +353,25 @@ def approved(record: dict) -> str | None:
     return version_of(record["text"]) if kind == "version" and is_accept(record) else None
 
 
-def when(seen: Seen) -> tuple[str, str]:
-    """Where a record stands in time: when it was made, then its id, as evidence-core orders records. The
-    times are RFC 3339, which sort as text."""
-    return seen.record.get("at", ""), seen.record.get("id", "")
+def order(record: dict) -> tuple[str, int, int, str]:
+    """Where a record stands in time: when it was made; then, for a record of a line of a comment, the comment's
+    id and the line (`FROM_LINE`); and last its id. The times are RFC 3339, which sort as text. GitHub gives a
+    comment's time to the second and its ids grow with time, so two comments of one second go by their ids, and
+    the lines of one comment in their order, where the records' ids, hashes, would order them by chance. Any
+    other record comes before the lines of its second. The intake reads a line against the records before it
+    by this order, and the current version is the latest by it, so the two agree on records of one second."""
+    ref = (record.get("origin") or {}).get("ref")
+    m = FROM_LINE.search(ref) if isinstance(ref, str) and "/line/" in ref else None
+    return record.get("at") or "", int(m[1]) if m else 0, int(m[2]) if m else 0, record.get("id") or ""
 
 
 def current_version(seen: list[Seen]) -> Seen | None:
-    """The version the review stands at: the latest record of a version, by time and then id, that was not
-    withdrawn; None when there is none. A version whose accept was superseded still counts, since its
-    reviewer's later review may be a tick of the same text. A withdrawn one is an edit undone, and the
-    version before it is current again."""
-    return max((s for s in seen if kind_of(s.record) == "version" and not s.withdrawn), key=when, default=None)
+    """The version the review stands at: the latest record of a version (`order`) that was not withdrawn; None
+    when there is none. A version whose accept was superseded still counts, since its reviewer's later review
+    may be a tick of the same text. A withdrawn one is an edit undone, and the version before it is current
+    again."""
+    return max((s for s in seen if kind_of(s.record) == "version" and not s.withdrawn),
+               key=lambda s: order(s.record), default=None)
 
 
 def summary(seen: list[Seen]) -> dict | None:
@@ -326,6 +389,7 @@ def summary(seen: list[Seen]) -> dict | None:
     text = now.record["text"]
     version = version_of(text)
     live = [s for s in seen if ai_accept(s.record) and not (s.withdrawn or s.superseded)]
-    approvers = sorted((s for s in live if s.applies and approved(s.record) == version), key=when, reverse=True)
+    approvers = sorted((s for s in live if s.applies and approved(s.record) == version), key=lambda s: order(s.record),
+                       reverse=True)
     return {"text": text, "version": version, "record": now.record, "approving": ai_accept(now.record),
             "current": bool(now.applies or approvers), "approvers": approvers, "earlier": len(live) - len(approvers)}

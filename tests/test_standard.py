@@ -239,6 +239,31 @@ class CheckTests(StandardTests):
             old = review(SAYS, refs(f"- {was}", TEST), SUBTLE)
             self.assertEqual(standard.check(review(SAYS, refs(f"- {becomes}", TEST), SUBTLE), parent=old, note="n"), [])
 
+    def test_a_reference_keeps_one_reference_of_the_parent(self):
+        # Two tags of the Stacks Project read alike (0.87), yet one kept does not keep the other: a new reference keeps
+        # at most one of the parent's by likeness.
+        a, b = "Stacks Project, Tag 00MA", "Stacks Project, Tag 0BSC"
+        self.assertTrue(standard.like(a, b))
+        old = review(SAYS, refs(f"- {a}", f"- {b}", TEST), SUBTLE)
+        problems = standard.check(review(SAYS, refs(f"- {a}", TEST), SUBTLE), parent=old, note="n")
+        self.assertEqual(len(problems), 1)
+        self.assertNamed(problems, f'"{b}"')
+        # Given twice, it is still one reference.
+        twice = review(SAYS, refs(f"- {a}", f"- {a}.", TEST), SUBTLE)
+        self.assertNamed(standard.check(twice, parent=old, note="n"), f'"{b}"')
+        # Each reworded, each is kept, by the new reference most like it; and two merged into one that holds both whole
+        # are both kept (Ruling R5).
+        for new in (("- Stacks, Tag 00MA", "- Stacks, Tag 0BSC"), ("- Stacks, Tag 0BSC", "- Stacks, Tag 00MA"),
+                    (f"- {a}; {b}",)):
+            self.assertEqual(standard.check(review(SAYS, refs(*new, TEST), SUBTLE), parent=old, note="n"), [], new)
+        # They go in the way that keeps the most: Local Fields, most like the first new reference, takes the second, which
+        # reads like it too, so that Galois Cohomology, like the first alone, keeps it.
+        a, b = "Serre, Local Fields, II.3", "Serre, Galois Cohomology, II.3"
+        old = review(SAYS, refs(f"- {a}", f"- {b}", TEST), SUBTLE)
+        new = review(SAYS, refs("- Serre, Local Galois, II.3", "- Serre LF II.3", TEST), SUBTLE)
+        self.assertEqual(standard.check(new, parent=old, note="n"), [])
+        self.assertEqual(standard.kept([a, b], ["Serre LF II.3"]), {a})
+
     def test_a_reference_in_any_bullet_is_not_dropped_silently(self):
         edit = review(SAYS, refs(TEST, CHECK), SUBTLE)  # without the reference
         said = [("Fixture documentation, §1.", "not about this")]
@@ -455,6 +480,27 @@ class CurrentVersionTests(StandardTests):
         # Time comes before id: a later version whose id sorts earlier is still the later.
         early, late = seen({**a.record, "id": "z"}), seen({**b.record, "id": "a"})
         self.assertIs(standard.current_version([early, late]), late)
+
+    def test_in_one_second_a_later_comment_or_line_is_the_later(self):
+        # GitHub gives a comment's time to the second. A write in comment 901 and an edit of it in comment 902, made in
+        # one second, go by the comments' ids, which grow with time, and not by the records' ids, which are hashes.
+        def on(r: dict, comment: int, line: int, url: str = "https://github.com/o/r/issues/1#issuecomment-{}") -> dict:
+            return {**r, "origin": {"kind": "comment", "ref": f"{url.format(comment)}/line/{line}"}}
+        at = wrote(1, "A")["at"]
+        v1 = seen(on({**wrote(1, "A", V1), "id": "z"}, 901, 2))
+        v2 = seen(on({**wrote(1, "A", V2, parent=VER1), "id": "a"}, 902, 2))
+        for rows in ([v1, v2], [v2, v1]):
+            self.assertIs(standard.current_version(rows), v2)
+        self.assertEqual(standard.summary([v1, v2])["version"], VER2)
+        self.assertEqual(standard.order(v2.record), (at, 902, 2, "a"))
+        # Within a comment, by its lines; in evidence-store's form of a comment's ref too.
+        v3 = seen(on({**v2.record, "id": "b"}, 902, 9, url="o/r#1/comment/{}"))
+        self.assertIs(standard.current_version([v3, v2, v1]), v3)
+        # Any other record comes before the lines of its second, by its id.
+        mine = held(1, "M")
+        self.assertEqual(standard.order(mine), (at, 0, 0, "r1"))
+        self.assertIs(standard.current_version([seen(mine), v1]), v1)
+        self.assertEqual(standard.order({}), ("", 0, 0, ""))
 
     def test_only_a_version_can_be_current(self):
         rows = [seen(yes(1, "A")), seen(ticked(2, "B", VER1)), seen(made(3, "C", verdict="problem", text="Wrong.")),

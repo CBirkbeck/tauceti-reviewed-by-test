@@ -6,10 +6,12 @@ import shutil
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
 from evidence_core import records as rec
+from evidence_core.coverage import Evidence
 from evidence_core.dataset import Dataset
 from evidence_core.rubric import STANDARD as RUBRIC
 from evidence_core.status import classify
@@ -83,6 +85,20 @@ def edit(n: int, agent: str, parent: str, text: str = V2, note: str = NOTE, drop
 
 def approve(n: int, agent: str, version: str, decl: str = "Fixture.triple", cells: str = CELLS) -> dict:
     return comment(n, agent, f"Approve: {decl} — {version} — {cells}")
+
+
+def dataset(ds: Dataset, decls: list) -> Dataset:
+    """`ds` with these declarations in place of its own: the library at another commit."""
+    by_meaning: dict[str, list] = {}
+    for d in decls:
+        if d.meaning:
+            by_meaning.setdefault(d.meaning, []).append(d)
+    return replace(ds, decls=decls, by_name={d.name: d for d in decls}, by_meaning=by_meaning)
+
+
+def without(ds: Dataset, *names: str) -> Dataset:
+    """`ds` without the declarations named: the library before they were added."""
+    return dataset(ds, [d for d in ds.decls if d.name not in names])
 
 
 #: A fence of a Markdown code block: three or more backticks or tildes, then its info string.
@@ -479,6 +495,65 @@ class RenameTests(IntakeCase):
         self.assertEqual((r["kind"], r["subject"]["name"], r["links"]),
                          ("comment", self.NEW, {"replies_to": yes["id"]}))
 
+    def test_an_approval_supersedes_its_reviewers_accept_under_the_old_name(self):
+        version = self.written()
+        approval, = self.process(approve(1, A, self.VER[:8], decl=self.NEW)).records
+        self.assertEqual(approval["links"], {"supersedes": version["id"]})
+        # So the page lists A once, by its approval, and counts no earlier approval.
+        ev = Evidence.resolve(self.store.records, self.ds)
+        seen = [standard.Seen(r, s.applies, ev.state(r["id"]) == "withdrawn", r["id"] in ev.superseded_by)
+                for r, s in ev.records_on(self.NEW)]
+        review = standard.summary(seen)
+        self.assertEqual(([a.record["id"] for a in review["approvers"]], review["earlier"]), ([approval["id"]], 0))
+
+    def test_the_intake_reads_a_declarations_records_as_the_page_does(self):
+        # A's write under the old name, then a maintainer's edit under the new one: a comment, replying to the write.
+        wrote = self.written()
+        text = self.TEXT.replace("None.", "It is `rfl`.")
+        edited, = self.process(person(1, f"Edit: {self.NEW} — {self.VER} — a maintainer's edit", "~~~review", text,
+                                      "~~~")).records
+        self.assertEqual(edited["links"], {"replies_to": wrote["id"]})
+        # Then the statement under the new name changes, and a new declaration has its old one, its meaning hash. The write
+        # follows that one, and the edit goes where the record it replies to went, whatever its own subject says
+        # (comment_route_probe.py, `Evidence.resolve`).
+        new = self.ds.by_name[self.NEW]
+        p = replace(new, id=max(d.id for d in self.ds.decls) + 1, name="Fixture.p")
+        later = dataset(self.ds, [replace(new, meaning="f" * 16) if d is new else d for d in self.ds.decls] + [p])
+        ev = Evidence.resolve(self.store.records, later)
+        for name, want in ((self.NEW, []), (p.name, [wrote["id"], edited["id"]])):
+            site = sorted(r["id"] for r, _ in ev.records_on(name))
+            mine = sorted(r["id"] for r in standard_intake.records_of(self.ctx, later, later.by_name[name]))
+            self.assertEqual((mine, site), (sorted(want), sorted(want)), name)
+        # And so the intake decides as the page shows: the new declaration's review is the edit's text, and the renamed one
+        # has none.
+        self.ctx.dataset = lambda commit: later
+        out = self.process(approve(2, B, standard.version_of(text)[:8], decl=p.name),
+                           approve(3, B, standard.version_of(text)[:8], decl=self.NEW))
+        approval, = out.records
+        self.assertEqual((approval["subject"]["name"], approval["standard"]["approves"]),
+                         (p.name, standard.version_of(text)))
+        self.assertIn(f"`{self.NEW}` has no standard review yet", self.last(out))
+
+    def test_a_comment_changes_a_renamed_declaration_once(self):
+        # Read when the declaration had its old name, a comment's Write of it went in, and its Edit under the new name waited
+        # for a dataset that has it. Read again then, the Edit changes the declaration the Write changed: refused.
+        before = dataset(self.ds, [replace(d, name=self.OLD) if d.name == self.NEW else d for d in self.ds.decls])
+        self.ctx.dataset = lambda commit: before
+        text = self.TEXT.replace("None.", "It is `rfl`.")
+        both = comment(1, B, f"Write: {self.OLD} — {CELLS}", "~~~review", self.TEXT, "~~~",
+                       f"Edit: {self.NEW} — {self.VER} — {CELLS} — {NOTE}", "~~~review", text, "~~~")
+        k = 1 + next(j for j, line in enumerate(both["body"].splitlines()) if line.startswith("Edit:"))
+        out = self.process(both)
+        wrote, = out.records
+        self.assertEqual(wrote["subject"]["name"], self.OLD)
+        said = self.last(out)
+        self.assertTrue(said.endswith(f"\n\n<!-- bulk-reply: 901 deferred: {k} -->"), said)
+        self.ctx.dataset = lambda commit: self.ds
+        out = self.process(both, bot(2, said))
+        self.assertEqual(out.records, [])
+        self.assertIn(f"line {k} (`{self.NEW}`): this comment changes the standard review of `{self.NEW}` in another "
+                      "line", self.last(out))
+
 
 class BodyTests(IntakeCase):
     def test_crlf_body_hashes_like_the_agent_did(self):
@@ -522,9 +597,37 @@ class BodyTests(IntakeCase):
         self.assertIn("line 2: there is no dataset of the library yet; it will be read again", self.last(out))
 
 
+class OriginTests(IntakeCase):
+    def test_a_run_reads_the_store_by_origin_once(self):
+        # A comment's lines each look up what the store holds from them, and the comment's changes, in a map made once a
+        # run: evidence-store's `Store.from_origin` reads the whole store at each call, some 25,000 records and more.
+        self.process(write(1, A))
+        many = comment(2, B, *[f"Approve: Fixture.triple — {VER1} — {CELLS}"] * 20,
+                       "Test: Fixture.triple — Fixture.triple_two — its value at 2",
+                       f"Write: Fixture.double — {CELLS}", "~~~review", V1, "~~~",
+                       f"Edit: Fixture.double — {VER1} — {CELLS} — {NOTE}", "~~~review", V2, "~~~",
+                       "Reviewed-by: Fixture.nothing — Matches the docs.")
+        calls: list[str] = []
+        real = Store.from_origin
+        with mock.patch.object(Store, "from_origin", lambda store, ref: calls.append(ref) or real(store, ref)):
+            first = self.process(many)
+            once = len(calls)
+            again = self.process(many)  # its reply was refused: no reply of the bot names it
+        self.assertLessEqual(max(once, len(calls) - once), 1, f"{len(calls)} calls in two runs")
+        self.assertEqual([standard.kind_of(r) or r["kind"] for r in first.records],
+                         ["approval"] * 20 + ["test", "version"])
+        said = self.last(first)
+        self.assertTrue(said.startswith("Recorded 22 of 24 lines:\n\n"), said[:100])
+        self.assertIn("(`Fixture.double`): this comment changes the standard review of `Fixture.double` in another line",
+                      said)
+        self.assertIn("(`Fixture.nothing`): `Fixture.nothing` is not a declaration", said)
+        self.assertEqual((again.records, again.replies), ([], first.replies))  # what it recorded then, and what it did not
+
+
 class AnnounceTests(IntakeCase):
     """Which comments are answered: those that no reply of the bot names yet, and none older than its replies from
-    before the markers. Their records are made either way."""
+    before the markers, which are not read again either. A sweep makes the records of the others, unsaid till the next
+    run that answers."""
 
     def test_a_reply_names_the_comment_it_answers(self):
         said = self.last(self.process(write(1, A)))
@@ -550,7 +653,7 @@ class AnnounceTests(IntakeCase):
                      "Test: Fixture.triple — Fixture.triple_two — its value at 2")
         c3 = comment(3, A, f"Approve: Fixture.double — {VER1} — {CELLS}")
         out = self.process(c1, bot(2, "Not recorded: …"), c3)  # a reply from before the markers
-        self.assertEqual([r["kind"] for r in out.records], ["test"])  # recorded all the same
+        self.assertEqual(out.records, [])  # nor read again: its lines were decided when it was answered
         (n, said), = out.replies
         self.assertIn("Fixture.double", said)
         self.assertNotIn("Fixture.triple", said)
@@ -637,10 +740,9 @@ class ReplyTests(IntakeCase):
         self.assertRegex(said, r"\n- … and \d+ more recorded\n\nNot recorded:\n\n- line 402 ")
 
 
-class AsOfTests(IntakeCase):
-    """Each run reads every comment of the issue again, the bot's replies among them, as production does. A line is
-    decided as of its comment, so what was refused stays refused however the store moves on, and nothing is recorded
-    late and unsaid (Ruling R12)."""
+class IssueCase(IntakeCase):
+    """Runs over the whole issue, as production makes them: each is given every comment of the issue, the bot's replies
+    among them, and posts its own replies."""
 
     def setUp(self):
         super().setUp()
@@ -659,10 +761,139 @@ class AsOfTests(IntakeCase):
         self.assertEqual(self.run_all().records, [])
         self.assertEqual(len(Store.load(self.dir / "evidence").records), before)
 
+    def quiet(self) -> None:
+        """A later run over every comment: it records nothing, and says nothing."""
+        out = self.run_all()
+        self.assertEqual((out.records, out.replies), ([], []))
+
     def withdraw(self, r: dict, n: int) -> None:
         """Its author withdraws `r` at the n-th minute, with `/withdraw` on the record's own issue."""
         on_its_issue = {"kind": "comment", "ref": f"https://github.com/o/r/issues/7#issuecomment-{n}"}
         self.store.add([intake.status_record(r, "withdrawn", r["by"], f"2026-10-31T10:{n:02d}:00Z", on_its_issue)])
+
+
+class FinalityTests(IssueCase):
+    """A line is decided once. A line refused in a comment answered is not read again, however the store and the
+    library move on; but two wait, named in the reply's marker, and are read again: a line read when there was no
+    dataset of the library, and one whose declaration the latest dataset lacks (Ruling R20)."""
+
+    def test_a_stale_approval_stays_refused_when_the_store_and_the_library_change(self):
+        self.issue += [write(1, A), edit(2, A, VER1), approve(3, B, VER1)]
+        out = self.run_all()
+        self.assertEqual(len(out.records), 2)  # B named V1 while V2 was current
+        self.assertTrue(self.issue[-1]["body"].endswith("\n\n<!-- bulk-reply: 903 -->"))  # nothing deferred
+        # A withdrawal of V2 older than the approval reaches the store only now, as the migration's records will: as of
+        # the approval, V1 was current after all. And the library moves on.
+        v2 = out.records[1]
+        self.store.add([intake.status_record(v2, "withdrawn", v2["by"], "2026-10-31T10:02:30Z",
+                                             {"kind": "migration", "ref": "late"})])
+        self.ctx.dataset = lambda commit: without(self.ds, "Fixture.double")
+        self.quiet()
+
+    def test_a_write_refused_for_a_test_not_in_the_library_stays_refused_when_it_is(self):
+        self.ctx.dataset = lambda commit: without(self.ds, "Fixture.triple_two")
+        self.issue += [write(1, A)]
+        (n, said), = self.run_all().replies
+        self.assertIn("line 2 (`Fixture.triple`): the test `Fixture.triple_two` is not a declaration that exists", said)
+        self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 901 -->"), said)
+        self.ctx.dataset = lambda commit: self.ds  # the test is in the library now
+        self.quiet()
+        self.assertEqual(self.store.records, [])
+
+    def test_lines_read_without_a_dataset_are_read_again_and_said_once_recorded(self):
+        def missing(commit):
+            raise LookupError(commit)
+        self.ctx.dataset = missing
+        test = "Test: Fixture.triple — Fixture.triple_two — its value at 2"
+        c = comment(1, A, f"Approve: Fixture.triple — {VER1}", f"Write: Fixture.triple — {CELLS}", "~~~review", V1,
+                    "~~~", test)
+        k = len(c["body"].splitlines())  # the Test line, after the block
+        self.issue += [c]
+        (n, said), = self.run_all().replies
+        self.assertIn("- line 2 (`Fixture.triple`): the line is `Approve: <decl> — <version> — <cells>`", said)
+        self.assertIn(f"- there is no dataset of the library yet; it will be read again\n  - line 3\n  - line {k}\n", said)
+        self.assertTrue(said.endswith(f"\n\n<!-- bulk-reply: 901 deferred: 3,{k} -->"), said)
+        self.quiet()  # still none: nothing new to say
+        self.ctx.dataset = lambda commit: self.ds
+        out = self.run_all()
+        version, test = out.records
+        (n, said), = out.replies
+        self.assertEqual((standard.kind_of(version), test["kind"]), ("version", "test"))
+        self.assertTrue(said.startswith("Recorded 2 of 3 lines:\n\n"), said)
+        self.assertIn(version["id"], said)
+        self.assertNotIn("Not recorded", said)  # the line refused for good is not said again
+        self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 901 -->"), said)
+        self.quiet()
+
+    def test_a_declaration_the_dataset_lacks_is_refused_once_and_recorded_once_it_has_it(self):
+        lacking = without(self.ds, "Fixture.double")
+        self.ctx.dataset = lambda commit: lacking
+        c = comment(1, A, f"Write: Fixture.double — {CELLS}", "~~~review", V1, "~~~",
+                    "Test: Fixture.double — Fixture.double_zero — its value at 0")
+        k = len(c["body"].splitlines())  # the Test line, after the block
+        self.issue += [c]
+        (n, said), = self.run_all().replies
+        self.assertIn("- `Fixture.double` is not a declaration of the library at `B`. Did you mean", said)
+        self.assertIn(f"\n  - line 2 (`Fixture.double`)\n  - line {k} (`Fixture.double`)\n", said)
+        self.assertTrue(said.endswith(f"\n\n<!-- bulk-reply: 901 deferred: 2,{k} -->"), said)
+        self.quiet()  # read again, and still not there: a typo is said once
+        self.ctx.dataset = lambda commit: self.ds  # a dataset built with it
+        out = self.run_all()
+        self.assertEqual([(r["kind"], r["subject"]["name"]) for r in out.records],
+                         [("review", "Fixture.double"), ("test", "Fixture.double")])
+        (n, said), = out.replies
+        self.assertTrue(said.startswith("Recorded 2 of 2 lines:\n\n"), said)
+        self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 901 -->"), said)
+        self.quiet()
+
+    def test_a_comment_from_before_the_markers_is_never_read_again(self):
+        self.issue += [approve(1, B, VER1), bot(2, "Not recorded: …")]  # answered before the replies named comments
+        self.quiet()
+        # A version older than the approval reaches the store only now, as the migration's records will: read again, the
+        # approval would go in, late and unsaid.
+        triple = self.ds.by_name["Fixture.triple"]
+        self.store.add([rec.with_id({
+            "schema": rec.SCHEMA, "kind": "review", "verdict": "accept", "subject": rec.subject_from_decl(triple, self.ds),
+            "by": {"kind": "agent", "agent": {"tool": "Tau Ceti review migration", "model": "claude-opus-5-5"}},
+            "at": "2026-10-31T10:00:30Z", "origin": {"kind": "migration", "ref": "late"}, "text": V1,
+            "rubric": "ltb-rubric/1", "checked": CHECKED, "standard": {"spec": SPEC}})])
+        self.quiet()
+
+
+class AsOfTests(IssueCase):
+    """A line is decided as of its comment, against the records before it (`standard.order`), so what was refused
+    stays refused however the store moves on, and nothing is recorded late and unsaid (Ruling R12)."""
+
+    def test_versions_in_one_second_go_by_comment_and_line(self):
+        # A write in comment 901 and an edit of it in comment 902, in one second: the edit is the later, for the intake and
+        # for the page, though by time and then id the write would be.
+        second = "2026-10-31T10:01:00Z"
+        self.issue += [{**write(1, A), "created_at": second},
+                       {**edit(2, A, VER1, note="says it never truncates"), "created_at": second}]
+        wrote, edited = self.run_all().records
+        self.assertGreater(wrote["id"], edited["id"])
+        self.issue += [approve(3, B, VER2)]
+        approval, = self.run_all().records
+        self.assertEqual(approval["standard"]["approves"], VER2)
+        seen = [standard.Seen(r, True, False, r is wrote) for r in (wrote, edited, approval)]
+        self.assertEqual(standard.summary(seen)["version"], VER2)
+        self.rerun()
+
+    def test_a_version_from_elsewhere_in_the_comments_second_comes_before_it(self):
+        # A record not of a line of a comment comes before the lines of its second, as the page orders versions: a
+        # migration's version made in the second an approval of it was posted is current as of the approval. (A status
+        # in that second does not count: test_a_status_in_the_comments_own_second_does_not_count.)
+        second = "2026-10-31T10:01:00Z"
+        self.store.add([rec.with_id({
+            "schema": rec.SCHEMA, "kind": "review", "verdict": "accept", "at": second,
+            "subject": rec.subject_from_decl(self.ds.by_name["Fixture.triple"], self.ds),
+            "by": {"kind": "agent", "agent": {"tool": "Tau Ceti review migration", "model": "claude-opus-5-5"}},
+            "origin": {"kind": "migration", "ref": "a version"}, "text": V1, "rubric": "ltb-rubric/1",
+            "checked": CHECKED, "standard": {"spec": SPEC}})])
+        self.issue += [{**approve(1, B, VER1), "created_at": second}]
+        approval, = self.run_all().records
+        self.assertEqual(approval["standard"]["approves"], VER1)
+        self.rerun()
 
     def test_a_stale_edit_stays_refused_when_the_edit_it_missed_is_withdrawn(self):
         self.issue += [write(1, A), edit(2, A, VER1), edit(3, B, VER1, V1.replace("None.", ZERO), note="adds the zero")]
