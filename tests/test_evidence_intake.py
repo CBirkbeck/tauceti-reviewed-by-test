@@ -171,11 +171,12 @@ class UnfinishedTests(unittest.TestCase):
 
 
 class Runner:
-    """`gh` faked: refuses a comment on the issues in `refuse`, and the first `limited` comments with
-    GitHub's secondary rate limit."""
+    """`gh` faked: refuses a comment on the issues in `refuse`, a comment whose body is in `too_long`, and the
+    first `limited` comments with GitHub's secondary rate limit. `posted` holds the comments it took."""
 
-    def __init__(self, refuse=(), limited=0):
-        self.calls, self.refuse, self.limited = [], set(refuse), limited
+    def __init__(self, refuse=(), limited=0, too_long=()):
+        self.calls, self.refuse, self.limited, self.too_long = [], set(refuse), limited, set(too_long)
+        self.posted = []
 
     def __call__(self, *args, input=None, check=True):
         self.calls.append(args)
@@ -185,6 +186,9 @@ class Runner:
                 raise RuntimeError("gh issue comment 5…: HTTP 403: You have exceeded a secondary rate limit.")
             if int(args[2]) in self.refuse:
                 raise RuntimeError("gh issue comment …: HTTP 422")
+            if input in self.too_long:
+                raise RuntimeError("gh issue comment …: HTTP 422: Validation Failed (body is too long)")
+            self.posted.append((int(args[2]), input))
         return ""
 
     def did(self, what):
@@ -215,6 +219,20 @@ class ApplyTests(unittest.TestCase):
         self.assertEqual(refused, [6])
         self.assertEqual(runner.did("close"), [5, 7, 8])
         self.assertNotIn(6, runner.did("edit"))
+
+    def test_a_refused_reply_does_not_hold_up_the_next_on_its_issue(self):
+        # On the bulk issue each reply answers a comment of its own, and one refused is said again by the next run: the
+        # replies after it are posted (Ruling R19).
+        runner = Runner(too_long={"first"})
+        outcome = {"replies": [[1, "first"], [1, "second"], [5, "a"]], "close": [[5, "completed"]]}
+        refused = evidence_intake.apply(outcome, "o/r", gh=runner, wait=lambda s: self.fail("no rate limit"))
+        self.assertEqual(refused, [1])
+        self.assertEqual(runner.posted, [(1, "second"), (5, "a")])
+        self.assertEqual(runner.did("close"), [5])
+        # Refused for a rate limit, then for another reason: the same.
+        runner = Runner(limited=1, too_long={"first"})
+        refused = evidence_intake.apply(outcome, "o/r", gh=runner, wait=lambda s: None)
+        self.assertEqual((refused, runner.posted), ([1], [(1, "second"), (5, "a")]))
 
     def test_waits_out_the_rate_limit_once_then_only_closes(self):
         runner = Runner(limited=1)

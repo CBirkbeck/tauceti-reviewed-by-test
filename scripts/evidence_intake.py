@@ -18,7 +18,8 @@ Intake commits the records first and replies after. GitHub lets an account post 
 hour, and evidence-store's `apply` stops at the first reply it refuses, before closing anything; intake,
 which has the records, never answers those issues again. So `apply` here goes issue by issue and leaves
 an issue whose reply was refused open, and the open sweep finishes what an earlier run left undone
-(`unfinished`).
+(`unfinished`). A reply refused for anything but a rate limit does not hold up the issue's next one: on
+the bulk issue each answers a comment of its own.
 
 Every intake run, the sweep of the last 14 days among them, reads the bulk issue our way
 (scripts/standard_intake.py): approvals, writes, edits and restores of the standard review, and evidence-store's
@@ -103,7 +104,9 @@ def apply(outcome: dict, repo: str, gh: Callable = github.gh, wait: Callable[[fl
     issue: its replies, then its labels, then its close. An issue whose reply GitHub refuses keeps its
     labels and stays open, for the next run. Refused for a rate limit, it waits a minute and tries once
     more, and if refused again posts no more replies this run, but still closes what needs no reply.
-    Returns the issues whose replies were refused."""
+    Refused for another reason, it goes on to the issue's next reply: on the bulk issue each reply answers
+    a comment of its own, and the comment of the one refused stays unanswered, so the next run says it
+    again. Returns the issues whose replies were refused."""
     if outcome.get("labels"):
         for name, colour in github.LABEL_COLOURS.items():
             gh("label", "create", name, "-R", repo, "--color", colour, "--force", check=False)
@@ -114,8 +117,13 @@ def apply(outcome: dict, repo: str, gh: Callable = github.gh, wait: Callable[[fl
                 order.append(entry[0])
     refused, limited = [], False
 
-    def comment(n: int, text: str) -> None:
-        gh("issue", "comment", str(n), "-R", repo, "--body-file", "-", input=text)
+    def comment(n: int, text: str) -> str:
+        """Posts a reply on issue `n`: what GitHub said in refusing it, or nothing."""
+        try:
+            gh("issue", "comment", str(n), "-R", repo, "--body-file", "-", input=text)
+            return ""
+        except RuntimeError as e:
+            return str(e) or "refused"
 
     for n in order:
         ok = True
@@ -125,17 +133,14 @@ def apply(outcome: dict, repo: str, gh: Callable = github.gh, wait: Callable[[fl
             if limited:
                 ok = False
                 break
-            try:
-                comment(n, text)
-            except RuntimeError as e:
-                if not LIMITED.search(str(e)):
-                    ok = False
-                    break
+            why = comment(n, text)
+            if LIMITED.search(why):
                 wait(60)
-                try:
-                    comment(n, text)
-                except RuntimeError as e2:
-                    limited, ok = bool(LIMITED.search(str(e2))), False
+                why = comment(n, text)
+                limited = bool(LIMITED.search(why))
+            if why:
+                ok = False  # and on to the issue's next reply, unless for a rate limit
+                if limited:
                     break
         if not ok:
             refused.append(n)

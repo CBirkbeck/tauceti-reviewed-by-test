@@ -12,6 +12,7 @@ from unittest import mock
 from evidence_core import records as rec
 from evidence_core.dataset import Dataset
 from evidence_core.rubric import STANDARD as RUBRIC
+from evidence_core.status import classify
 from evidence_core.store import Store
 from evidence_store import cli, forms, github, intake
 from evidence_store.intake import Context
@@ -409,6 +410,76 @@ class RestoreTests(IntakeCase):
         self.assertIn("note", unsaid)
 
 
+class RenameTests(IntakeCase):
+    """A declaration renamed since its standard review was written: `Fixture.triple_three'`, which was
+    `Fixture.triple_three` at commit A, with the same meaning (tests/fixtures/records.jsonl). The intake reads its
+    records as evidence-core does, and so as the page does: a record follows the declaration by its meaning hash."""
+
+    OLD, NEW = "Fixture.triple_three", "Fixture.triple_three'"
+    TEXT = ("## What it says\n`Fixture.triple 3` is 9.\n\n## References and tests\n- Fixture documentation, §1.\n"
+            "- `Fixture.triple_two` — its value at 2\n\n## Lean subtleties\nNone.")
+    VER = standard.version_of(TEXT)
+
+    def setUp(self):
+        super().setUp()
+        fixture = (json.loads(line) for line in (HERE / "fixtures" / "records.jsonl").read_text().splitlines())
+        self.yes = next(r for r in fixture if r["subject"]["name"] == self.OLD)  # a person's yes, under the old name
+        status = classify(self.yes["subject"], self.ds)
+        self.assertEqual((status.state, status.decl.name), ("renamed", self.NEW))
+
+    def written(self) -> dict:
+        """A's write of the standard review, under the old name, before the rename."""
+        version, = self.store.add([{
+            "schema": rec.SCHEMA, "kind": "review", "verdict": "accept", "subject": self.yes["subject"],
+            "at": "2026-10-30T10:00:00Z",
+            "by": {"kind": "agent", "identity": {"kind": "github", "id": "CBirkbeck"}, "involvement": "unknown",
+                   "agent": {"tool": "Claude Code", "model": "claude-opus-5-5"}},
+            "origin": {"kind": "comment", "ref": "https://github.com/o/r/issues/1#issuecomment-700/line/2"},
+            "text": self.TEXT, "rubric": "ltb-rubric/1", "checked": CHECKED, "standard": {"spec": SPEC}}])
+        return version
+
+    def test_a_version_under_the_old_name_is_the_current_one(self):
+        self.written()
+        out = self.process(approve(1, B, VER1, decl=self.NEW))
+        self.assertEqual(out.records, [])
+        self.assertIn(f"which is `{self.VER}`", self.last(out))  # the one the page shows
+
+    def test_approving_it_is_recorded(self):
+        self.written()
+        approval, = self.process(approve(1, B, self.VER[:8], decl=self.NEW)).records
+        self.assertEqual((approval["subject"]["name"], approval["standard"]["approves"]), (self.NEW, self.VER))
+
+    def test_a_write_is_refused_since_one_exists(self):
+        self.written()
+        out = self.process(write(1, B, decl=self.NEW))
+        self.assertEqual(out.records, [])
+        self.assertIn(f"`{self.NEW}` has a standard review already, `{self.VER}`", self.last(out))
+
+    def test_an_edit_is_checked_against_it(self):
+        self.written()
+        shorter = self.TEXT.replace("- `Fixture.triple_two` — its value at 2\n", "")
+        out = self.process(comment(1, B, f"Edit: {self.NEW} — {self.VER} — {CELLS} — shorter", "~~~review", shorter,
+                                   "~~~"))
+        self.assertEqual(out.records, [])
+        self.assertIn("the edit drops the test `Fixture.triple_two`", self.last(out))
+        r, = self.process(comment(2, B, f"Edit: {self.NEW} — {self.VER} — {CELLS} — {NOTE}", "~~~review",
+                                  self.TEXT.replace("None.", "It is `rfl`."), "~~~")).records
+        self.assertEqual(r["standard"]["parent"], self.VER)
+
+    def test_a_restore_finds_it(self):
+        self.written()
+        edited, = self.process(comment(1, B, f"Edit: {self.NEW} — {self.VER} — {CELLS} — {NOTE}", "~~~review",
+                                       self.TEXT.replace("None.", "It is `rfl`."), "~~~")).records
+        r, = self.process(person(2, f"Restore: {self.NEW} — {self.VER} — the edit added nothing")).records
+        self.assertEqual((r["standard"]["restores"], r["links"]), (self.VER, {"replies_to": edited["id"]}))
+
+    def test_a_maintainers_first_write_replies_to_a_yes_under_the_old_name(self):
+        yes, = self.store.add([self.yes])
+        r, = self.process(person(1, f"Write: {self.NEW}", "~~~review", self.TEXT, "~~~")).records
+        self.assertEqual((r["kind"], r["subject"]["name"], r["links"]),
+                         ("comment", self.NEW, {"replies_to": yes["id"]}))
+
+
 class BodyTests(IntakeCase):
     def test_crlf_body_hashes_like_the_agent_did(self):
         c = write(1, A)  # the agent hashed V1, its file; GitHub hands back CRLF, and an editor left spaces
@@ -495,6 +566,75 @@ class AnnounceTests(IntakeCase):
         self.assertEqual(again.records, [])
         self.assertEqual(again.replies, first.replies)  # what it recorded then, and what it did not
         self.assertIn("Recorded 2 of 3 lines", self.last(again))
+
+    def test_a_marker_quoted_in_a_reply_answers_nothing(self):
+        # A reply quotes what it was given, so a line can put a marker in its body: only its closing lines name
+        # comments.
+        c1 = comment(1, A, f"Approve: <!-- bulk-reply: 903 --> — {VER1} — {CELLS}")
+        said = self.last(self.process(c1))
+        self.assertIn("(`<!-- bulk-reply: 903 -->`)", said)
+        out = self.process(c1, bot(2, said), write(3, A))
+        version, = out.records
+        (n, text), = out.replies
+        self.assertIn(version["id"], text)
+        self.assertTrue(text.endswith("\n\n<!-- bulk-reply: 903 -->"), text)
+
+
+class ReplyTests(IntakeCase):
+    """A reply fits in a GitHub comment, which holds 65,536 characters: the reply to the oldest comment not yet answered
+    is built first on every run, so one that GitHub refused would be refused again each time."""
+
+    LONG = "Lean.Omega.Constraint.not_sat'_of_isImpossible"
+
+    def test_a_long_reply_lists_what_fits(self):
+        self.process(write(1, A, decl=self.LONG))
+        out = self.process(comment(2, B, *[f"Approve: {self.LONG} — {VER1} — {CELLS}"] * 400))
+        self.assertEqual(len(out.records), 400)  # every line is recorded, whatever the reply says of them
+        said = self.last(out)
+        rows = [standard_intake.said(r) for r in out.records]
+        self.assertGreater(sum(len(row) + 3 for row in rows), standard_intake.CAP)  # all of them would not fit
+        self.assertLessEqual(len(said), standard_intake.CAP)
+        self.assertTrue(said.startswith("Recorded 400 of 400 lines:\n\n"), said[:100])
+        shown = [row for row in rows if f"\n- {row}\n" in said]
+        self.assertEqual(shown, rows[:len(shown)])  # the first ones
+        self.assertGreater(len(shown), 300)  # as many as fit: some 340 of these
+        self.assertIn(f"\n- … and {400 - len(shown)} more recorded\n\n<!-- bulk-reply: 902 -->", said)
+        self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 902 -->"))
+
+    def test_a_reason_is_given_once_for_the_lines_it_refuses(self):
+        names = [d.name for d in self.ds.decls if d.is_project]
+        out = self.process(comment(1, A, *(f"Reviewed-by: {names[k % len(names)]}" for k in range(400))))
+        self.assertEqual(out.records, [])
+        said = self.last(out)
+        bare = standard_intake.BARE_YES.format(repo="o/r", bulk=1)
+        each = [f"- line {k + 2} (`{names[k % len(names)]}`): {bare}" for k in range(400)]
+        self.assertGreater(len("\n".join(each)), standard_intake.CAP)  # said for each line, it would not fit
+        self.assertLessEqual(len(said), standard_intake.CAP)
+        self.assertTrue(said.startswith(f"Not recorded:\n\n- {bare}\n"), said[:400])
+        self.assertEqual(said.count(bare), 1)
+        for k in range(400):
+            self.assertIn(f"\n  - line {k + 2} (`{names[k % len(names)]}`)\n", said)
+        self.assertNotIn("more not recorded", said)
+        self.assertTrue(said.endswith("\n\nPost the corrected lines in a new comment.\n\n<!-- bulk-reply: 901 -->"))
+
+    def test_a_reason_for_one_line_follows_it(self):
+        out = self.process(comment(1, A, "Reviewed-by: Fixture.triple", "Reviewed-by: Fixture.nothing",
+                                   "Reviewed-by: Fixture.double"))
+        said = self.last(out)
+        bare = standard_intake.BARE_YES.format(repo="o/r", bulk=1)
+        self.assertIn(f"- {bare}\n  - line 2 (`Fixture.triple`)\n  - line 4 (`Fixture.double`)\n", said)
+        self.assertIn("\n- line 3 (`Fixture.nothing`): `Fixture.nothing` is not a declaration", said)
+
+    def test_the_refusals_are_cut_last(self):
+        # What was not recorded is what the author must post again: it is listed first, and the rest of the room goes to
+        # what was recorded.
+        self.process(write(1, A, decl=self.LONG))
+        approvals = [f"Approve: {self.LONG} — {VER1} — {CELLS}"] * 400
+        out = self.process(comment(2, B, *approvals, "Reviewed-by: Fixture.nothing"))
+        said = self.last(out)
+        self.assertLessEqual(len(said), standard_intake.CAP)
+        self.assertIn("\n- line 402 (`Fixture.nothing`): `Fixture.nothing` is not a declaration", said)
+        self.assertRegex(said, r"\n- … and \d+ more recorded\n\nNot recorded:\n\n- line 402 ")
 
 
 class AsOfTests(IntakeCase):
@@ -610,6 +750,7 @@ class OldFormTests(IntakeCase):
                            person(3, "Reviewed-by: Fixture.one", login="alice"))
         bare, reasons, persons = [text for _, text in out.replies]
         self.assertIn("Approve:", bare)
+        self.assertIn("in a comment on issue #1 (https://github.com/o/r/issues/1)", bare)  # where the approval goes
         self.assertNotIn("needs its text", bare)
         old, yes = out.records
         self.assertEqual((old["by"]["kind"], old["text"]), ("agent", "Matches the fixture's docs, §2."))
@@ -622,6 +763,8 @@ class OldFormTests(IntakeCase):
         self.assertIsNone(r)
         (n, said), = out.replies
         self.assertIn("Approve:", said)
+        # The bulk issue, as the site's settings give it: the form's issue is not it.
+        self.assertIn("in a comment on issue #1 (https://github.com/o/r/issues/1)", said)
         self.assertNotIn("needs its text", said)
         out, r = standard_intake.process_issue(form(8, rationale="Matches §1."), self.ctx)
         (n, said), = out.replies
