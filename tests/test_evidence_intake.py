@@ -96,20 +96,28 @@ class IntakeTests(unittest.TestCase):
         with mock.patch.object(github, "events", lambda repo, n: []):
             self.assertEqual(self.run_intake("--sweep-open"), 0)
         out = json.loads((self.dir / "outcome.json").read_text(encoding="utf-8"))
-        self.assertEqual(out["replies"], [[7, evidence_intake.recorded(r)]])
+        self.assertEqual(out["replies"], [[7, evidence_intake.recorded(r, "o/r")]])
         self.assertEqual(out["close"], [[7, "completed"]])
         self.assertIs(github.comments, before)  # put back as it was
 
 
 FIXTURE = json.loads((HERE / "fixtures" / "intake" / "recorded.json").read_text(encoding="utf-8"))
+#: What intake now adds on recording an AI agent's yes of the earlier form, in repository o/r.
+NOTE = ("Recorded as an AI agent's yes of the earlier form: it counts as an approval of an earlier version of the "
+        "standard review. AI agents now approve or edit the declaration's standard review: AI-REVIEWS.md "
+        "(https://github.com/o/r/blob/main/AI-REVIEWS.md).")
 
 
 class RecordedTests(unittest.TestCase):
     def test_the_reply_intake_posted(self):
         for case, f in FIXTURE.items():  # issues 556, 557 and 103, as the bot answered them
             # and an AI agent's yes of the earlier form, as it is answered now: with what to do instead
-            want = f["reply"] + ("\n\n" + standard_intake.EARLIER_FORM if case == "agent-accept" else "")
-            self.assertEqual(evidence_intake.recorded(f["record"]), want, case)
+            want = f["reply"] + ("\n\n" + NOTE if case == "agent-accept" else "")
+            self.assertEqual(evidence_intake.recorded(f["record"], "o/r"), want, case)
+
+    def test_the_guide_is_the_repositorys_own(self):
+        said = evidence_intake.recorded(FIXTURE["agent-accept"]["record"], "someone/else")
+        self.assertTrue(said.endswith("(https://github.com/someone/else/blob/main/AI-REVIEWS.md)."), said)
 
 
 class FakeStore:
@@ -149,8 +157,7 @@ class UnfinishedTests(unittest.TestCase):
         out = self.finish([self.issue(10), self.issue(11, comments=1, labels=["evidence:test", "evidence:needs-fix"])],
                           {"replies": [], "labels": [], "close": []})
         # an AI agent's yes of the earlier form, answered as intake answers it now
-        self.assertEqual(out["replies"],
-                         [[10, FIXTURE["agent-accept"]["reply"] + "\n\n" + standard_intake.EARLIER_FORM]])
+        self.assertEqual(out["replies"], [[10, FIXTURE["agent-accept"]["reply"] + "\n\n" + NOTE]])
         self.assertEqual(out["labels"], [[11, [], ["evidence:needs-fix"]]])
         self.assertEqual(out["close"], [[10, "completed"], [11, "completed"]])
 

@@ -30,14 +30,17 @@ declaration's latest review. People say yes with the page's form, never with `Ap
 
 The lines of evidence-store's own kinds (`Reviewed-by:`, `Test:`, `Named:`, `Challenge:`) are read as its bulk
 handler reads them, into the same records. An AI agent's yes of the earlier form, without the standard review, is
-recorded with a note on what agents do now, and a bare one is refused with the approval to give instead; the
-review form's replies say the same (`process_issue`).
+recorded with a note on what agents do now, pointing to AI-REVIEWS.md in the repository the intake runs for, and a
+bare one is refused with the approval to give instead; the review form's replies say the same (`process_issue`).
 
 A comment's records are made whenever it is read, each added to the store at once so that later lines see it, and
-none twice, since a record's origin names its comment and line. Every run reads the whole issue again, so a
-comment's reply is said only while the comment is newer than the bot's latest comment on the issue: evidence-store
-said the refusals of every old comment again on each run. `install` puts this module in place of evidence-store's
-reading, for every run of its intake.
+none twice, since a record's origin names its comment and line. Every run reads the whole issue again, and
+evidence-store said the refusals of every old comment again each time. So a reply ends with a hidden line naming the
+comment it answers (`<!-- bulk-reply: <comment id> -->`), and a comment is answered while no reply of the bot names
+it: one posted while a run was reading the issue is answered by the next, and one whose reply GitHub refused is
+answered again, with what it recorded then. The bot's replies from before these lines name nothing, so no comment
+older than the latest of them is answered again. `install` puts this module in place of evidence-store's reading,
+for every run of its intake.
 """
 from __future__ import annotations
 
@@ -66,11 +69,15 @@ FORMS = {("Approve", True): "Approve: <decl> — <version> — <cells>",
          ("Edit", False): "Edit: <decl> — <parent> — <note>",
          ("Restore", False): "Restore: <decl> — <earlier version> — <note>"}
 TEXT = "its text is missing: a `~~~review` line, the text, then a line `~~~`"
+#: Where AI agents learn what they do now: AI-REVIEWS.md in the repository the intake runs for (`repo`).
 APPROVE_INSTEAD = ("AI agents now approve or edit the declaration's standard review: AI-REVIEWS.md "
-                   "(https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md).")
+                   "(https://github.com/{repo}/blob/main/AI-REVIEWS.md).")
 #: The note on recording an AI agent's yes of the earlier form.
 EARLIER_FORM = ("Recorded as an AI agent's yes of the earlier form: it counts as an approval of an earlier version "
                 "of the standard review. " + APPROVE_INSTEAD)
+#: The line a reply on the bulk issue ends with, for the comment it answers; and how a later run finds it.
+ANSWERS = "<!-- bulk-reply: {} -->"
+ANSWERED = re.compile(r"<!--\s*bulk-reply:\s*(\d+)\s*-->")
 #: What evidence-core says of an AI agent's yes without its reasons, and what it is told now.
 NEEDS_TEXT = "a review by an agent needs its text: why"
 BARE_YES = ("an AI agent's yes is now an approval of the standard review: "
@@ -295,9 +302,9 @@ def earlier_form(r: dict) -> bool:
     return standard.ai_accept(r) and "standard" not in r
 
 
-def noted(text: str, r: dict) -> str:
-    """A reply on recording `r`, with the note for an AI agent's yes of the earlier form."""
-    return text + "\n\n" + EARLIER_FORM if earlier_form(r) else text
+def noted(text: str, r: dict, repo: str) -> str:
+    """A reply on recording `r` for repository `repo`, with the note for an AI agent's yes of the earlier form."""
+    return text + "\n\n" + EARLIER_FORM.format(repo=repo) if earlier_form(r) else text
 
 
 def said(r: dict) -> str:
@@ -314,18 +321,21 @@ def said(r: dict) -> str:
     return f"Recorded the standard review `{version}` of `{name}`, {act} by {who} (record `{r['id']}`)."
 
 
-def reply(done: list[str], refused: list[str], lines: int, earlier: bool) -> str:
-    """One reply to a comment, as evidence-store's bulk handler gives it, and the note on the earlier form once."""
-    msg = (f"Recorded {len(done)} of {lines} lines:\n\n" + "\n".join(done)) if done else ""
+def reply(made: list[dict], refused: list[str], lines: int, comment: dict, repo: str) -> str:
+    """One reply to a comment, worded as evidence-store's bulk handler words it: what was recorded and what was not.
+    Then the note on the earlier form once, and the line naming the comment it answers."""
+    msg = (f"Recorded {len(made)} of {lines} lines:\n\n" + "\n".join(f"- {said(r)}" for r in made)) if made else ""
     if refused:
         msg += ("\n\n" if msg else "") + "Not recorded:\n\n" + "\n".join(f"- {e}" for e in refused) + \
             "\n\nPost the corrected lines in a new comment."
-    return msg + ("\n\n" + EARLIER_FORM if earlier else "")
+    if any(map(earlier_form, made)):
+        msg += "\n\n" + EARLIER_FORM.format(repo=repo)
+    return msg + ("\n\n" + ANSWERS.format(comment["id"]) if comment.get("id") is not None else "")
 
 
 def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: bool = True) -> Outcome:
     """The records the commands of a comment on the bulk issue ask for, in order and each added to the store as it
-    is made, and one reply: what was recorded, and what was not and why."""
+    is made, and one reply: what was recorded, now or on an earlier run, and what was not and why."""
     out = Outcome()
     user = comment.get("user", {})
     if user.get("login") in intake.BOTS:
@@ -336,11 +346,12 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
     at = intake.iso(comment.get("created_at", ""))
     maintainer = intake.is_maintainer(ctx, comment)
     cmds = commands(text)
-    done, refused, changed = [], [], set()
+    made, refused, changed = [], [], set()
     for cmd in cmds:
         ref = f"{base}/line/{cmd.line}"
         had = ctx.store.from_origin(ref)
         if had:
+            made += had  # said again if the comment is answered now: the reply that said them was refused
             changed.update(r["subject"]["name"] for r in had if standard.kind_of(r) == "version")
             continue
         origin = {"kind": "comment", "ref": ref}
@@ -356,25 +367,27 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
             continue
         out.records.append(r)
         ctx.store.add([r])
+        made.append(r)
         if standard.kind_of(r) == "version":
             changed.add(r["subject"]["name"])
-        done.append(f"- {said(r)}")
-    if announce and (done or refused):
-        out.replies.append((issue["number"], reply(done, refused, len(cmds), any(map(earlier_form, out.records)))))
+    if announce and (made or refused):
+        out.replies.append((issue["number"], reply(made, refused, len(cmds), comment, ctx.repo)))
     return out
 
 
 def process(issue: dict, comments: list[dict], ctx: Context, announce: bool = True,
             events: list[dict] = ()) -> Outcome:
-    """evidence-store's `process`, with the bulk issue read here: its comments in order, each reply said only when
-    its comment is newer than the bot's latest comment on the issue."""
+    """evidence-store's `process`, with the bulk issue read here: its comments in order, each answered while no
+    reply of the bot names it and it is newer than the bot's latest reply from before the replies named any."""
     if not intake.is_bulk(issue):
         return THEIR_PROCESS(issue, comments, ctx, announce, events)
-    last = max((c.get("created_at", "") for c in comments if (c.get("user") or {}).get("login") in intake.BOTS),
-               default="")
+    bots = [c for c in comments if (c.get("user") or {}).get("login") in intake.BOTS]
+    answered = {n for c in bots for n in ANSWERED.findall(c.get("body") or "")}
+    before = max((c.get("created_at", "") for c in bots if not ANSWERED.search(c.get("body") or "")), default="")
     out = Outcome()
     for c in sorted(comments, key=lambda c: c.get("created_at", "")):
-        out.merge(process_bulk_comment(c, issue, ctx, announce and c.get("created_at", "") > last))
+        unanswered = str(c.get("id")) not in answered and c.get("created_at", "") > before
+        out.merge(process_bulk_comment(c, issue, ctx, announce and unanswered))
     return out
 
 
@@ -388,7 +401,7 @@ def process_issue(issue: dict, ctx: Context, announce: bool = True) -> tuple[Out
 
     def say(text: str) -> str:
         text = text.replace(NEEDS_TEXT, BARE_YES) if review else text
-        return noted(text, r) if made else text
+        return noted(text, r, ctx.repo) if made else text
 
     out.replies = [(n, say(text) if n == issue.get("number") else text) for n, text in out.replies]
     return out, r

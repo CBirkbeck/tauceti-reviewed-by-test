@@ -40,9 +40,8 @@ V2 = V1.replace("None.", "On ℕ, `Fixture.triple` never truncates.")
 VER1, VER2 = standard.version_of(V1), standard.version_of(V2)
 NOTE = "adds that it never truncates"
 BULK = {"number": 1, "labels": [{"name": "evidence:bulk"}]}
-BOT = {"id": 1, "user": {"login": "github-actions[bot]", "type": "Bot"}, "body": "Not recorded: …",
-       "created_at": "2026-10-31T10:02:00Z", "author_association": "NONE",
-       "html_url": "https://github.com/o/r/issues/1#issuecomment-1"}
+#: AI-REVIEWS.md in the repository the intake runs for: the context's, `o/r`.
+GUIDE = "(https://github.com/o/r/blob/main/AI-REVIEWS.md)."
 
 
 def url(n: int) -> str:
@@ -54,6 +53,13 @@ def comment(n: int, *lines: str, login: str = "CBirkbeck", association: str = "O
     line is an agent mark)."""
     return {"id": 900 + n, "user": {"login": login, "type": "User"}, "body": "\n".join(lines),
             "created_at": f"2026-10-31T10:{n:02d}:00Z", "author_association": association, "html_url": url(n)}
+
+
+def bot(n: int, body: str) -> dict:
+    """The intake bot's comment `n` on the bulk issue, at the n-th minute."""
+    return {"id": 800 + n, "user": {"login": "github-actions[bot]", "type": "Bot"}, "body": body,
+            "created_at": f"2026-10-31T10:{n:02d}:00Z", "author_association": "NONE",
+            "html_url": f"https://github.com/o/r/issues/1#issuecomment-{800 + n}"}
 
 
 def person(n: int, *lines: str, login: str = "boss") -> dict:
@@ -373,21 +379,8 @@ class BodyTests(IntakeCase):
         c = comment(1, A, f"Write: Fixture.triple — {CELLS}", "~~~review", V1, "~~~",
                     "Test: Fixture.triple — Fixture.triple_two — its value at 2")
         self.assertEqual(len(self.process(c).records), 2)
-        out = self.process(c)
-        self.assertEqual((out.records, out.replies), ([], []))
+        self.assertEqual(self.process(c).records, [])
         self.assertEqual(len(Store.load(self.dir / "evidence").records), 2)
-
-    def test_refusals_are_said_once(self):
-        c1 = comment(1, A, f"Approve: Fixture.triple — {VER1} — {CELLS}",
-                     "Test: Fixture.triple — Fixture.triple_two — its value at 2")
-        c3 = comment(3, A, f"Approve: Fixture.double — {VER1} — {CELLS}")
-        out = self.process(c1, BOT, c3)
-        self.assertEqual([r["kind"] for r in out.records], ["test"])  # recorded all the same
-        said = self.last(out)
-        self.assertEqual(len(out.replies), 1)
-        self.assertIn("Fixture.double", said)
-        self.assertNotIn("Fixture.triple", said)
-        self.assertEqual(self.process(c1, BOT, c3, announce=False).replies, [])  # a sweep says nothing
 
     def test_a_missing_dataset_is_read_again(self):
         def missing(commit):
@@ -396,6 +389,52 @@ class BodyTests(IntakeCase):
         out = self.process(write(1, A))
         self.assertEqual(out.records, [])
         self.assertIn("line 2: there is no dataset of the library yet; it will be read again", self.last(out))
+
+
+class AnnounceTests(IntakeCase):
+    """Which comments are answered: those that no reply of the bot names yet, and none older than its replies from
+    before the markers. Their records are made either way."""
+
+    def test_a_reply_names_the_comment_it_answers(self):
+        said = self.last(self.process(write(1, A)))
+        self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 901 -->"), said)
+
+    def test_a_comment_answered_is_not_answered_again(self):
+        c1 = write(1, A)
+        said = self.last(self.process(c1))
+        out = self.process(c1, bot(2, said))
+        self.assertEqual((out.records, out.replies), ([], []))
+
+    def test_a_comment_posted_while_a_run_read_the_issue_is_answered(self):
+        c1 = write(1, A)
+        said = self.last(self.process(c1))  # the run read the issue with c1 alone, and c2 came before its reply
+        out = self.process(c1, approve(2, B, VER1), bot(3, said))
+        approval, = out.records
+        (n, text), = out.replies
+        self.assertIn(approval["id"], text)
+        self.assertTrue(text.endswith("\n\n<!-- bulk-reply: 902 -->"), text)
+
+    def test_comments_before_the_markers_are_not_answered_again(self):
+        c1 = comment(1, A, f"Approve: Fixture.triple — {VER1} — {CELLS}",
+                     "Test: Fixture.triple — Fixture.triple_two — its value at 2")
+        c3 = comment(3, A, f"Approve: Fixture.double — {VER1} — {CELLS}")
+        out = self.process(c1, bot(2, "Not recorded: …"), c3)  # a reply from before the markers
+        self.assertEqual([r["kind"] for r in out.records], ["test"])  # recorded all the same
+        (n, said), = out.replies
+        self.assertIn("Fixture.double", said)
+        self.assertNotIn("Fixture.triple", said)
+        # A sweep answers nothing.
+        self.assertEqual(self.process(c1, bot(2, "Not recorded: …"), c3, announce=False).replies, [])
+
+    def test_a_reply_github_refused_is_said_again(self):
+        c1 = comment(1, A, f"Write: Fixture.triple — {CELLS}", "~~~review", V1, "~~~",
+                     "Test: Fixture.triple — Fixture.triple_two — its value at 2",
+                     f"Approve: Fixture.double — {VER1} — {CELLS}")
+        first = self.process(c1)
+        again = self.process(c1)  # no reply of the bot names c1: GitHub refused the first
+        self.assertEqual(again.records, [])
+        self.assertEqual(again.replies, first.replies)  # what it recorded then, and what it did not
+        self.assertIn("Recorded 2 of 3 lines", self.last(again))
 
 
 class OldFormTests(IntakeCase):
@@ -410,8 +449,8 @@ class OldFormTests(IntakeCase):
         self.assertEqual((old["by"]["kind"], old["text"]), ("agent", "Matches the fixture's docs, §2."))
         self.assertNotIn("standard", old)
         self.assertIn("yes of the earlier form", reasons)
-        self.assertIn(standard_intake.APPROVE_INSTEAD, reasons)
-        self.assertNotIn(standard_intake.APPROVE_INSTEAD, persons)  # a person's yes is no AI agent's
+        self.assertIn(GUIDE, reasons)
+        self.assertNotIn("AI-REVIEWS.md (", persons)  # a person's yes is no AI agent's
         # The review form says the same, and evidence_intake's `recorded` as this does.
         out, r = standard_intake.process_issue(form(7), self.ctx)
         self.assertIsNone(r)
@@ -421,8 +460,8 @@ class OldFormTests(IntakeCase):
         out, r = standard_intake.process_issue(form(8, rationale="Matches §1."), self.ctx)
         (n, said), = out.replies
         self.assertEqual((n, r["text"]), (8, "Matches §1."))
-        self.assertIn(standard_intake.APPROVE_INSTEAD, said)
-        self.assertEqual(said, evidence_intake.recorded(r))
+        self.assertIn(GUIDE, said)
+        self.assertEqual(said, evidence_intake.recorded(r, "o/r"))
         # An agent's no without its reasons is told what evidence-store tells it.
         out, r = standard_intake.process_issue(form(9, "problem", category="junk"), self.ctx)
         (n, said), = out.replies
@@ -470,7 +509,7 @@ class InstallTests(IntakeCase):
             standard_intake.install()
             out = cli.process(form(8, rationale="Matches §1."), [], self.ctx)
         (n, said), = out.replies
-        self.assertIn(standard_intake.APPROVE_INSTEAD, said)
+        self.assertIn(GUIDE, said)
 
 
 if __name__ == "__main__":

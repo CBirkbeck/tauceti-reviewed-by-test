@@ -64,15 +64,15 @@ def open_issues(repo: str, since: str = "") -> list[dict]:
     return sorted(out, key=lambda i: i["number"])
 
 
-def recorded(r: dict) -> str:
-    """What intake replies on recording `r` from its issue, as evidence-store's process_issue says it, with the
-    note our intake adds for an AI agent's yes of the earlier form (standard_intake.process_issue)."""
+def recorded(r: dict, repo: str) -> str:
+    """What intake replies on recording `r` from its issue in `repo`, as evidence-store's process_issue says it, with
+    the note our intake adds for an AI agent's yes of the earlier form (standard_intake.process_issue)."""
     k = intake.kind_key(r)
     footer = intake.FOOTER[k].format(name=r["subject"]["name"])
     if k == "accept" and r["by"]["kind"] == "agent":
         footer = footer.replace("It counts from now on.", "It is recorded as an AI agent's review: each reader "
                                 "chooses whether those count.")
-    return standard_intake.noted(intake.describe(r) + "\n\n" + footer, r)
+    return standard_intake.noted(intake.describe(r) + "\n\n" + footer, r, repo)
 
 
 def unfinished(repo: str, store: Store, swept: list[dict], outcome: dict, comments_of: Callable[[int], list[dict]],
@@ -92,7 +92,7 @@ def unfinished(repo: str, store: Store, swept: list[dict], outcome: dict, commen
             continue
         said = comments_of(n) if i.get("comments") else []
         if not any((c.get("user") or {}).get("login") in intake.BOTS for c in said):
-            outcome.setdefault("replies", []).append([n, recorded(r)])
+            outcome.setdefault("replies", []).append([n, recorded(r, repo)])
         if "evidence:needs-fix" in {l.get("name") for l in i.get("labels", [])}:
             outcome.setdefault("labels", []).append([n, [], ["evidence:needs-fix"]])
         outcome.setdefault("close", []).append([n, "completed"])
