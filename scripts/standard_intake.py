@@ -35,7 +35,8 @@ instead: a line read when there was no dataset of the library, and one whose dec
 which may be one the dataset is yet to be built with (refused with the dataset's nearest names, so that a typo is
 said once). The reply names them in its closing line, `<!-- bulk-reply: <comment id> deferred: <k>,<k> -->`, and
 later runs read those lines again, as of their comment: a line now recorded, or refused for good, is said in a new
-reply to the comment, whose closing line names the lines that still wait.
+reply to the comment, whose closing line names the lines that still wait; and so is a line read without a dataset
+that now waits for its declaration, since what it lacks was never said (`UNREAD`).
 
 An AI's write, edit and approval are accepts that carry the rubric's cells, and each supersedes its reviewer's
 latest earlier accept of the declaration, as evidence-store's accepts do, among the records the page puts on it, so
@@ -95,6 +96,9 @@ FORMS = {("Approve", True): "Approve: <decl> — <version> — <cells>",
 TEXT = "its text is missing: a `~~~review` line, the text, then a line `~~~`"
 #: What a reply says of a line read when there was no dataset of the library: it waits, and is read again.
 NO_DATASET = "there is no dataset of the library yet; it will be read again"
+#: A row of a reply that says so (`refusals`): for one line, or as the reason given for the lines after it. A row of a line
+#: that names a declaration reads `- line k (`…`)`, so no text a reply quotes makes one.
+UNREAD = re.compile(rf"^- (?:line \d+: )?{re.escape(NO_DATASET)}$", re.M)
 #: Where AI agents learn what they do now: AI-REVIEWS.md in the repository the intake runs for (`repo`).
 APPROVE_INSTEAD = ("AI agents now approve or edit the declaration's standard review: AI-REVIEWS.md "
                    "(https://github.com/{repo}/blob/main/AI-REVIEWS.md).")
@@ -533,12 +537,13 @@ def origins(records: list[dict]) -> dict[str, list[dict]]:
 
 def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: bool = True,
                          index: dict[str, list[dict]] | None = None,
-                         deferred: Sequence[int] | None = None) -> Outcome:
+                         deferred: Sequence[int] | None = None, unread: bool = False) -> Outcome:
     """The records the commands of a comment on the bulk issue ask for, in order and each added to the store as it
     is made, and one reply: what was recorded, now or on an earlier run, and what was not and why, its marker naming the
     lines deferred. `index` is the store's records by origin (`origins`), made once a run and kept current here. A
     comment answered already is read again only for the lines its latest reply deferred (`deferred`), and its reply,
-    if it has one, says only what is new: a line recorded, or refused for good. A line that waits again was said."""
+    if it has one, says only what is new: a line recorded, or refused for good. A line that waits again was said,
+    unless that reply said there was no dataset (`unread`) and the line now waits for its declaration."""
     out = Outcome()
     user = comment.get("user", {})
     if user.get("login") in intake.BOTS:
@@ -591,7 +596,7 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
         if standard.kind_of(r) == "version":
             versions.append(r)
     if deferred is not None:
-        refused = [x for x in refused if x[0] not in waiting]
+        refused = [x for x in refused if x[0] not in waiting or unread and x[2] != NO_DATASET]
     if announce and (made or refused):
         out.replies.append((issue["number"], reply(made, refused, len(cmds), comment, ctx.repo, waiting)))
     return out
@@ -624,11 +629,15 @@ def process(issue: dict, comments: list[dict], ctx: Context, announce: bool = Tr
     if not intake.is_bulk(issue):
         return THEIR_PROCESS(issue, comments, ctx, announce, events)
     deferred: dict[str, tuple[int, ...]] = {}  # each comment answered, and the lines its latest reply deferred
+    unread: set[str] = set()  # those whose latest reply said there was no dataset to read a line against
     legacy = ""  # when the bot made its latest reply from before the replies named the comments they answer
     for c in sorted(comments, key=when):
         if (c.get("user") or {}).get("login") in intake.BOTS:
             these = answered(c.get("body"))
             deferred.update(these)
+            unread.difference_update(these)
+            if UNREAD.search(c.get("body") or ""):
+                unread.update(these)
             if not these:
                 legacy = max(legacy, c.get("created_at", ""))
     index = origins(ctx.store.records)
@@ -639,7 +648,7 @@ def process(issue: dict, comments: list[dict], ctx: Context, announce: bool = Tr
         lines = deferred.get(str(c.get("id")))
         if lines is not None:
             if lines:
-                out.merge(process_bulk_comment(c, issue, ctx, announce, index, lines))
+                out.merge(process_bulk_comment(c, issue, ctx, announce, index, lines, str(c.get("id")) in unread))
         elif c.get("created_at", "") > legacy:
             out.merge(process_bulk_comment(c, issue, ctx, announce, index))
     return out

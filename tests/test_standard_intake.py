@@ -825,6 +825,26 @@ class FinalityTests(IssueCase):
         self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 901 -->"), said)
         self.quiet()
 
+    def test_a_line_read_without_a_dataset_whose_declaration_is_not_there_is_said_once(self):
+        def missing(commit):
+            raise LookupError(commit)
+        self.ctx.dataset = missing
+        self.issue += [approve(1, B, VER1, decl="Fixture.tripel")]
+        (n, said), = self.run_all().replies
+        self.assertIn("- line 2: there is no dataset of the library yet; it will be read again", said)
+        self.ctx.dataset = lambda commit: self.ds
+        # Read with a dataset, it waits for its declaration: that was never said, so it is said now, with its nearest names.
+        (n, said), = self.run_all().replies
+        self.assertIn("- line 2 (`Fixture.tripel`): `Fixture.tripel` is not a declaration of the library at `B`. "
+                      "Did you mean `Fixture.triple`", said)
+        self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 901 deferred: 2 -->"), said)
+        self.quiet()  # and once
+        # A reply that quotes those words did not say them: else it would be said again on every run.
+        self.issue += [approve(2, B, VER1, decl=standard_intake.NO_DATASET)]
+        (n, said), = self.run_all().replies
+        self.assertIn(f"(`{standard_intake.NO_DATASET}`)", said)
+        self.quiet()
+
     def test_a_declaration_the_dataset_lacks_is_refused_once_and_recorded_once_it_has_it(self):
         lacking = without(self.ds, "Fixture.double")
         self.ctx.dataset = lambda commit: lacking
