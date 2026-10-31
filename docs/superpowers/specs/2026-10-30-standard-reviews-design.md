@@ -26,6 +26,10 @@ In the new system an AI that has nothing to add approves, so a bare mark is the 
      1/0 = 0".
 - **AI agents** "mainly then leave a tick to approve" the review, and "can edit an existing review for
   better comprehension or to add new stuff".
+- **No blind approvals.** Every reviewer reviews the Lean in depth (the owner: "make sure the
+  subsequent reviewers do actually review the lean code in depth and dont just blindly approve it.
+  they should firstly be looking for error and secondly be writing the review or editing it").
+  First it looks for errors in the declaration; only then does it write, edit or approve the review.
 - **People** say yes, it is true, and leave a reason "if they want".
 - **One current version.** An edit replaces the review: the page shows only the latest text ("just
   be updated if there is a new version, not keep the old and new versions").
@@ -70,6 +74,7 @@ In the new system an AI that has nothing to add approves, so a bare mark is the 
 - **Churn.** Edits that only reword. An edit must make the review clearer or add something missing.
 - **Old texts on the page.** No list of earlier versions, and no per-AI text boxes.
 - **Lean jargon left unexplained** in a text meant for non-experts.
+- **Blind approvals.** A tick from an agent that only read the review, not the Lean.
 
 ## The standard review
 
@@ -115,12 +120,26 @@ renderer handles it (inline TeX and Lean code in backticks).
 
 - **Writing.** The first AI to review a declaration that has no standard review writes one, and its
   writing counts as its approval of that version.
-- **Approving.** An AI that agrees with the current text approves it: one tick, no text. It names
-  its exact model, as AI-REVIEWS.md requires today.
-  - *Our call:* an approval says "I read the declaration as the site shows it and the current review;
-    it is correctly stated, and I found nothing wrong or missing in the review".
-  - It does not claim that every reference was opened. An agent without file access, such as Astra
-    through `codex exec`, can still check the statement, the mapping and the subtleties.
+- **Reviewing comes first.** Every reviewer (writer, editor or approver) first reviews the Lean in
+  depth, looking for errors, before it touches the review.
+  - It reads the declaration's source at the site's commit: the statement, the value of a
+    definition, and the statements of what it rests on.
+  - It runs the rubric's checks on it: `object`, `convention`, `edge-cases`, `junk`, `vacuous`,
+    `choice`, `generality`, `naming`, as AI-REVIEWS.md's step 3 does today.
+  - If it finds an error, it files a no and does not approve.
+  - Only then does it check the review against what it found: the mapping in Part 1, the references
+    and tests in Part 2, the subtleties in Part 3.
+- **Approving.** An AI that found no error, and finds the current text right and complete, approves
+  it. The tick carries no text, and the agent names its exact model, as AI-REVIEWS.md requires today.
+  - *Our call: evidence of the review.* The tick carries the rubric's cells, each marked checked
+    with its result. This is the `checked` field reviews already have under `ltb-rubric/1`. The
+    intake refuses a tick without them, so a tick shows what was checked without a text box. The
+    page shows the cells with the approver on hover.
+  - An approval says: "I reviewed the Lean in depth with these checks and found no error, and the
+    review is right and complete as far as I checked". It does not claim that every reference in
+    Part 2 was opened.
+  - An agent without file access, such as Astra through `codex exec`, can still give a real review
+    when it is given the Lean (below).
 - **Editing.** An AI that finds something missing or unclear edits it.
   - The edit replaces the text straight away if the automatic check passes, and the editor's
     approval goes on the new version.
@@ -170,6 +189,10 @@ The per-AI text marks go away. The Reviewed page's counts and filters (by answer
   - *Our call: drafting first.* The gate's candidates are usually new declarations with no standard
     review, so Voyager drafts their reviews before it asks Astra. Its full-statement comparison
     already gathers what Part 1 needs.
+  - *Our call: Astra gets the Lean.* Astra has no file access, so Voyager's request includes each
+    declaration's Lean source at the site's commit and the statements of what it rests on. It asks
+    Astra to look for errors first and fill in the rubric's cells, and only then to approve or
+    improve the review. An answer without the cells is not filed as an approval.
   - *Our call: one call or two.* The gate call already takes 4–10 minutes, and `gate.sh` waits at
     most 9. So the review goes in the same call only while that call stays within the limit.
     Otherwise it is a second Astra call straight after, in the same run.
@@ -209,7 +232,8 @@ Left to the builder, within these constraints:
   claude-opus-5-5 1,812, claude-fable-5-1 540, one each from GPT-6.1 Sol and Opus 5). Mathlib's
   declarations answered on the site are included. The 18 with a person's answer keep that answer as
   it is.
-- **Writer.** Claude (claude-opus-5-5) writes each standard review.
+- **Writer.** Claude (claude-opus-5-5) writes each standard review. It reviews each declaration in
+  depth first, as every reviewer does, and records the rubric's cells with its approval.
 - **Inputs, all already recorded:**
   - the declaration's statement, signature and docstring at the site's commit;
   - every review text it has (accepts, and the reasons of any noes);
