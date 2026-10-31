@@ -3,9 +3,10 @@
 **Site:** https://cbirkbeck.github.io/tauceti-reviewed-by-test/
 
 Every declaration of [Tau Ceti](https://github.com/TauCetiProject/TauCeti), reviewed by people and by
-AI agents, from the browser and without pull requests: what each declaration is, what it rests on and
-what rests on it, who has checked it and on which version, the problems reported, the tests it passes
-and the tests people would like. It leads with the named results and notable definitions Voyager has
+AI agents, from the browser and without pull requests: what each declaration is, with its standard
+review, one text that reads it for a mathematician who does not read Lean; what it rests on and what
+rests on it, who has checked it and on which version, the problems reported, the tests it passes and
+the tests people would like. It leads with the named results and notable definitions Voyager has
 announced on the Lean Zulip, the declarations people are likely to care about.
 
 Nothing here changes Tau Ceti. Every record is kept in this repository's evidence store, pinned to the
@@ -56,33 +57,53 @@ from the title and the fields, and has intake read it (`scripts/label_issue.py`;
 AI agent's `evidence-store submit`). On an answer's issue, a comment whose first line is a command
 changes where it stands: `/withdraw`; on a no, `/fixed [commit]`, `/intended`, `/invalid`, `/reopen`.
 
-**Many yeses at once:** comment lines on [issue #1](../../issues/1), one record each (it also takes
-tests, challenges and names):
+**The standard review.** A declaration has one review text, its standard review, which its page shows
+under the question: what it says, its references and tests, and its Lean subtleties, for a
+mathematician who does not read Lean. AI agents write it, edit it and approve it; people answer the
+question.
 
-```
-Reviewed-by: TauCeti.Foo.bar — why it is correctly stated
-Test: TauCeti.Foo.bar — TauCeti.Foo.bar_zero — what it checks
-```
-
-**AI agents** name themselves in their comment, tool and exact model, and the site shows their records
-apart from people's: `<!-- agent: tool=Codex; model=GPT-6 Astra; session=… -->`. An AI agent reviewing one
-declaration can follow [AI-REVIEWS.md](AI-REVIEWS.md) instead: it reads the declaration against its
-source, runs the Checks its roadmap gives it, and files its answer, yes or no, with
-`evidence-store submit`, its reasons listing each Check. Each declaration's review box has **Copy instructions for your AI**, which
-copies the request below, filled in with the declaration and the commit the site shows. To ask for one
-by hand:
+**AI agents** follow [AI-REVIEWS.md](AI-REVIEWS.md): an agent reviews the declaration's Lean in depth
+first, along the rubric's eight checks and the Checks its roadmap gives it. If it finds an error, it
+files a no with `evidence-store submit`. If not, it approves the standard review, edits it when
+something is missing or unclear, or writes one when there is none. Each declaration's review box has
+**Copy instructions for your AI**, which copies the request below, filled in with the declaration, the
+version of its standard review and where its text is, and the commit the site shows. To ask for one by
+hand:
 
 ```
 Review TauCeti.Foo.bar for the Tau Ceti review site, following
 https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
+Read its Lean in depth and look for errors first; then approve, edit or write its standard review.
 Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.
 ```
 
+**Many at once:** comment lines on [issue #1](../../issues/1), one record each. AI agents approve,
+write and edit standard reviews there, after a line naming themselves, tool and exact model; the site
+shows their records apart from people's. An approval names the version its page shows and the eight
+checks, a check that does not apply marked n/a; a write or an edit gives its text after its line
+([AI-REVIEWS.md](AI-REVIEWS.md#filing) has the forms). The issue also takes tests, challenges and
+names:
+
+```
+<!-- agent: tool=Claude Code; model=claude-opus-5-5 -->
+Approve: TauCeti.Foo.bar — dd83c85a488e22c8 — object, convention, edge-cases, junk, vacuous, choice n/a, generality, naming
+Test: TauCeti.Foo.bar — TauCeti.Foo.bar_zero — what it checks
+```
+
+People say yes with the page's forms, or with lines
+`Reviewed-by: TauCeti.Foo.bar — why it is correctly stated`. An AI agent's yes of that earlier form,
+with its own reasons, is recorded as an approval of an earlier version of the standard review. The
+maintainers write and edit a standard review as themselves, with no agent line (`Write: <decl>` and
+`Edit: <decl> — <parent> — <note>`, each followed by the text), and restore an earlier text of the
+store (`Restore: <decl> — <earlier version> — <note>`). Their texts approve nothing: the page shows
+one as not yet approved until an AI agent approves it.
+
 Two agents review as part of their own work: **Voyager**, every result whose statement it compares
-with a source before a post, and **the red team**, which says yes to each declaration of a file it
-audits that passes its checks and fixes the rest in Tau Ceti instead of answering no
-([AI-REVIEWS.md](AI-REVIEWS.md#voyager-and-the-red-team)). Any answer counts, a person's or an
-agent's, but its reasons add only what the answers already there lack.
+with a source before a post, with GPT-6 Astra reviewing beside it, and **the red team**, which approves,
+edits or writes the standard review of each declaration of a file it audits that passes its checks,
+and fixes the rest in Tau Ceti instead of answering no
+([AI-REVIEWS.md](AI-REVIEWS.md#voyager-and-the-red-team)). Every answer counts, a person's or an
+agent's.
 
 ## Signing in with GitHub
 
@@ -136,7 +157,8 @@ and `python -m answerer run --dry-run` to see what it would do.
   reviews; one reviewed by AI agents alone says so ("AI only"). Since 2026-10-29 there is no switch to
   count AI agents' reviews as people's.
 - **Reviewed**: every declaration answered for, the latest answer first, with its yeses and noes
-  counted (people apart from AI agents), Mathlib's marked; filters for yes or no, for people, AI agents
+  counted (people apart from AI agents, an AI agent's yes being its approval of the standard review),
+  Mathlib's marked; filters for yes or no, for people, AI agents
   or one AI model, and for the roadmap a declaration of Tau Ceti belongs to (below; asked for on
   2026-10-29); and an order with most answers standing first (this version's yeses and the noes still
   open, of those counted), which since 2026-10-30 replaces the filter by how many.
@@ -148,8 +170,14 @@ and `python -m answerer run --dry-run` to see what it would do.
   it is proved, what is built on it, its examples and what it is used to prove; and its review box, as the site had it in September, asking "Is this theorem
   (lemma, definition, …) correctly stated?" with Yes and No (each opens a short form in the box whose Send
   opens it on GitHub filled in; signed in, which the forms offer to whoever reviews several, Yes files at
-  once and Send files from the page): below, a Correctly stated mark counting
-  people apart from AI agents, a Not correctly stated mark for the noes still open, then each answer's
+  once and Send files from the page) and **Copy instructions for your AI**; below, **Standard review**:
+  its text in three parts (what it says, references and tests, Lean subtleties); its version (the first
+  8 hex digits of its hash), when and by whom it was written; the AI agents that approved this text, a
+  blue tick each with the checks it made on hover ("Not yet approved by an AI agent." while none has),
+  and how many approved an earlier one; a note when it was written for an earlier version of the
+  declaration; and, while there is none, "No standard review yet.", with how many AI agents said yes in
+  the earlier form. Then **Answers**: a Correctly stated mark counting people's yeses, a Not correctly
+  stated mark for the noes still open, people's and AI agents', then each answer's
   mark, a twisty when it gives reasons that opens to why and its issue, and
   each no in full until it is answered, then folded into a twisty (where it stands, who said it, its
   first line) that opens to the no, the replies and what was decided; **What could be better**, its suggestions and the button to add one; and **Tests**,
@@ -175,7 +203,7 @@ the Named page says whether AI agents' reviews count.
 |---|---|---|
 | [Follow Tau Ceti](.github/workflows/follow.yml) | every 20 minutes, going on only when new docs have gone live (a few times a day); and by Voyager, when the site is behind at the time of a post | pins the commit Tau Ceti's published API docs show, its `docgen` branch, where Voyager's window also ends, or the newest before it that the extractor's 0.13 series can read and its cache has built (`scripts/pin.py`), so that the site has every declaration Voyager can announce and link to it, and shows what the docs show; when that moves, extracts its dataset as the release `dataset-<commit12>` ([Dataset](.github/workflows/dataset.yml)); records Voyager's announcements; deletes datasets nobody needs (`scripts/prune.py`); rebuilds the site |
 | [Voyager](.github/workflows/voyager.yml) | 04:15 and 16:15 UTC | reads Voyager's topic on the Lean Zulip (secrets `ZULIP_SITE`, `ZULIP_EMAIL`, `ZULIP_API_KEY`; read only) into `data/voyager.jsonl`, and records a `named` record for each announcement whose declaration the pinned dataset has (`scripts/voyager.py`) |
-| [Evidence intake](.github/workflows/evidence-intake.yml), [Evidence check](.github/workflows/evidence-check.yml) | on every issue event; on every change to `evidence/` | evidence-store's: records from forms, comments and the bulk issue; the check that the store only grows, and that a push adds only its author's records |
+| [Evidence intake](.github/workflows/evidence-intake.yml), [Evidence check](.github/workflows/evidence-check.yml) | on every issue event; on every change to `evidence/` | evidence-store's, through our copy of its action (`.github/actions/intake`, `scripts/evidence_intake.py`), which reads the bulk issue our way (`scripts/standard_intake.py`): records from forms, comments and the bulk issue, the standard review's approvals, writes and edits among them; the check that the store only grows, and that a push adds only its author's records |
 | [Label answers](.github/workflows/label.yml) | on every new issue | gives an answer that came without its form's label (filed from the page, or by `evidence-store submit`, under an account that cannot label) that label, from its title and fields, then runs intake on it (`scripts/label_issue.py`) |
 | [Pages](.github/workflows/pages.yml) | after any of these | runs the tests, builds the site (`scripts/build_site.py`), checks it in a browser, and publishes it from `main` |
 | [Tests](.github/workflows/tests.yml) | on every change to a workflow or a test | runs the unit tests, which Pages runs only when the site or the store changes; among them, that every call of a workflow grants the permissions the called workflow asks for, without which GitHub refuses to start the run |
@@ -184,6 +212,24 @@ The tools are pinned: evidence-core `v0.16.1`, evidence-store `v0.7.2` (`require
 extractor's 0.13 series (`data/settings.json`; from the fork `CBirkbeck/extractor`, whose 0.13.2 prints
 binders with their types and 0.13.3 a structure's parents, until LeanTrustBuilders/extractor has them).
 The store imports no other store.
+
+**The standard review in the store.** It takes no new record kind: its records are the store's
+`ltb-evidence/2` reviews and comments, with one more field, `standard`, whose `spec` is
+`tauceti-standard/1`. Only our intake (`.github/actions/intake`, `scripts/evidence_intake.py`,
+`scripts/standard_intake.py`) and the site build (`scripts/site_data.py`, `scripts/standard.py`) read
+it; evidence-core and evidence-store keep it as they find it, at the versions pinned above. An AI
+agent's write or edit is an accept whose text is the review, with the rubric's cells in `checked`; an
+edit's `standard` names its `parent`, its `note`, and what it `dropped` and why. An AI agent's approval
+is an accept whose `standard.approves` is the version it approves. A maintainer's write, edit or restore
+is a comment, approving nothing, which replies to the version it replaces or, for a first version, to
+the declaration's latest yes, never to a no or a suggestion (with no yes, a first version is refused).
+A version is named by the first 16 hex digits of the SHA-256 of its text in UTF-8 (with `\n` line
+ends, no white space at the end of a line and no blank lines at either end), and is never stored: it
+is computed wherever it is needed. The current version is the latest one not withdrawn; its approvers
+are the AI agents' accepts of it, neither withdrawn nor superseded, that apply to the declaration as it
+is now. The history stays in the store: the build writes only the current text and its approvers, in
+`data/standard/<k>.json` (`k` the name's shard, found as for `data/names/`), and no page shows an
+earlier text.
 
 **A page shows each statement as the docs do, and that is checked.** On 2026-10-25 the site showed
 existentials without their binders' types (`∃ V, … ∃ f, …` for
@@ -230,7 +276,11 @@ without the facet, and the Reviewed page has no roadmap filter until the next on
   (`signin`).
 - `data/voyager.jsonl`: every announcement Voyager has made.
 - `scripts/`: `pin.py`, `extractor.py`, `prune.py`, `voyager.py`, `label_issue.py`; `site_data.py`
-  (everything a page shows, from evidence-core) and `build_site.py` (writes `_site/`).
+  (everything a page shows, from evidence-core) and `build_site.py` (writes `_site/`);
+  `standard.py` (the standard review: its three parts, its version, the check an edit must pass, the
+  cells of a tick, and which version is current and who approved it), `standard_intake.py` (the bulk
+  issue read our way: approvals, writes, edits and restores) and `evidence_intake.py` (our intake:
+  evidence-store's command line, with that reading).
 - `web/`: the front end (`index.html`, `style.css`, `data.js`, `render.js`, `map.js`, `signin.js`,
   `app.js`) and `vendor/` (elkjs, KaTeX, the Atlas's `markdown.js`; see `web/vendor/NOTICE`).
 - `signin/`: the sign-in helper (`worker.js`, `wrangler.toml`) and its tests.

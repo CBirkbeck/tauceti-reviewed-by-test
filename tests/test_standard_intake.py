@@ -1,6 +1,7 @@
 import contextlib
 import io
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -10,6 +11,7 @@ from unittest import mock
 
 from evidence_core import records as rec
 from evidence_core.dataset import Dataset
+from evidence_core.rubric import STANDARD as RUBRIC
 from evidence_core.store import Store
 from evidence_store import cli, forms, github, intake
 from evidence_store.intake import Context
@@ -80,6 +82,32 @@ def edit(n: int, agent: str, parent: str, text: str = V2, note: str = NOTE, drop
 
 def approve(n: int, agent: str, version: str, decl: str = "Fixture.triple", cells: str = CELLS) -> dict:
     return comment(n, agent, f"Approve: {decl} — {version} — {cells}")
+
+
+#: A fence of a Markdown code block: three or more backticks or tildes, then its info string.
+FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})\s*([^`]*?)\s*$")
+#: A code span of prose, in single backticks.
+SPAN = re.compile(r"(?<!`)`([^`\n]+)`(?!`)")
+#: A field of a form, not of an example: `<decl>`, `<earlier version>`.
+PLACEHOLDER = re.compile(r"<[a-z][a-z ]*>")
+
+
+def fences(text: str) -> tuple[list[tuple[str, str]], str]:
+    """A Markdown text's fenced code blocks, each as its info string and its body, and the prose around them. A block
+    closes at a line of its own fence's character, as long as its fence or longer: a `~~~` line in a ``` block, the end
+    of a review written on the bulk issue, is the block's body."""
+    found, prose, lines, k = [], [], text.split("\n"), 0
+    while k < len(lines):
+        m = FENCE.match(lines[k])
+        if m is None:
+            prose.append(lines[k])
+            k += 1
+            continue
+        close = re.compile(rf"^ {{0,3}}{re.escape(m[1][0])}{{{len(m[1])},}}\s*$")
+        end = next((j for j in range(k + 1, len(lines)) if close.match(lines[j])), len(lines))
+        found.append((m[2], "\n".join(lines[k + 1:end])))
+        k = end + 1
+    return found, "\n".join(prose)
 
 
 def form(n: int, kind: str = "review", **answers) -> dict:
@@ -648,6 +676,73 @@ class InstallTests(IntakeCase):
             out = cli.process(form(8, rationale="Matches §1."), [], self.ctx)
         (n, said), = out.replies
         self.assertIn(GUIDE, said)
+
+
+class DocsTests(unittest.TestCase):
+    """AI-REVIEWS.md and the README as an agent follows them: each line they show is one the intake takes, each text
+    passes the check, and AI-REVIEWS.md marks the one definition of a standard review, which the migration's prompt
+    and `review_site.py guide` read without the rest of the file."""
+
+    BEGIN, END = "<!-- standard-review:begin -->", "<!-- standard-review:end -->"
+
+    def test_the_docs_examples_parse(self):
+        root = HERE.parent
+        docs = {name: (root / name).read_text(encoding="utf-8") for name in ("AI-REVIEWS.md", "README.md")}
+        guide = docs["AI-REVIEWS.md"]
+        self.assertEqual((guide.count(self.BEGIN), guide.count(self.END)), (1, 1))
+        self.assertLess(guide.index(self.BEGIN), guide.index(self.END))
+        marked = guide.split(self.BEGIN)[1].split(self.END)[0]
+        self.assertNotIn("](#", marked)  # no link into the rest of the file, which its readers do not have
+        for heading in standard.HEADINGS:
+            self.assertIn(heading, marked)
+        self.assertTrue([body for info, body in fences(marked)[0] if info == "review"], "the marked section's example")
+        # The page's example of an approval (How to review) is the guide's too.
+        page = (root / "web" / "app.js").read_text(encoding="utf-8")
+        self.assertIn(re.search(r"Approve: TauCeti\.Foo\.bar — [^'\\]+", page)[0], guide)
+
+        texts, examples, templates = [], [], []
+        for name, doc in docs.items():
+            found, prose = fences(doc)
+            for info, body in found:
+                if info == "review":
+                    texts.append(body)
+                    continue
+                agent = intake.parse_agent_mark(body) is not None
+                for cmd in standard_intake.commands(body):
+                    if cmd.keyword in standard_intake.OURS:
+                        (templates if PLACEHOLDER.search(" ".join(cmd.fields)) else examples).append((name, cmd, agent))
+                        texts += [cmd.block] if cmd.block is not None else []
+            for span in SPAN.findall(prose):
+                if re.match(r"(Approve|Write|Edit|Restore):\s*\S", span):
+                    cmd, = standard_intake.commands(span)
+                    templates.append((name, cmd, None))
+        self.assertTrue(templates)
+        self.assertEqual({cmd.keyword for _, cmd, _ in examples} & {"Approve", "Write", "Edit"},
+                         {"Approve", "Write", "Edit"})
+
+        for text in texts:
+            with self.subTest(text=text[:80]):
+                self.assertEqual(standard.check(text), [])
+        for name, cmd, _ in templates:  # a form, `<decl>` and all: the fields of an agent's line or a person's
+            with self.subTest(doc=name, form=cmd.fields):
+                self.assertTrue(any(standard_intake.given(cmd, line) is not None
+                                    for (keyword, _), line in standard_intake.FORMS.items() if keyword == cmd.keyword))
+        for name, cmd, agent in examples:
+            with self.subTest(doc=name, line=cmd.line, keyword=cmd.keyword):
+                line = standard_intake.FORMS.get((cmd.keyword, agent))
+                self.assertIsNotNone(line, "an agent approves, and a person restores")
+                f = standard_intake.given(cmd, line)
+                self.assertIsNotNone(f, line)
+                if agent:
+                    self.assertEqual(standard.cells(f["cells"], RUBRIC.names)[1], "")
+                for version in (f[key] for key in ("version", "parent", "earlier version") if key in f):
+                    self.assertTrue(standard_intake.HEX.fullmatch(intake.clean(version).lower()), version)
+                if cmd.keyword in ("Write", "Edit"):
+                    self.assertIsNotNone(cmd.block, "a write or an edit gives its text")
+                if cmd.keyword == "Edit":  # against the text it names, which the docs show too
+                    versions = {standard.version_of(t): t for t in texts}
+                    parent, = [t for v, t in versions.items() if v.startswith(intake.clean(f["parent"]).lower())]
+                    self.assertEqual(standard.check(cmd.block, parent=parent, dropped=cmd.dropped, note=f["note"]), [])
 
 
 if __name__ == "__main__":
