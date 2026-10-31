@@ -3,6 +3,8 @@
 
   python3 scripts/migrate_records.py voyager-refused TSV --dataset DIR [--store DIR] --comment-url URL
                                      --at TIME --session S --out FILE
+  python3 scripts/migrate_records.py standard BUNDLES RESULTS CHECKS --dataset DIR [--store DIR] [--out-dir DIR]
+                                     --prefix PREFIX [--held FILE] [--at TIME]
 
 `voyager-refused`: Voyager's yeses that the intake refused for want of their reasons, filed with the reasons
 transcribed from Voyager's run notes. On 2026-10-30 Voyager posted bare `Reviewed-by: <decl>` lines on the bulk
@@ -18,6 +20,37 @@ Voyager's latest earlier yes of the declaration, among the store's records.
 A row is refused, and nothing is written, when its line is not a positive number or is given twice, when it has no
 reasons, when the dataset lacks its declaration, when the store has the line recorded already, or when Voyager said
 yes to the declaration again at or after TIME: that yes counts already, and this one would count beside it.
+
+`standard`: the standard reviews the migration's writers made, as records. BUNDLES are scripts/migrate_inputs.py's;
+RESULTS the writers' (scripts/migrate_write.py collect), `{"decl", "cells", "verdict", "hold", "review"}` or
+`{"decl", "error"}`; CHECKS scripts/migrate_check.py's, a `{"decl", "ok", "problems"}` to each result, those of the
+last round. The records are keyed in the dataset DIR, which is the bundles' (the same commit), and made by the
+migration (Tau Ceti review migration, claude-opus-5-5, through CBirkbeck's account, in the run PREFIX) at TIME, which
+is the time of the run unless given: make them just before they are pushed, so that the records that come between are
+few. They go to `<PREFIX>-<nn>.jsonl` in OUT-DIR (evidence/records), at most 2,000 to a file, numbered on from the files
+of that prefix there already, none changed; each comes from its own line of its file, which its origin links in
+evidence/records on main. The store is read as it stands, for a declaration's latest accept, an open no and a standard
+review there already: bring it up to date first. The results are the run: a bundle with no result is not in it, as a
+retry round's results hold only what it ran again. A result is:
+- passed by its check, approved, and no no on the declaration is open (the bundle says so, or the store does now): an
+  accept holding the review as a first version, with its cells as `checked`. Writing the review approves it, as an AI's
+  write does. As evidence-store's accepts do, it supersedes the migration's own latest earlier accept of the
+  declaration, among the records the page puts on it;
+- passed by its check, and held, or approved for a declaration with an open no: a comment, a version nobody approves,
+  with `standard.note` saying it was held for the owner. It replies to the declaration's latest accept, any
+  reviewer's, never to a no or a question, which would then be taken for answered (Ruling R14). A declaration with no
+  accept has no record, since there is none to reply to;
+- an error, or failed by its check: no record.
+HELD (docs/standard-reviews-held.md) takes a line for each declaration that is held or has no record, with the reason
+(`no result: …`; `failed checks: …`, with the writer's own reason added when it held the review; `no yes to attach
+the review to`; or the writer's own) and its address on the site. It is added to when it is there, and a line already
+in it is not added again. A declaration that has a standard review already (a version not withdrawn) gets no record,
+since the migration's would replace that review: the report names it, and HELD lists it if it was held.
+
+Nothing is written, and the exit is 1, when a result has no bundle or no check, a check no result, a declaration is
+given twice, a bundle is at another commit than the dataset, the dataset lacks a declaration, or a result that its
+check passed is no review `standard.check` passes or has cells that are not each axis of the rubric once, checked or
+n/a. The exit is 2 on a time that is not like 2026-11-02T09:30:00Z or a file that cannot be read.
 """
 from __future__ import annotations
 
@@ -25,20 +58,49 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import ROOT  # noqa: E402
+import standard  # noqa: E402
 
 from evidence_core import Dataset  # noqa: E402
 from evidence_core import records as rec  # noqa: E402
+from evidence_core.coverage import Evidence  # noqa: E402
+from evidence_core.rubric import Rubric  # noqa: E402
 from evidence_core.store import Store  # noqa: E402
 
 STORE = ROOT / "evidence"
+HELD = ROOT / "docs" / "standard-reviews-held.md"
 #: What follows the reasons in a record's text.
 TRANSCRIBED = " (Reasons transcribed from Voyager's run notes; the line it posted had none.)"
 #: A record's time, as the intake keeps GitHub's: RFC 3339 in UTC, to the second.
 TIME = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
+#: Where the files of records stand in the repository, as an origin links them (`<file>#L<n>`), and the site, where the
+#: held list links each declaration.
+RECORDS_URL = "https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/evidence/records/"
+SITE_URL = "https://cbirkbeck.github.io/tauceti-reviewed-by-test/"
+#: What JavaScript's `encodeURIComponent`, which the page addresses a declaration by, leaves as it is besides letters,
+#: digits and `-_.`.
+URI_SAFE = "!~*'()"
+#: The most records a file holds.
+PER_FILE = 2000
+#: The most problems a refused run prints: files that do not belong together make one for every result.
+SHOWN = 50
+#: The note of a review held for the owner (`standard.note`), and the reasons a declaration is listed that no result or
+#: check gives.
+HELD_NOTE = "Written in the migration; held for the owner."
+NO_YES = "no yes to attach the review to"
+OPEN_NO = "a no on it is open"
+#: The held list's title, written when the file is made.
+HELD_TITLE = (
+    "# Standard reviews held for the owner\n\n"
+    "Declarations the migration to standard reviews did not approve, a line each: why, and where the site shows the "
+    "declaration. A review held for the owner is recorded as a comment on the declaration's latest yes, which nobody "
+    "approved; one that failed its checks, or was not written, has no record. No no was filed.\n")
 
 
 def voyager(session: str) -> dict:
@@ -104,6 +166,241 @@ def voyager_refused(rows: list[tuple[int, str, str]], ds: Dataset, store: Store,
     return out, problems
 
 
+def migration(session: str) -> dict:
+    """The migration, as the records name it: Claude writing the standard reviews, through CBirkbeck's account, in the
+    run `session`."""
+    return {"kind": "agent", "identity": {"kind": "github", "id": "CBirkbeck"}, "involvement": "unknown",
+            "agent": {"tool": "Tau Ceti review migration", "model": "claude-opus-5-5", "session": session}}
+
+
+def now() -> str:
+    """The time of the run, as a record keeps one (`TIME`)."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def count(n: int, word: str) -> str:
+    """`n` of a thing, in the plural unless there is one."""
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
+def one_line(text: object) -> str:
+    """A text on one line: each run of whitespace, newlines among it, as a space."""
+    return " ".join(str(text).split())
+
+
+def site_link(name: str) -> str:
+    """Where the site shows a declaration, addressed as the page does (`encodeURIComponent` of its name)."""
+    return f"{SITE_URL}#/d/{quote(name, safe=URI_SAFE)}"
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    """The objects on the lines of a JSONL file, blank lines skipped. The lines are cut at `\\n` only: a review may hold
+    a Unicode line separator, which `splitlines` would cut at. ValueError for a line that is no object."""
+    rows = []
+    for n, line in enumerate(Path(path).read_text(encoding="utf-8").split("\n"), 1):
+        if line.strip():
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"{path}:{n}: {e}") from e
+            if not isinstance(row, dict):
+                raise ValueError(f"{path}:{n}: a line is a JSON object")
+            rows.append(row)
+    return rows
+
+
+def keyed(rows: list[dict], what: str, problems: list[str]) -> dict[str, dict]:
+    """The rows by their declaration. A row with none, or a second row of a declaration, is a problem."""
+    out: dict[str, dict] = {}
+    for row in rows:
+        name = row.get("decl")
+        if not isinstance(name, str) or not name:
+            problems.append(f"a line of the {what} names no declaration")
+        elif name in out:
+            problems.append(f"`{name}`: it is in the {what} twice")
+        else:
+            out[name] = row
+    return out
+
+
+@dataclass
+class Plan:
+    """What the results come to."""
+    #: The records to write, without their origins and ids, in the order of the results.
+    records: list[dict] = field(default_factory=list)
+    #: The declarations for the owner, each with the reason it is listed, in the order of the results.
+    held: list[tuple[str, str]] = field(default_factory=list)
+    #: The declarations that have a standard review already, and get no record.
+    skipped: list[str] = field(default_factory=list)
+    #: What stops the run: while there is any, nothing is written.
+    problems: list[str] = field(default_factory=list)
+
+
+def standard_records(bundles: list[dict], results: list[dict], checks: list[dict], ds: Dataset, store: Store, at: str,
+                     session: str) -> Plan:
+    """The records and the held list the results make (see the module's docstring), keyed in `ds`, made at `at` by
+    the migration in the run `session`, against the records of `store` as the page reads them for `ds`
+    (evidence-core's `Evidence`: a declaration renamed keeps its records)."""
+    plan = Plan()
+    by, rubric = migration(session), store.rubric
+    bundle_of = keyed(bundles, "bundles", plan.problems)
+    check_of = keyed(checks, "checks", plan.problems)
+    result_of = keyed(results, "results", plan.problems)
+    for name in result_of:
+        plan.problems += [f"`{name}`: it has a result but no {what}" for what, rows in
+                          (("bundle", bundle_of), ("check", check_of)) if name not in rows]
+    plan.problems += [f"`{name}`: it has a check but no result" for name in check_of if name not in result_of]
+    off = [name for name in result_of if name in bundle_of and bundle_of[name].get("commit") != ds.commit]
+    if off:
+        plan.problems.append(f"{len(off)} bundles are at another commit than the dataset's `{ds.commit[:12]}`; "
+                             f"`{off[0]}` is at `{str(bundle_of[off[0]].get('commit'))[:12]}`")
+    ev = Evidence.resolve(store.records, ds)
+    for name, result in result_of.items():
+        bundle, check = bundle_of.get(name), check_of.get(name)
+        if bundle is None or check is None or name in off:
+            continue
+        decl = ds.by_name.get(name)
+        if decl is None:
+            plan.problems.append(f"`{name}`: not a declaration of the dataset at `{ds.commit[:12]}`")
+            continue
+        if "error" in result:
+            plan.held.append((name, f"no result: {one_line(result['error'])}"))
+            continue
+        if check.get("ok") is not True:
+            found = check.get("problems")
+            why = "failed checks: " + ("; ".join(one_line(p) for p in found) if isinstance(found, list) and found
+                                       else "none given")
+            if result.get("verdict") == "hold" and one_line(result.get("hold") or ""):
+                why += f"; the writer held it: {one_line(result['hold'])}"  # the review is lost, the concern is not
+            plan.held.append((name, why))
+            continue
+        verdict, text, cells = result.get("verdict"), result.get("review"), result.get("cells")
+        if verdict not in ("approve", "hold") or not isinstance(text, str):
+            plan.problems.append(f"`{name}`: its check passed, but the result is neither an approval nor a hold "
+                                 "with a review")
+            continue
+        text = standard.normalize(text)
+        # The checker passed it, so this is a net against a CHECKS file that is not RESULTS': the intake would
+        # refuse a first version that fails it.
+        wrong = standard.check(text, exists=ds.by_name.__contains__)
+        if wrong:
+            plan.problems.append(f"`{name}`: its check passed, but the review does not pass `standard.check`: "
+                                 + "; ".join(wrong))
+            continue
+        mine = [r for r, _ in ev.records_on(name)]
+        open_no = bundle.get("open_no") is True or bool(ev.open_problems(name))
+        hold = verdict == "hold" or open_no
+        reason = one_line(result.get("hold") or "") or (OPEN_NO if open_no else "held, with no reason given")
+        if any(standard.kind_of(r) == "version" and ev.state(r["id"]) != "withdrawn" for r in mine):
+            plan.skipped.append(name)
+            if hold:
+                plan.held.append((name, reason))
+            continue
+        subject = rec.subject_from_decl(decl, ds)
+        if not hold:
+            if not isinstance(cells, dict) or set(cells) != set(rubric.names) \
+                    or any(state not in ("checked", "na") for state in cells.values()):
+                plan.problems.append(f"`{name}`: an approval's cells are each axis of {rubric.name} once, `checked` or "
+                                     f"`na`: {cells!r}")
+                continue
+            r = {"schema": rec.SCHEMA, "kind": "review", "verdict": "accept", "subject": subject, "by": by, "at": at,
+                 "text": text, "rubric": rubric.name, "checked": {axis: cells[axis] for axis in rubric.names},
+                 "standard": {"spec": standard.SPEC}}
+            earlier = [x for x in mine if standard.is_accept(x) and rec.same_reviewer(x.get("by") or {}, by)]
+            if earlier:
+                r["links"] = {"supersedes": max(earlier, key=standard.order)["id"]}
+            plan.records.append(r)
+            continue
+        accepts = [x for x in mine if standard.is_accept(x)]
+        if not accepts:
+            plan.held.append((name, f"{NO_YES}; held because: {reason}"))
+            continue
+        plan.records.append({"schema": rec.SCHEMA, "kind": "comment", "subject": subject, "by": by, "at": at,
+                             "text": text, "standard": {"spec": standard.SPEC, "note": HELD_NOTE},
+                             "links": {"replies_to": max(accepts, key=standard.order)["id"]}})
+        plan.held.append((name, reason))
+    return plan
+
+
+def write_files(records: list[dict], out_dir: Path, prefix: str, rubric: Rubric) -> tuple[list[Path], list[str]]:
+    """Writes `records`, which lack their origins and ids, to `<prefix>-<nn>.jsonl` files of `out_dir`: `PER_FILE` to a
+    file, numbered on from the highest number of that prefix there already, and no file there is changed. Each record
+    comes from its own line of its file (`RECORDS_URL`). The files written, and what is wrong with the records: while
+    any is, nothing is written."""
+    out_dir = Path(out_dir)
+    have = [int(m[1]) for f in out_dir.glob(f"{prefix}-*.jsonl")
+            if (m := re.fullmatch(rf"{re.escape(prefix)}-(\d+)\.jsonl", f.name))] if out_dir.is_dir() else []
+    first = max(have, default=0) + 1
+    made: list[tuple[str, list[dict]]] = []
+    problems: list[str] = []
+    for start in range(0, len(records), PER_FILE):
+        file = f"{prefix}-{first + start // PER_FILE:02d}.jsonl"
+        chunk = []
+        for n, r in enumerate(records[start:start + PER_FILE], 1):
+            r = rec.with_id({**r, "origin": {"kind": "file", "ref": f"{RECORDS_URL}{file}#L{n}"}})
+            problems += [f"`{r['subject']['name']}`: {e}" for e in rec.validate(r, {rubric.name: rubric})]
+            chunk.append(r)
+        made.append((file, chunk))
+    if problems or not made:
+        return [], problems
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for file, chunk in made:
+        with (out_dir / file).open("x", encoding="utf-8") as f:
+            f.write("".join(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n" for r in chunk))
+        paths.append(out_dir / file)
+    return paths, []
+
+
+def write_held(path: Path, held: list[tuple[str, str]], heading: str) -> int:
+    """Adds a line to the held list for each (declaration, reason) of `held` that is not in the file already, under a
+    heading `heading` when there is any; makes the file, with its title, when there is none. How many lines it added."""
+    path = Path(path)
+    before = path.read_text(encoding="utf-8") if path.exists() else ""
+    have = set(before.split("\n"))
+    lines = [f"- [`{name}`](<{site_link(name)}>) — {one_line(why)}" for name, why in held]
+    new = [line for line in dict.fromkeys(lines) if line not in have]
+    if new:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        text = before or HELD_TITLE
+        text += ("" if text.endswith("\n") else "\n") + f"\n## {heading}\n\n" + "\n".join(new) + "\n"
+        path.write_text(text, encoding="utf-8")
+    return len(new)
+
+
+def run_standard(args: argparse.Namespace) -> int:
+    at = args.at or now()
+    if not TIME.fullmatch(at):
+        print(f"error: --at {at!r} is not a time like 2026-11-02T09:30:00Z", file=sys.stderr)
+        return 2
+    try:
+        bundles, results, checks = (read_jsonl(Path(p)) for p in (args.bundles, args.results, args.checks))
+        ds, store = Dataset.load(args.dataset), Store.load(args.store)
+    except (OSError, ValueError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    plan = standard_records(bundles, results, checks, ds, store, at, args.prefix)
+    files, problems = [], plan.problems
+    if not problems:
+        files, problems = write_files(plan.records, Path(args.out_dir), args.prefix, store.rubric)
+    if problems:
+        print(f"error: {count(len(problems), 'problem')}; nothing is written:", file=sys.stderr)
+        for problem in problems[:SHOWN]:
+            print(f"  {problem}", file=sys.stderr)
+        if len(problems) > SHOWN:
+            print(f"  … and {len(problems) - SHOWN} more", file=sys.stderr)
+        return 1
+    added = write_held(Path(args.held), plan.held, f"{args.prefix}, {at}")
+    approved = sum(r["kind"] == "review" for r in plan.records)
+    print(f"wrote {count(len(plan.records), 'record')} to {count(len(files), 'file')} in {args.out_dir}: "
+          f"{approved} approved, {len(plan.records) - approved} held for the owner as comments")
+    print(f"{count(len(plan.held), 'declaration')} for the owner, {count(added, 'line')} added to {args.held}")
+    if plan.skipped:
+        print(f"{len(plan.skipped)} left alone, since they have a standard review already: "
+              + ", ".join(plan.skipped[:10]) + (" …" if len(plan.skipped) > 10 else ""))
+    return 0
+
+
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(prog="migrate_records.py", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -116,7 +413,22 @@ def main(argv: list[str]) -> int:
     refused.add_argument("--at", required=True, help="the comment's time, e.g. 2026-10-30T18:01:39Z")
     refused.add_argument("--session", required=True, help="Voyager's run, e.g. voyager-2026-10-30-1603")
     refused.add_argument("--out", required=True, help="the file of records to write")
+    std = sub.add_parser("standard", help="the migration's checked standard reviews, and the list held for the owner")
+    std.add_argument("bundles", help="the bundles (scripts/migrate_inputs.py)")
+    std.add_argument("results", help="the writers' results (scripts/migrate_write.py collect)")
+    std.add_argument("checks", help="the checks of the results (scripts/migrate_check.py), those of the last round")
+    std.add_argument("--dataset", required=True, help="the dataset of the bundles' commit")
+    std.add_argument("--store", default=str(STORE), help="the evidence store (default: evidence/)")
+    std.add_argument("--out-dir", default=str(STORE / "records"), help="where the files go (default: evidence/records)")
+    std.add_argument("--prefix", required=True, help="the files' name and the run, e.g. standard-migration-2026-11-02")
+    std.add_argument("--held", default=str(HELD),
+                     help="the list for the owner (default: docs/standard-reviews-held.md)")
+    std.add_argument("--at", help="the records' time, e.g. 2026-11-02T09:30:00Z (default: now)")
     args = p.parse_args(argv)
+    return run_standard(args) if args.cmd == "standard" else run_voyager_refused(args)
+
+
+def run_voyager_refused(args: argparse.Namespace) -> int:
     if not TIME.fullmatch(args.at):
         print(f"error: --at {args.at!r} is not a time like 2026-10-30T18:01:39Z", file=sys.stderr)
         return 2
