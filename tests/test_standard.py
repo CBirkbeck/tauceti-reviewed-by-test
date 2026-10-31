@@ -371,6 +371,229 @@ class RecordTests(StandardTests):
         r = record("comment", standard={"spec": standard.SPEC, "parent": "0123456789abcdef", "restores": "fedcba9876543210"})
         self.assertEqual(standard.act(r), "restored")
 
+    def test_an_accept_is_a_review_that_says_yes(self):
+        self.assertTrue(standard.is_accept({"kind": "review", "verdict": "accept"}))
+        for r in ({"kind": "review", "verdict": "problem"}, {"kind": "review"}, {"verdict": "accept"}, {},
+                  {"kind": "comment", "verdict": "accept"}):
+            self.assertFalse(standard.is_accept(r), r)
+        # A comment that says `accept` is no accept to the standard review either: it has no approval in it.
+        spec = {"spec": standard.SPEC, "approves": "dd83c85a488e22c8"}
+        self.assertIsNone(standard.kind_of({"kind": "comment", "verdict": "accept", "text": "t", "standard": spec}))
+
+
+V1 = GOOD
+V2 = GOOD.replace("None.", "Division by zero is zero.")
+VER1, VER2 = standard.version_of(V1), standard.version_of(V2)
+PERSON = {"kind": "person", "identity": {"kind": "github", "id": "example"}}
+
+
+def made(n: int, who, kind="review", **fields) -> dict:
+    """What happened at time `n`, by the agent whose tool is `who` (a test tells agents apart by it), or by the
+    `by` given: an accept, or a comment when `kind` says so. The times and the ids both run in order."""
+    by = {"kind": "agent", "agent": {"tool": who, "model": "m"}} if isinstance(who, str) else who
+    return record(kind, id=f"r{n}", at=f"2026-10-25T10:{n:02d}:00Z", by=by, **fields)
+
+
+def wrote(n: int, who, text=V1, parent=None) -> dict:
+    """A version an AI wrote, which is an accept: an edit when it names its parent."""
+    s = {"spec": standard.SPEC, **({"parent": parent, "note": "n", "dropped": []} if parent else {})}
+    return made(n, who, text=text, standard=s)
+
+
+def held(n: int, who, text=V1) -> dict:
+    """A version nobody approves by recording it: a comment."""
+    return made(n, who, "comment", text=text, standard={"spec": standard.SPEC})
+
+
+def ticked(n: int, who, version: str) -> dict:
+    """An approval of `version`."""
+    return made(n, who, text=f"Approves the standard review `{version}`.",
+                standard={"spec": standard.SPEC, "approves": version})
+
+
+def yes(n: int, who) -> dict:
+    """An accept of the earlier form: reasons of its own, and no `standard`."""
+    return made(n, who, text="Correctly stated.")
+
+
+def seen(r: dict, applies=True, withdrawn=False, superseded=False) -> standard.Seen:
+    return standard.Seen(r, applies, withdrawn, superseded)
+
+
+def tools(rows) -> list[str]:
+    return [s.record["by"].get("agent", {}).get("tool", s.record["by"]["kind"]) for s in rows]
+
+
+class SeenTests(StandardTests):
+    def test_a_seen_is_a_record_and_what_the_store_says_of_it(self):
+        r = yes(1, "A")
+        s = standard.Seen(r, True, False, True)
+        self.assertEqual([f.name for f in dataclasses.fields(s)], ["record", "applies", "withdrawn", "superseded"])
+        self.assertEqual((s.record, s.applies, s.withdrawn, s.superseded), (r, True, False, True))
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            s.applies = False
+
+
+class CurrentVersionTests(StandardTests):
+    def test_the_latest_version_not_withdrawn_is_current(self):
+        v1 = seen(wrote(1, "A", V1), superseded=True)  # A's edit superseded A's yes of v1, but v1 stays a candidate
+        v2 = seen(wrote(2, "A", V2, parent=VER1))
+        self.assertIs(standard.current_version([v1, v2]), v2)
+        # The edit withdrawn is undone: v1, though superseded, is current again; with both withdrawn none is.
+        v2 = seen(v2.record, withdrawn=True)
+        self.assertIs(standard.current_version([v1, v2]), v1)
+        self.assertIsNone(standard.current_version([seen(v1.record, withdrawn=True), v2]))
+
+    def test_versions_are_ordered_by_time_then_id_not_by_position(self):
+        a, b = seen(wrote(1, "A", V1)), seen(wrote(2, "B", V2))
+        self.assertIs(standard.current_version([a, b]), b)
+        self.assertIs(standard.current_version([b, a]), b)
+        # At the same instant the later id wins, whichever comes first.
+        c = seen({**a.record, "at": b.record["at"], "id": "r9"})
+        for rows in ([c, b], [b, c]):
+            self.assertIs(standard.current_version(rows), c)
+        # Time comes before id: a later version whose id sorts earlier is still the later.
+        early, late = seen({**a.record, "id": "z"}), seen({**b.record, "id": "a"})
+        self.assertIs(standard.current_version([early, late]), late)
+
+    def test_only_a_version_can_be_current(self):
+        rows = [seen(yes(1, "A")), seen(ticked(2, "B", VER1)), seen(made(3, "C", verdict="problem", text="Wrong.")),
+                seen(made(4, "D", "comment", text="A remark."))]
+        self.assertIsNone(standard.current_version(rows))
+        self.assertIsNone(standard.current_version([]))
+        # A comment that carries the spec and a text is one: a maintainer's edit, a migration review held for the owner.
+        c = seen(held(5, "M"))
+        self.assertIs(standard.current_version([*rows, c]), c)
+
+
+class SummaryTests(StandardTests):
+    def test_what_a_summary_holds(self):
+        v1, v2 = wrote(1, "A", V1), wrote(2, "A", V2, parent=VER1)
+        s = standard.summary([seen(v1, superseded=True), seen(v2)])
+        self.assertEqual(set(s), {"text", "version", "record", "approving", "current", "approvers", "earlier"})
+        self.assertEqual((s["text"], s["version"]), (V2, VER2))
+        self.assertIs(s["record"], v2)
+        self.assertEqual((s["approving"], s["current"], s["earlier"]), (True, True, 0))
+        self.assertEqual(s["approvers"], [seen(v2)])
+        # With no version there is no summary.
+        self.assertIsNone(standard.summary([]))
+        self.assertIsNone(standard.summary([seen(yes(1, "A")), seen(ticked(2, "B", VER1))]))
+        self.assertIsNone(standard.summary([seen(v2, withdrawn=True)]))
+
+    def test_what_an_accept_approves(self):
+        self.assertEqual(standard.approved(wrote(1, "A", V2)), VER2)  # a version: its own text's
+        self.assertEqual(standard.approved(ticked(2, "B", VER1)), VER1)  # an approval: the one it names
+        self.assertIsNone(standard.approved(held(3, "C", V2)))  # a comment approves nothing,
+        self.assertIsNone(standard.approved(yes(4, "D")))  # nor does a yes of the earlier form
+        self.assertEqual(standard.approved(wrote(5, "E", V2.replace("\n", "  \r\n"))), VER2)
+
+    def test_an_ai_accept_is_an_agents_accept_in_any_form(self):
+        for r in (wrote(1, "A"), ticked(2, "B", VER1), yes(3, "C"), made(4, "D", standard={"spec": "other"})):
+            self.assertTrue(standard.ai_accept(r), r)
+        # Not an AI's yes: a comment, a no, a person's yes, and an author that is not a `by`.
+        for r in (held(5, "E"), made(6, "F", verdict="problem"), made(7, PERSON), {**yes(8, "G"), "by": None},
+                  {**yes(9, "H"), "by": "Voyager"}, {"kind": "review", "verdict": "accept"}):
+            self.assertFalse(standard.ai_accept(r), r)
+
+    def test_approvers_are_this_texts_and_apply_now(self):
+        rows = [seen(wrote(1, "A", V1), superseded=True),  # A's first version, which A's edit superseded
+                seen(wrote(2, "A", V2, parent=VER1)),      # v2 by A, who approves it by writing it
+                seen(ticked(3, "B", VER2)),                # approval of v2 by B
+                seen(ticked(4, "C", VER1)),                # approval of v1 by C
+                seen(yes(5, "D")),                         # old-form yes by D
+                seen(ticked(6, "E", VER2), applies=False)]  # approval of v2 by E, which no longer applies
+        s = standard.summary(rows)
+        self.assertEqual(tools(s["approvers"]), ["B", "A"])
+        self.assertEqual(s["earlier"], 3)  # C, D, E
+        self.assertEqual((s["version"], s["approving"], s["current"]), (VER2, True, True))
+        # Whatever order the caller holds them in.
+        self.assertEqual(standard.summary(rows[::-1]), s)
+
+    def test_a_yes_withdrawn_or_superseded_counts_nowhere(self):
+        rows = [seen(wrote(1, "A", V2)),
+                seen(ticked(2, "B", VER2), superseded=True),  # B ticked again at 3
+                seen(ticked(3, "B", VER2)),
+                seen(ticked(4, "C", VER2), withdrawn=True),
+                seen(ticked(5, "C", VER1), superseded=True),
+                seen(yes(6, "D"), superseded=True),
+                seen(yes(7, "E"), withdrawn=True)]
+        s = standard.summary(rows)
+        self.assertEqual([x.record["id"] for x in s["approvers"]], ["r3", "r1"])
+        self.assertEqual(s["earlier"], 0)
+
+    def test_approvers_come_latest_first_by_time_then_id(self):
+        tied = {**ticked(5, "E", VER2), "at": made(3, "C")["at"], "id": "r9"}  # at C's instant, with the later id
+        rows = [seen(wrote(1, "A", V2)), seen(ticked(3, "C", VER2)), seen(ticked(2, "B", VER2)),
+                seen(ticked(4, "D", VER2)), seen(tied)]
+        self.assertEqual(tools(standard.summary(rows)["approvers"]), ["D", "E", "C", "B", "A"])
+
+    def test_only_an_accept_counts(self):
+        rows = [seen(wrote(1, "A", V1)),
+                seen(made(2, "B", verdict="problem", text="Wrong.")),
+                seen(made(3, "C", verdict="question", text="Why?")),
+                seen(made(4, "D", "comment", text="A remark.")),
+                seen(held(5, "E", V2))]  # a version, but a comment: it approves nothing
+        s = standard.summary(rows[:4])
+        self.assertEqual((tools(s["approvers"]), s["earlier"]), (["A"], 0))
+        s = standard.summary(rows)
+        self.assertEqual((s["version"], tools(s["approvers"]), s["earlier"]), (VER2, [], 1))
+
+    def test_a_version_is_its_texts_hash_whatever_its_line_endings(self):
+        crlf = V2.replace("\n", "  \r\n")
+        s = standard.summary([seen(wrote(1, "A", crlf)), seen(ticked(2, "B", VER2))])
+        self.assertEqual((s["version"], tools(s["approvers"]), s["earlier"]), (VER2, ["B", "A"], 0))
+        self.assertEqual(s["text"], crlf)  # as recorded
+
+    def test_a_comment_version_approves_nothing(self):
+        mine = held(1, "M")
+        s = standard.summary([seen(mine)])
+        self.assertEqual((s["approving"], s["approvers"], s["current"], s["earlier"]), (False, [], True, 0))
+        self.assertEqual((s["version"], s["text"]), (VER1, V1))
+        self.assertIs(s["record"], mine)
+        # An AI that then approves it is its approver, and the comment is not.
+        s = standard.summary([seen(mine), seen(ticked(2, "B", VER1))])
+        self.assertEqual((s["approving"], tools(s["approvers"]), s["current"], s["earlier"]), (False, ["B"], True, 0))
+
+    def test_a_maintainers_edit_strands_the_approvals_and_a_restore_brings_them_back(self):
+        a, b = seen(wrote(1, "A", V1)), seen(ticked(2, "B", VER1))
+        edit = seen(made(3, PERSON, "comment", text=V2, standard={"spec": standard.SPEC, "parent": VER1, "note": "n"}))
+        s = standard.summary([a, b, edit])
+        self.assertEqual((s["version"], s["approving"], s["approvers"], s["current"]), (VER2, False, [], True))
+        self.assertEqual(s["earlier"], 2)  # A's and B's, of the text before
+        restores = {"spec": standard.SPEC, "parent": VER2, "restores": VER1}
+        restore = seen(made(4, PERSON, "comment", text=V1, standard=restores))
+        s = standard.summary([a, b, edit, restore])
+        self.assertEqual((s["version"], s["approving"], tools(s["approvers"])), (VER1, False, ["B", "A"]))
+        self.assertEqual(s["earlier"], 0)
+
+    def test_out_of_date_when_nothing_about_it_applies(self):
+        v1, tick = wrote(1, "A", V1), ticked(2, "B", VER1)
+        s = standard.summary([seen(v1, applies=False), seen(tick, applies=False)])
+        self.assertEqual((s["current"], s["approvers"], s["earlier"], s["approving"]), (False, [], 2, True))
+        self.assertFalse(standard.summary([seen(held(1, "M"), applies=False)])["current"])
+        # One approver that applies is enough, though the version's own record does not,
+        s = standard.summary([seen(v1, applies=False), seen(tick)])
+        self.assertEqual((s["current"], tools(s["approvers"]), s["earlier"]), (True, ["B"], 1))
+        # and so is the version's own record, a comment, though every approval is stale.
+        s = standard.summary([seen(tick, applies=False), seen(held(3, "M"))])
+        self.assertEqual((s["current"], s["approvers"], s["earlier"]), (True, [], 1))
+
+    def test_people_are_never_approvers(self):
+        mine = wrote(4, "A", V1)
+        people = [made(1, PERSON, text=V1, standard={"spec": standard.SPEC}),  # an accept that carries the same text
+                  made(2, PERSON, text="Approves.", standard={"spec": standard.SPEC, "approves": VER1}),  # a tick of it
+                  made(3, PERSON, text="The integers, as in any textbook.")]  # a yes of the earlier form
+        s = standard.summary([*map(seen, people), seen(mine)])
+        self.assertEqual((tools(s["approvers"]), s["earlier"]), (["A"], 0))
+        # Alone, the first is the text that is current, and it approves itself for nobody.
+        s = standard.summary([seen(people[0])])
+        self.assertEqual((s["version"], s["approving"], s["approvers"], s["current"]), (VER1, False, [], True))
+        self.assertEqual(s["earlier"], 0)
+        # Nor does a person's tick, or a person's yes, count as an approval of an earlier text.
+        for r in people[1:]:
+            s = standard.summary([seen(r), seen(held(5, "M"))])
+            self.assertEqual((s["approvers"], s["earlier"]), ([], 0))
+
 
 if __name__ == "__main__":
     unittest.main()

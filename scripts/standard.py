@@ -3,7 +3,8 @@
 A declaration has one standard review, which AI agents approve or edit in place of each leaving a text of
 its own (docs/superpowers/specs/2026-10-30-standard-reviews-design.md). This module owns what that text
 is, so that the intake, the site build and the migration agree on it: its three parts, its version, the
-check an edit must pass and the rubric cells a tick carries. It judges nothing about the mathematics.
+check an edit must pass, the rubric cells a tick carries, and which version is current and who approved it.
+It judges nothing about the mathematics.
 
 A version is named by the hash of its text, and the hash is never stored, so an approval made before the
 site shows a new text can still name it. The text is normalized first: GitHub hands back a comment body
@@ -19,6 +20,11 @@ A reference that is only reworded counts as kept, by how alike the two read, and
 said after it, since the new text then holds the old. A first version, and a restore, which puts back a
 text that passed the check when it was recorded, are not compared with a parent: they get the first two
 questions only.
+
+Which version is current is read from a declaration's records alone. The caller says, of each, whether it
+applies to the declaration as it is now, was withdrawn, or was superseded by its reviewer's later review
+(`Seen`): the intake reads that from the store, the site build from evidence-core. Only an AI approves. A
+person says yes with the page's form, and that yes is no approval of the text.
 """
 from __future__ import annotations
 
@@ -229,6 +235,11 @@ def cells(spec: str, axes: Sequence[str]) -> tuple[dict[str, str] | None, str]:
     return (None, "; ".join(reasons)) if reasons else ({axis: got[axis] for axis in axes}, "")
 
 
+def is_accept(record: dict) -> bool:
+    """Whether the record is a review that says yes."""
+    return record.get("kind") == "review" and record.get("verdict") == "accept"
+
+
 def kind_of(record: dict) -> str | None:
     """What a record is to the standard review. A "version" is a review (an accept) or a comment that
     carries the spec and a text of its own, and approves nothing; an "approval" is an accept that names
@@ -236,7 +247,7 @@ def kind_of(record: dict) -> str | None:
     s = record.get("standard")
     if not isinstance(s, dict) or s.get("spec") != SPEC:
         return None
-    accept = record.get("kind") == "review" and record.get("verdict") == "accept"
+    accept = is_accept(record)
     if "approves" in s:
         return "approval" if accept and isinstance(s["approves"], str) and s["approves"] else None
     text = record.get("text")
@@ -255,3 +266,64 @@ def act(record: dict) -> str:
     if kind == "approval":
         return "approved"
     return "restored" if s.get("restores") else "edited" if s.get("parent") else "wrote"
+
+
+@dataclass(frozen=True)
+class Seen:
+    """A record of a declaration and how the store reads it now: whether it applies to the declaration as it
+    is (evidence-core's status), whether it was withdrawn, and whether its reviewer's later review
+    superseded it. The caller says so, since the intake and the site build each know it their own way."""
+    record: dict
+    applies: bool
+    withdrawn: bool
+    superseded: bool
+
+
+def ai_accept(record: dict) -> bool:
+    """Whether an AI said yes in the record: an accept by an agent, in whichever form. A person's accept is
+    not one, whatever it carries."""
+    by = record.get("by")
+    return is_accept(record) and isinstance(by, dict) and by.get("kind") == "agent"
+
+
+def approved(record: dict) -> str | None:
+    """The version an accept approves: the one an approval names, or for a version its own text's. A comment,
+    and an accept of the earlier form, approve none."""
+    kind = kind_of(record)
+    if kind == "approval":
+        return record["standard"]["approves"]
+    return version_of(record["text"]) if kind == "version" and is_accept(record) else None
+
+
+def when(seen: Seen) -> tuple[str, str]:
+    """Where a record stands in time: when it was made, then its id, as evidence-core orders records. The
+    times are RFC 3339, which sort as text."""
+    return seen.record.get("at", ""), seen.record.get("id", "")
+
+
+def current_version(seen: list[Seen]) -> Seen | None:
+    """The version the review stands at: the latest record of a version, by time and then id, that was not
+    withdrawn; None when there is none. A version whose accept was superseded still counts, since its
+    reviewer's later review may be a tick of the same text. A withdrawn one is an edit undone, and the
+    version before it is current again."""
+    return max((s for s in seen if kind_of(s.record) == "version" and not s.withdrawn), key=when, default=None)
+
+
+def summary(seen: list[Seen]) -> dict | None:
+    """The standard review of a declaration as its page shows it, or None while it has no version. It holds
+    the current version's `text` as recorded, its `version` and its `record`. `approving` is whether that
+    record is an AI's accept, which approves the text by writing it; a comment, held for the owner, and a
+    person's accept approve nothing. `approvers` are the AI accepts of this version that apply to the
+    declaration as it is now, latest first, and `earlier` counts the other AI accepts: yeses of the earlier
+    form, approvals of other texts, and approvals of this one made for an earlier version of the declaration.
+    An accept withdrawn or superseded counts in neither. The text is `current` when the version's record or
+    any approver applies; otherwise it was written for an earlier version of the declaration."""
+    now = current_version(seen)
+    if now is None:
+        return None
+    text = now.record["text"]
+    version = version_of(text)
+    live = [s for s in seen if ai_accept(s.record) and not (s.withdrawn or s.superseded)]
+    approvers = sorted((s for s in live if s.applies and approved(s.record) == version), key=when, reverse=True)
+    return {"text": text, "version": version, "record": now.record, "approving": ai_accept(now.record),
+            "current": bool(now.applies or approvers), "approvers": approvers, "earlier": len(live) - len(approvers)}
