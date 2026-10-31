@@ -486,6 +486,26 @@ def standard_review_html_is_inert(browser, url, errors):  # Review Focus 3: the 
     expect(page.locator(".review .standard img").count() == 0, "and makes no element")
 
 
+@check
+def standard_review_unreachable(browser, url, errors):
+    """A standard review that cannot be had leaves the page up, without it: a shard of data/standard/ that does not come,
+    or a meta.json kept from before the shards, which names none."""
+    page = visit(browser, url, "#/d/Fixture.triple", errors,
+                 before=lambda p: p.route("**/data/standard/*.json", lambda route: route.abort()))
+    expect(page.locator("main h1").first.inner_text() != "This page could not be shown"
+           and page.locator(".review .ask").count() == 1 and page.locator(".review .standard").count() == 0,
+           "the shard blocked: the review box, with no standard review")
+    errors[:] = [e for e in errors if "net::ERR_FAILED" not in e]  # the browser's own line for the request blocked above
+    asked = []
+
+    def from_before_the_shards(p):
+        p.on("request", lambda r: asked.append(r.url))
+        edited(("**/data/meta.json", lambda meta: meta["shards"].pop("standard")))(p)
+    page = visit(browser, url, "#/d/Fixture.triple", errors, before=from_before_the_shards)
+    expect(page.locator(".review .ask").count() == 1 and page.locator(".review .standard").count() == 0
+           and not [u for u in asked if "/data/standard/" in u], "no shard named: none asked for, and the review box")
+
+
 def without_standard(name: str, extra_yeses: int = 0):
     """A `before` for `visit`: the site as it was before ``name`` had a standard review, its entry gone from its
     shard in data/standard/. With ``extra_yeses``, that many more AI agents have said yes in the earlier form (copies

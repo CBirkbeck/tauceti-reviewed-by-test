@@ -54,10 +54,18 @@
     return {node: n, entry: module.decls.find(e => e.id === id) || null, module};
   }
   /* A declaration's standard review: its entry in the shard of its name in data/standard/, or null while it has
-     none. Only the current text is there, with its approvers; the history stays in the store. */
+     none. Only the current text is there, with its approvers; the history stays in the store. Null too when the
+     shard cannot be had, or a meta.json kept from before the shards names none: the page then shows no standard
+     review, rather than failing. */
   async function standard(name) {
     const m = await meta();
-    const shard = await json(`standard/${fnv(name, m.shards.standard)}.json`);
+    if (!(m.shards && m.shards.standard)) return null;
+    let shard;
+    try {
+      shard = await json(`standard/${fnv(name, m.shards.standard)}.json`);
+    } catch (e) {
+      return null;
+    }
     return Object.hasOwn(shard, name) ? shard[name] : null;
   }
   async function moduleByName(name) {
