@@ -2,24 +2,25 @@
 """The migration's writing: the batches Claude Code agents write the standard reviews from, the results they add, and
 those results collected. Agents in a session write the reviews, not the Message Batches API (Ruling R31).
 
-  python3 scripts/migrate_write.py split BUNDLES --name NAME [--size 40] [--work .cache/migration]
+  python3 scripts/migrate_write.py split BUNDLES --name NAME [--size 20] [--work .cache/migration]
   python3 scripts/migrate_write.py split BUNDLES --name NAME --retry CHECKS --results RESULTS [--size …] [--work …]
   python3 scripts/migrate_write.py add RESULT --decl DECL --verdict approve|hold --cells CELLS [--hold WHY]
                                    [--review FILE]
+  python3 scripts/migrate_write.py todo RESULT
   python3 scripts/migrate_write.py collect NAME [--work .cache/migration]
 
 **split** cuts BUNDLES (scripts/migrate_inputs.py) into `<work>/<NAME>/batch-<nnn>.jsonl`, `nnn` from 001: at most
 `--size` bundles each, in their order, each given `index`, its line in BUNDLES from 0. It writes
 `<work>/<NAME>/prompt.md` beside them, the agents' instructions: scripts/migrate_prompt.md, with AI-REVIEWS.md's
 definition of the standard review (its section between `<!-- standard-review:begin -->` and
-`<!-- standard-review:end -->`) put in where it says, and the command that adds a result. It prints one line per batch:
-its path, and how many bundles it has. An agent takes one batch: it reads prompt.md and the batch, and for each bundle
-adds one line to `result-<nnn>.jsonl` beside it, of the batch's number: `{"decl", "cells", "verdict", "hold",
-"review"}`, and nothing else.
+`<!-- standard-review:end -->`) put in where it says, and this script's command for `add` and `todo`. It prints one line
+per batch: its path, and how many bundles it has. An agent takes one batch: it reads prompt.md and the batch, and for
+each bundle adds one line to `result-<nnn>.jsonl` beside it, of the batch's number: `{"decl", "cells", "verdict",
+"hold", "review"}`, and nothing else.
 
 With `--retry`, it takes only the bundles whose result in RESULTS (`collect`'s) failed its check in CHECKS
-(scripts/migrate_check.py, run on RESULTS), no result among them; a bundle that is not in RESULTS was not in that round.
-Each gets `retry`: `{"problems": [what the check found], "previous": "<the review it was given>"}`.
+(scripts/migrate_check.py, run on RESULTS), no result among them; a bundle that is not in RESULTS was not in that round
+(Ruling R49). Each gets `retry`: `{"problems": [what the check found], "previous": "<the review it was given>"}`.
 
 A name is split once: `split` refuses a directory that holds batches or results already, since agents' work is in it.
 
@@ -28,7 +29,8 @@ stdin, as written: an agent gives it in a here-document, with nothing to escape,
 written by hand reads `\\theta` as a tab and `heta`). The line replaces any line of the declaration the file had. `add`
 refuses a declaration that is not in the batch, and a result whose cells, verdict or hold break the contract
 (`migrate_check.shape`), writing nothing; it then checks the review as migrate_check.py will and says what it finds, so
-that the agent can fix it and add it again.
+that the agent can fix it and add it again. **todo** lists the bundles of RESULT's batch that have no line yet, by their
+line in the batch: an agent sent to a batch another began resumes from the first of them.
 
 **collect** merges the result files of NAME into `<work>/<NAME>/results.jsonl`: one line per bundle, in the bundles'
 order, its result, or `{"decl", "error"}`, the error `no result`, `unparseable line` or `two results`. A line that is
@@ -58,10 +60,11 @@ WORK = ROOT / ".cache" / "migration"
 TEMPLATE = Path(__file__).resolve().with_name("migrate_prompt.md")
 GUIDE = ROOT / "AI-REVIEWS.md"
 BEGIN, END = "<!-- standard-review:begin -->", "<!-- standard-review:end -->"
-#: Where the template takes AI-REVIEWS.md's section, and the command that adds a result.
-SECTION, ADD = "{{STANDARD_REVIEW}}", "{{ADD}}"
-#: The most bundles a batch holds, unless told otherwise.
-SIZE = 40
+#: Where the template takes AI-REVIEWS.md's section, and this script as an agent runs it (`add`, `todo`).
+SECTION, WRITE = "{{STANDARD_REVIEW}}", "{{WRITE}}"
+#: The most bundles a batch holds, unless told otherwise: 20 keep an agent's batch well within its context, though
+#: the named results, read first, carry long reviews (Ruling R48).
+SIZE = 20
 NAME = re.compile(r"\w[\w.-]*")
 BATCH = re.compile(r"batch-(\d+)\.jsonl")
 RESULT = re.compile(r"result-(\d+)\.jsonl")
@@ -80,17 +83,19 @@ def section(guide: str) -> str:
     return guide.split(BEGIN, 1)[1].split(END, 1)[0].strip("\n")
 
 
-def add_command() -> str:
-    """The command an agent adds a result with: this script run by this Python, so that it runs as written."""
-    return f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve()))} add"
+def write_command() -> str:
+    """This script as an agent runs it, to add a result or see what is left: run by this Python, so that it runs as
+    written."""
+    return f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve()))}"
 
 
-def prompt(template: str, guide: str, add: str) -> str:
-    """The agents' instructions: the template with the guide's section, and the command `add`, put in their places."""
-    for slot in (SECTION, ADD):
+def prompt(template: str, guide: str, write: str) -> str:
+    """The agents' instructions: the template with the guide's section, and this script's command `write`, put in
+    their places."""
+    for slot in (SECTION, WRITE):
         if slot not in template:
             raise ValueError(f"{TEMPLATE.name} has no {slot}")
-    return template.replace(SECTION, section(guide)).replace(ADD, add)
+    return template.replace(SECTION, section(guide)).replace(WRITE, write)
 
 
 def write_jsonl(path: Path, rows: list) -> None:
@@ -115,11 +120,26 @@ def placed(b: dict, k: int) -> dict:
     return {**{key: v for key, v in b.items() if key not in ("index", "retry")}, "index": k}
 
 
+def keyed(rows: list, what: str) -> dict[str, dict]:
+    """The lines of a file of results or checks, by their declaration. A line that names none, as a check of a result
+    of no shape may, is left out, and said so."""
+    out, odd = {}, 0
+    for r in rows:
+        if isinstance(r, dict) and isinstance(r.get("decl"), str):
+            out[r["decl"]] = r
+        else:
+            odd += 1
+    if odd:
+        print(f"warning: {odd} lines of {what} name no declaration, and are left out", file=sys.stderr)
+    return out
+
+
 def retried(bundles: list[dict], checks: list, results: list) -> list[dict]:
     """The bundles to write again, from a round's results (`collect`'s) and their checks: those of the round whose
-    result failed, each with its problems and the review it was given. CHECKS must cover every result."""
-    given = {r.get("decl"): r for r in results if isinstance(r, dict)}
-    checked = {c.get("decl"): c for c in checks if isinstance(c, dict)}
+    result failed, each with its problems and the review it was given. A bundle with no line in RESULTS was in no batch
+    of that round (Ruling R49): a third round, split from the second's files, does not take back what passed in the
+    first. CHECKS must cover every result."""
+    given, checked = keyed(results, "RESULTS"), keyed(checks, "CHECKS")
     unchecked = [d for d in given if d not in checked]
     if unchecked:
         raise Refused(f"CHECKS has no check of {len(unchecked)} results of RESULTS, among them `{unchecked[0]}`: run "
@@ -151,7 +171,7 @@ def split(a: argparse.Namespace) -> int:
         print("nothing to retry: every result of RESULTS passed its check" if a.retry else
               f"nothing to split: {a.bundles} holds no bundle", file=sys.stderr)
         return 0
-    text = prompt(TEMPLATE.read_text(encoding="utf-8"), GUIDE.read_text(encoding="utf-8"), add_command())
+    text = prompt(TEMPLATE.read_text(encoding="utf-8"), GUIDE.read_text(encoding="utf-8"), write_command())
     out.mkdir(parents=True, exist_ok=True)
     (out / "prompt.md").write_text(text, encoding="utf-8")
     for k in range(0, len(chosen), a.size):
@@ -250,13 +270,35 @@ def collect(a: argparse.Namespace) -> int:
     return 0
 
 
-def add(a: argparse.Namespace) -> int:
-    path = a.result.resolve()
+def batch_of(result: Path) -> tuple[Path, Path, list[dict]]:
+    """A result file, the batch file beside it of its number, and that batch's bundles."""
+    path = result.resolve()
     m = RESULT.fullmatch(path.name)
     batch = path.with_name(f"batch-{m[1]}.jsonl") if m else None
     if batch is None or not batch.is_file():
-        raise Refused(f"{a.result} is not a result file: it is named result-<nnn>.jsonl, beside batch-<nnn>.jsonl")
-    bundles = migrate_check.read_jsonl(batch)
+        raise Refused(f"{result} is not a result file: it is named result-<nnn>.jsonl, beside batch-<nnn>.jsonl")
+    return path, batch, migrate_check.read_jsonl(batch)
+
+
+def left(path: Path, bundles: list[dict]) -> list[tuple[int, str]]:
+    """The bundles of a batch that have no line in its result file yet, each as (its line in the batch, its name)."""
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    done = {named_in(line) for line in lines if line.strip()}
+    return [(k, b.get("decl")) for k, b in enumerate(bundles, 1) if b.get("decl") not in done]
+
+
+def todo(a: argparse.Namespace) -> int:
+    path, batch, bundles = batch_of(a.result)
+    rest = left(path, bundles)
+    print(f"{len(bundles) - len(rest)} of {len(bundles)} bundles of {batch.name} have their line in {path.name}"
+          + ("; the batch is done" if not rest else "; still to do, by their line in the batch:"))
+    for k, decl in rest:
+        print(f"  line {k}: `{decl}`")
+    return 0
+
+
+def add(a: argparse.Namespace) -> int:
+    path, batch, bundles = batch_of(a.result)
     bundle = next((b for b in bundles if b.get("decl") == a.decl), None)
     if bundle is None:
         raise Refused(f"`{a.decl}` is not in {batch.name}: give the `decl` of one of its bundles")
@@ -276,11 +318,10 @@ def add(a: argparse.Namespace) -> int:
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write("\n".join(kept) + "\n")
     os.replace(tmp, path)
-    done = {named_in(line) for line in kept}
-    left = [b["decl"] for b in bundles if b.get("decl") not in done]
+    rest = left(path, bundles)
     print(f"added `{a.decl}` to {path.name}" + (", replacing its earlier line" if replaced else "")
-          + f": {len(bundles) - len(left)} of {len(bundles)} bundles of {batch.name} have their line"
-          + (f"; next: `{left[0]}`" if left else "; the batch is done"))
+          + f": {len(bundles) - len(rest)} of {len(bundles)} bundles of {batch.name} have their line"
+          + (f"; next: `{rest[0][1]}`, line {rest[0][0]} of the batch" if rest else "; the batch is done"))
     found = migrate_check.review_problems(review, bundle)
     if found:
         print("The check finds, in this review:\n" + "\n".join(f"- {p}" for p in found)
@@ -306,12 +347,14 @@ def main(argv: list[str]) -> int:
     r.add_argument("--cells", required=True, help="the eight checks: `object, choice=na, junk=error, …`")
     r.add_argument("--hold", help="why it is held (a hold only)")
     r.add_argument("--review", type=Path, help="the review's file (default: stdin)")
+    t = sub.add_parser("todo", help="list the bundles of a batch that have no result yet (for the writing agents)")
+    t.add_argument("result", type=Path, help="the result file, result-<nnn>.jsonl beside batch-<nnn>.jsonl")
     c = sub.add_parser("collect", help="merge a round's result files into results.jsonl")
     c.add_argument("name", help="the round's name")
     c.add_argument("--work", type=Path, default=WORK, help="where rounds go (default .cache/migration)")
     a = p.parse_args(argv)
     try:
-        return {"split": split, "add": add, "collect": collect}[a.command](a)
+        return {"split": split, "add": add, "todo": todo, "collect": collect}[a.command](a)
     except Refused as e:
         print(f"{'refused' if a.command == 'add' else 'error'}: {e}", file=sys.stderr)
         return 1 if a.command == "add" else 2

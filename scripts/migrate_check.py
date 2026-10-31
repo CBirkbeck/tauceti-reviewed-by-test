@@ -19,11 +19,18 @@ result, the bundle, and Tau Ceti's files for the Checks a review lists, and asks
   bundle's signature (`site_data.binder_groups`), Part 1 must name one of its binder names, or, for an instance
   group, its class, by the class's last component, as a whole word. A group that only introduces a type,
   `(R : Type u_1)`, needs nothing, nor does an implicit one;
-- **a reference cannot be traced.** One text of the bundle (its docstring, source or value, an earlier review, a
-  test's text, Voyager's announcement, the roadmap block) must share three consecutive words with it (all of them,
-  when it has fewer), and give every number it gives, glued to no other digit;
+- **a reference cannot be traced** (Ruling R48). A reference is an item of References and tests, a bullet or a numbered
+  item, that does not open with a backticked name or `Check`. One text of the bundle (its docstring, the comments in
+  its value, an earlier review, Voyager's announcement, the roadmap block; not its Lean code, nor its tests' texts) must
+  hold its citation: three consecutive words (all, when fewer) of what comes before its first `:` or ` — `, and the
+  words of each title it gives in italics. The same text must give every number of it, glued to no other digit, and
+  hold every link of it;
+- **a citation anywhere in the review gives a number no text of the bundle gives.** A theorem, proposition, lemma,
+  corollary, definition, section, chapter, tag or `§` with its number (in English, abbreviated, French or German) is
+  looked for in What it says, the prose of References and tests, its tests' lines, and Lean subtleties alike;
 - **a test is not one of the bundle's `tests`, or a Check is not one of its `checks`**, at the place the bundle gives
-  for it, with its tag at that line of TAUCETI.
+  for it, with its tag at that line of TAUCETI; and **References and tests names in backticks a Lean name** that is
+  none of its tests, the declaration or what it rests on, unless a reference copies it from its text.
 
 `problems` gives all of them; `shape` and `review_problems` each half, for `migrate_write.py add`, which refuses a
 result the shape rules forbid and shows an agent what the rest find while it can still fix it.
@@ -38,6 +45,7 @@ import re
 import sys
 import unicodedata
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -72,13 +80,41 @@ OPEN, CLOSE = "([{⦃⟨", ")]}⦄⟩"
 
 #: Dashes of every kind, read as `-`.
 DASHES = dict.fromkeys(map(ord, "‐‑‒–—―−"), "-")
-#: A word, as a reference and a text are compared: a run of letters, or a number (`7.3`, `40-41`).
-WORD = re.compile(r"[^\W\d_]+|\d+(?:[.:-]\d+)*")
-#: A number a reference gives: from a digit on, through letters and digits, and through a `.`, `:` or `-` before more
-#: digits: `4`, `1.8`, `10.161.1`, `40-41`, `032f`, a commit's hash.
-NUMBER = re.compile(r"\d[^\W_]*(?:[.:-]\d[^\W_]*)*")
-#: How many consecutive words a reference shares with a text of the bundle.
+#: A word, as a citation and a text are compared: a run of letters, or a number (`7.3`); a range is two (`61–63`).
+WORD = re.compile(r"[^\W\d_]+|\d+(?:[.:]\d+)*")
+#: A number, as a reference or a citation gives it: from a digit on, through letters and digits, and through a `.`, `:`
+#: or `-` before more of them: `4`, `1.8`, `10.161.1`, `2B.2`, `3.C`, `40-41`, `032F`, a commit's hash.
+NUMERAL = r"\d[^\W_]*(?:[.:-][^\W_]+)*"
+NUMBER = re.compile(NUMERAL)
+#: How many consecutive words of its citation a reference shares with a text of the bundle.
 RUN = 3
+#: Words that begin a sentence as often as a name does, which a citation's run of words needs besides them.
+COMMON = frozenset("a an the this that these those it its in on at for see as by of and or with from to also here "
+                   "there compare cf no not is are was".split())
+#: The words a citation names a place by, in any case, abbreviated, or in French or German, as the bundles write them.
+KEYWORD = ("theorems?|thms?|th(?=\\.)|propositions?|props?|lemmas?|lemmata|lems?|corollar(?:y|ies)|cors?|"
+           "definitions?|defns?|defs?|sections?|sects?|secs?|chapters?|chaps?|ch|tags?|"
+           "théorèmes?|lemmes?|corollaires?|définitions?|chapitres?|exposés?|"
+           "satz|sätze|korollare?|kapitel|abschnitte?|stacks(?:\\s+project)?(?:,?\\s+tags?)?")
+#: What a citation names: a number (a Stacks tag is one), or a Roman numeral, `VII`, `II.5.3`.
+MARK = rf"{NUMERAL}|[IVXLC]+(?![^\W_])(?:[.:-][^\W_]+)*"
+#: A citation: one of those words and its number (`Theorem 4.12`, `Prop. 1.3`, `Stacks 02IO`), or `§` and its number.
+CITATION = re.compile(rf"(?<![^\W\d_])(?i:{KEYWORD})(?:\.\s*|\s+)({MARK})|(§+)\s*({MARK})")
+#: A link's address: up to a space, a bracket or an angle, with the parentheses of one like `…/Ring_(mathematics)`.
+URL = re.compile(r"https?://[^\s<>()\[\]]+(?:\([^\s<>()]*\)[^\s<>()\[\]]*)*")
+#: Where a reference's citation ends and the writer's own words begin: its first `: `, ` — `, ` – ` or ` -- `.
+SPLIT = re.compile(r":\s| [—–] | -- ")
+#: A title in italics, `*…*` or `_…_`.
+ITALIC = re.compile(r"(?<![*\w])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![*\w])|(?<![_\w])_(?!\s)([^_\n]+?)(?<!\s)_(?![_\w])")
+#: An item of References and tests: a bullet, `- `, `* ` or `+ `, or a numbered item, `1. ` or `1) `.
+ITEM = re.compile(r"^([-*+]|\d+[.)])[ \t]+(\S.*)$")
+#: A comment of Lean's, where a definition's value may cite its source: `/-- … -/`, `/- … -/`, `-- …`.
+COMMENT = re.compile(r"/-.*?-/|--[^\n]*", re.S)
+#: A Lean name of two parts or more, `TauCeti.Foo.bar`, as a backticked span may be; and the endings of a file's name.
+DOTTED = re.compile(rf"{IDENT}(?:\.[\w'!?✝]+)+")
+FILES = frozenset({"md", "lean", "pdf", "html", "toml", "txt", "json", "yml", "yaml", "py"})
+#: Code and mathematics, which no citation is looked for in.
+CODE = re.compile(r"`[^`\n]*`|\$\$.*?\$\$|\$[^$\n]*\$", re.S)
 #: A Check's place, after its tag: `path:line`, in backticks.
 PLACE = re.compile(r"^Check\s+\*[^*]+\*[\s,;:]*`([^`\s]+):(\d+)`")
 
@@ -239,54 +275,180 @@ def follows(review: str, bundle: dict) -> list[str]:
 
 
 def plain(text: str) -> str:
-    """Text as references are compared: in Unicode's compatibility form, its dashes `-`, in lowercase."""
+    """Text as citations are compared: in Unicode's compatibility form, its dashes `-`, in lowercase."""
     return unicodedata.normalize("NFKC", text).translate(DASHES).lower()
 
 
-def texts(bundle: dict) -> list[str]:
-    """The texts of a bundle a reference may come from, each apart, plain: its docstring, source and value, each
-    earlier review, each test's text, Voyager's announcement, and the roadmap block with its roadmap and file."""
-    out = [bundle.get("docstring"), bundle.get("source"), bundle.get("value")]
-    out += [r.get("text") for r in bundle.get("reviews") or []]
-    out += [t.get("text") for t in bundle.get("tests") or []]
+@dataclass(frozen=True)
+class Source:
+    """A text of a bundle that a reference may come from: what it is, as a problem names it, the text as written, and
+    the text as citations are compared (`plain`)."""
+    label: str
+    text: str
+    plain: str
+
+
+def sources(bundle: dict) -> list[Source]:
+    """The texts of a bundle a reference may come from, each apart: its docstring, the comments in its value, each
+    earlier review, Voyager's announcement, and the roadmap block with its roadmap and file. Not its Lean code, nor its
+    tests' texts, whose words a writer's own description of the declaration could share."""
+    found = [("the docstring", bundle.get("docstring")),
+             ("the comments in its value", "\n".join(COMMENT.findall(bundle.get("value") or "")))]
+    for r in bundle.get("reviews") or []:
+        at = f" of {str(r['at'])[:10]}" if r.get("at") else ""
+        found.append((f"the review by {r.get('by') or 'someone'}{at}", r.get("text")))
     named, roadmap = bundle.get("named"), bundle.get("roadmap")
     if named:
-        out.append(f"{named.get('name') or ''}\n{named.get('text') or ''}")
+        found.append(("Voyager's announcement", f"{named.get('name') or ''}\n{named.get('text') or ''}"))
     if roadmap:
-        out.append(f"{roadmap.get('name') or ''}\n{roadmap.get('path') or ''}\n{roadmap.get('block') or ''}")
-    return [plain(t) for t in out if isinstance(t, str) and t.strip()]
+        found.append(("the roadmap block", "\n".join(roadmap.get(k) or "" for k in ("name", "path", "block"))))
+    return [Source(label, text, plain(text)) for label, text in found if isinstance(text, str) and text.strip()]
 
 
-def runs(words: list[str], n: int) -> set[tuple[str, ...]]:
+def grams(words: list[str], n: int) -> set[tuple[str, ...]]:
     return {tuple(words[i:i + n]) for i in range(len(words) - n + 1)}
 
 
-def gives(text: str, number: str) -> bool:
-    """Whether a (plain) text gives `number`, glued to no other digit: `§4` gives `4` and `Proposition7.3` gives
-    `7.3`, but `14`, `1.4` and `7.3.1` give neither."""
-    return re.search(rf"(?<!\d)(?<!\d[.:-]){re.escape(number)}(?![^\W_])(?![.:-]\d)", text) is not None
+def gives(text: str, mark: str) -> bool:
+    """Whether a (plain) text gives a number or a numeral, in lowercase, glued to nothing that would make it another:
+    `§4` gives `4` and `Proposition7.3` gives `7.3`, but `14`, `1.4`, `7.3.1` and `7.3a` give neither, nor `xvii` a
+    `vii`. A range gives its ends: `§§6.3–6.5` gives `6.3` and `6.5`."""
+    before = r"(?<!\d)(?<!\d[.:])" if mark[:1].isdigit() else r"(?<![^\W_])"
+    return re.search(rf"{before}{re.escape(mark)}(?![^\W_])(?![.:][^\W_])", text) is not None
 
 
-def untraced(ref: str, sources: list[str]) -> str | None:
-    """Why reference `ref` cannot be traced to the (plain) texts of its bundle, `sources`; None when one of them shares
-    `RUN` consecutive words with it, all of them when it has fewer, and gives every number it gives."""
-    mine = plain(ref)
-    words = WORD.findall(mine)
-    if not words:
-        return f'the reference "{ref}" says nothing that could be looked for: a reference names a source'
-    n = min(RUN, len(words))
-    grams = runs(words, n)
-    sharing = [t for t in sources if grams & runs(WORD.findall(t), n)]
-    if not sharing:
-        return (f'the reference "{ref}" is not in the bundle: no text of it (the docstring, an earlier review, '
-                f"Voyager's announcement, the roadmap block) has {'three' if n == RUN else 'all'} of its words in a "
-                "row. Cite only what the bundle gives, in its words")
-    numbers = list(dict.fromkeys(NUMBER.findall(mine)))
-    missing = min(([x for x in numbers if not gives(t, x)] for t in sharing), key=len)
-    if missing:
-        return (f'the reference "{ref}" has numbers the bundle does not give it: {", ".join(missing)}. Give its '
-                "numbers as the text it comes from does, or leave it out")
-    return None
+def marks(text: str) -> list[str]:
+    """What of a text the bundle must give too, in lowercase: every number in it, and each Roman numeral one of its
+    citations names (`Chapter VII`)."""
+    norm = unicodedata.normalize("NFKC", text).translate(DASHES)
+    found = NUMBER.findall(norm.lower())
+    found += [m.lower() for c in CITATION.finditer(norm) if not (m := c[1] or c[3])[:1].isdigit()]
+    return list(dict.fromkeys(found))
+
+
+def named_words(text: str) -> list[tuple[str, bool]]:
+    """The words of a citation (`WORD`), in lowercase, each with whether it is a name or a number: whether it holds a
+    digit, or begins with a capital and is no word as common as `The`, which opens a sentence as often as a name."""
+    found = WORD.findall(unicodedata.normalize("NFKC", text).translate(DASHES))
+    return [(w.lower(), any(c.isdigit() for c in w) or (w[0].isupper() and w.lower() not in COMMON)) for w in found]
+
+
+def trace(ref: str, texts: list[Source]) -> tuple[Source | None, str | None]:
+    """The text of the bundle reference `ref` comes from, and None; or None, and why it cannot be traced. The text
+    must hold its citation, the words before its first `:` or ` — `: `RUN` consecutive ones (all, when fewer) among
+    which is a name or a number (`named_words`), so that a run of common words does not trace an invented source. It
+    must hold the words of each title the reference gives in italics, give every number of it (`marks`, `gives`), and
+    hold every link of it. The writer's own words, after the citation, do not trace it."""
+    bare = URL.sub(" ", ref)
+    hint = "; a reference does not open with a backticked name" if ref.lstrip().startswith("`") else ""
+    cited = named_words(SPLIT.split(bare, 1)[0]) or named_words(bare)
+    titles = [w for w in (WORD.findall(plain(a or b)) for a, b in ITALIC.findall(bare)) if w]
+    if not cited:
+        return None, f'the reference "{ref}" says nothing that could be looked for: a reference names a source{hint}'
+    size = min(RUN, len(cited))
+    wanted = {tuple(w for w, _ in cited[i:i + size]) for i in range(len(cited) - size + 1)
+              if any(named for _, named in cited[i:i + size])}
+    if not wanted:
+        return None, (f'the reference "{ref}" names no source: its citation, the words before its first `:` or ` — `, '
+                      f"holds no name and no number{hint}")
+
+    def holds(t: Source) -> bool:
+        words = WORD.findall(t.plain)
+        return bool(wanted & grams(words, size)) and all(grams(w, len(w)) & grams(words, len(w)) for w in titles)
+
+    holding = [t for t in texts if holds(t)]
+    if not holding:
+        return None, (f'the reference "{ref}" is not in the bundle: no text of it (the docstring, an earlier review, '
+                      "Voyager's announcement, the roadmap block) holds its citation, the words before its first `:` "
+                      f"or ` — `, and its title. Cite only what the bundle gives, in its words{hint}")
+    numbers, links = marks(bare), [u.rstrip(".,;:!?") for u in URL.findall(ref)]
+    best: tuple[Source, list[str], list[str]] | None = None
+    for t in holding:
+        missing = [mark for mark in numbers if not gives(t.plain, mark)]
+        unlinked = [u for u in links if u not in t.text]
+        if not missing and not unlinked:
+            return t, None
+        if best is None or len(missing) + len(unlinked) < len(best[1]) + len(best[2]):
+            best = (t, missing, unlinked)
+    t, missing, unlinked = best
+    said = []
+    for mark in missing:
+        other = next((o for o in texts if gives(o.plain, mark)), None)
+        said.append(f"{mark} is in {other.label}, not in {t.label}" if other else f"no text of the bundle gives {mark}")
+    said += [f"{t.label} does not hold the link {u}" for u in unlinked]
+    return None, (f'the reference "{ref}" takes its citation from {t.label}, but ' + "; ".join(said)
+                  + ". A reference comes whole from one text, its numbers and links too" + hint)
+
+
+@dataclass(frozen=True)
+class Item:
+    """An item of References and tests: a `test`, a `check` or a `reference`; its text, on one line; the lines of the
+    part it takes; whether it is numbered rather than a bullet; and a test's name or a Check's tag."""
+    kind: str
+    text: str
+    lines: tuple[int, ...]
+    numbered: bool
+    name: str | None
+
+
+def items_of(body: str) -> list[Item]:
+    """The items of References and tests, read as `standard.bullets` reads its bullets, and its numbered items as
+    bullets too (Ruling R48): an item's indented lines go on from it, and a blank line or a line of prose ends it. One
+    that opens with a backticked Lean name is a test, one that opens with `Check *tag*` a Check, any other a
+    reference."""
+    found: list[tuple[str, list[str], list[int]]] = []
+    going = False
+    for i, line in enumerate(body.split("\n")):
+        m = ITEM.match(line)
+        if m:
+            found.append((m[1], [m[2]], [i]))
+            going = True
+        elif going and line[:1] in (" ", "\t") and line.strip():
+            found[-1][1].append(line.strip())
+            found[-1][2].append(i)
+        else:
+            going = False
+    out = []
+    for marker, said, lines in found:
+        text = " ".join(said)
+        if m := standard.TEST.match(text):
+            kind, name = "test", m[1]
+        elif m := standard.CHECK.match(text):
+            kind, name = "check", m[1].strip()
+        else:
+            kind, name = "reference", None
+        out.append(Item(kind, text, tuple(lines), marker[0].isdigit(), name))
+    return out
+
+
+def binder_names(bundle: dict) -> set[str]:
+    """The binder names of the declaration's signature, its implicit ones too."""
+    out: set[str] = set()
+    for _, group in site_data.binder_groups(bundle["decl"], {"text": bundle.get("signature") or ""}):
+        inner = group[1:-1].strip()
+        at = depth0(inner, " : ")
+        if at is not None and NAMES.fullmatch(inner[:at].strip()):
+            out.update(inner[:at].split())
+    return out
+
+
+def strangers(text: str, allowed: set, heads: set[str], source: str = "") -> list[str]:
+    """What References and tests may not name in backticks: a dotted Lean name that is none of `allowed` (whole, or as
+    the last parts of one, `Foo.bar` for `TauCeti.Foo.bar`), that is not headed by a binder name of the signature or a
+    single letter (`e.symm`, `x.1`), that names no file (`README.md`), and that `source`, the text a reference comes
+    from, does not hold."""
+    out = []
+    for span in re.findall(r"`([^`\n]+)`", text):
+        name = span.strip()
+        if not DOTTED.fullmatch(name) or name.rsplit(".", 1)[1].lower() in FILES:
+            continue
+        head = name.split(".", 1)[0]
+        if head in heads or len(head) == 1 or name in source:
+            continue
+        if not any(isinstance(a, str) and (a == name or a.endswith("." + name)) for a in allowed):
+            out.append(f"References and tests names `{name}`, which is not one of the declaration's tests: name in "
+                       "backticks only its tests, the declaration and what it rests on")
+    return out
 
 
 def tag_at(source: Path, path: str, line: int, tag: str) -> bool:
@@ -301,42 +463,86 @@ def tag_at(source: Path, path: str, line: int, tag: str) -> bool:
     return 1 <= line <= len(lines) and f"*{tag}*" in lines[line - 1]
 
 
-def listed(review: str, bundle: dict, source: Path | None) -> list[str]:
-    """What is wrong with the items of References and tests: a test that is not one of the bundle's `tests`; a Check
-    that is not one of its `checks`, at its place there, with its tag at that line of `source` (when given); a
-    reference that cannot be traced (`untraced`)."""
-    found = standard.items(review)
-    tests = {t.get("test") for t in bundle.get("tests") or []}
-    problems = [f"the test `{name}` is not one of the declaration's tests in the bundle (`tests`): name only those"
-                for name in dict.fromkeys(found.tests) if name not in tests]
+def placed(item: Item, places: dict[str, list[tuple[str, int]]], source: Path | None) -> list[str]:
+    """What is wrong with a Check: it is not one of the bundle's `checks`, it is not at the place `checks` gives, or
+    its tag is not at that line of `source` (when given)."""
+    tag = item.name
+    if tag not in places:
+        return [f"the Check *{tag}* is not one of the bundle's `checks`: list a Check only as `checks` gives it"
+                + (", and so none, since it gives none" if not places else "")]
+    at = PLACE.match(item.text)
+    given = " or ".join(f"`{p}:{n}`" for p, n in places[tag])
+    if not at:
+        return [f"the Check *{tag}* gives no place: write it with its place in backticks, {given}"]
+    if (at[1], int(at[2])) not in places[tag]:
+        return [f"the Check *{tag}* is at {given} in the bundle, not at `{at[1]}:{at[2]}`"]
+    if source is not None and not tag_at(source, at[1], int(at[2]), tag):
+        return [f"the Check *{tag}* is not at `{at[1]}:{at[2]}` in Tau Ceti at the site's commit"]
+    return []
+
+
+def listed(review: str, bundle: dict, texts: list[Source], source: Path | None) -> list[str]:
+    """What is wrong with the items of References and tests (`items_of`): a test that is not one of the bundle's
+    `tests`, or that it gives as missing; a Check that is not one of its `checks` (`placed`); a reference that cannot be
+    traced (`trace`); and a Lean name in backticks it may not name (`strangers`), in an item or in its prose."""
+    body = part(review, standard.HEADINGS[1]) or ""
+    items = items_of(body)
+    tests = {t.get("test"): t for t in bundle.get("tests") or []}
+    allowed = set(tests) | {bundle["decl"]} | {r.get("name") for r in bundle.get("rests_on") or []}
+    heads = binder_names(bundle)
     places: dict[str, list[tuple[str, int]]] = {}
     for c in bundle.get("checks") or []:
         places.setdefault(c.get("tag"), []).append((c.get("path"), int(c.get("line") or 0)))
-    for bullet in standard.bullets(part(review, standard.HEADINGS[1]) or ""):
-        m = standard.CHECK.match(bullet)
-        if not m:
-            continue
-        tag = m[1].strip()
-        if tag not in places:
-            problems.append(f"the Check *{tag}* is not one of the bundle's `checks`: list a Check only as `checks` "
-                            "gives it" + (", and so none, since it gives none" if not places else ""))
-            continue
-        at = PLACE.match(bullet)
-        given = " or ".join(f"`{p}:{n}`" for p, n in places[tag])
-        if not at:
-            problems.append(f"the Check *{tag}* gives no place: write it with its place in backticks, {given}")
-        elif (at[1], int(at[2])) not in places[tag]:
-            problems.append(f"the Check *{tag}* is at {given} in the bundle, not at `{at[1]}:{at[2]}`")
-        elif source is not None and not tag_at(source, at[1], int(at[2]), tag):
-            problems.append(f"the Check *{tag}* is not at `{at[1]}:{at[2]}` in Tau Ceti at the site's commit")
-    sources = texts(bundle)
-    problems += [why for ref in standard.distinct(found.references) if (why := untraced(ref, sources))]
+    problems = []
+    for item in items:
+        if item.kind == "test":
+            if item.name not in tests:
+                problems.append(f"the test `{item.name}` is not one of the declaration's tests in the bundle "
+                                "(`tests`): name only those; a reference does not open with a backticked name")
+            elif item.numbered and tests[item.name].get("result") == "missing":
+                problems.append(f"the test `{item.name}` is not a declaration that exists: `tests` gives it as missing "
+                                "at the site's commit")
+            problems += strangers(item.text[len(item.name) + 2:], allowed, heads)
+        elif item.kind == "check":
+            problems += placed(item, places, source)
+        else:
+            found, why = trace(item.text, texts)
+            problems += [why] if why else strangers(item.text, allowed, heads, found.text)
+    taken = {i for item in items for i in item.lines}
+    return problems + strangers("\n".join(line for i, line in enumerate(body.split("\n")) if i not in taken),
+                                allowed, heads)
+
+
+def scanned(review: str) -> list[tuple[str, str]]:
+    """The review as its citations are looked for, part by part, (part, text): all of it but the references of
+    References and tests, which are traced whole (`trace`); without code, mathematics or the addresses of links."""
+    before, found = standard.sections(review)
+    out = [("The text before What it says", before)] if before.strip() else []
+    for heading, body in found:
+        if heading == standard.HEADINGS[1]:
+            refs = {i for item in items_of(body) if item.kind == "reference" for i in item.lines}
+            body = "\n".join(line for i, line in enumerate(body.split("\n")) if i not in refs)
+        out.append((heading[3:], body))
+    return [(where, CODE.sub(" ", URL.sub(" ", text))) for where, text in out]
+
+
+def unsupported(review: str, texts: list[Source]) -> list[str]:
+    """The citations of a review outside its references (`scanned`) whose number no text of the bundle gives: a
+    theorem, a section, a tag and their kin (`CITATION`), in What it says, the prose of References and tests, a
+    test's line or Lean subtleties alike."""
+    problems = []
+    for where, text in scanned(review):
+        for m in CITATION.finditer(unicodedata.normalize("NFKC", text).translate(DASHES)):
+            mark = m[1] or m[3]
+            if not any(gives(t.plain, mark.lower()) for t in texts):
+                problems.append(f'{where} cites "{" ".join(m[0].split())}", but no text of the bundle gives {mark}: '
+                                "cite only what the bundle gives, with its numbers as given")
     return problems
 
 
 def review_problems(review: str, bundle: dict, source: Path | None = None) -> list[str]:
     """What is wrong with a review, written from `bundle`: `standard.check`, a control character, What it says against
-    the signature, and the items of References and tests (`listed`)."""
+    the signature, the items of References and tests (`listed`), and the citations of the rest (`unsupported`)."""
     problems = []
     if CONTROL.search(review):
         problems.append("the review holds a control character (a tab, a form feed, …): JSON reads a TeX backslash "
@@ -344,7 +550,9 @@ def review_problems(review: str, bundle: dict, source: Path | None = None) -> li
                         "`migrate_write.py add`, which needs nothing escaped")
     gone = {t.get("test") for t in bundle.get("tests") or [] if t.get("result") == "missing"}
     problems += standard.check(review, exists=lambda name: name not in gone)
-    return problems + follows(review, bundle) + listed(review, bundle, source)
+    texts = sources(bundle)
+    problems += follows(review, bundle) + listed(review, bundle, texts, source) + unsupported(review, texts)
+    return list(dict.fromkeys(problems))
 
 
 def problems(bundle: dict, result, source: Path | None = None) -> list[str]:

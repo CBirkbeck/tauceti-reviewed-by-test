@@ -134,10 +134,10 @@ class SplitTests(Temporary):
             self.assertIn(f"{n} bundles", line)
         self.assertTrue((d / "prompt.md").is_file())
         self.assertFalse(list(d.glob("result-*")))
-        # At most 40 to a batch unless told otherwise.
-        code, out, err = self.split([bundle(f"TauCeti.Foo.m{k}") for k in range(81)], "all")
+        # At most 20 to a batch unless told otherwise (Ruling R48).
+        code, out, err = self.split([bundle(f"TauCeti.Foo.m{k}") for k in range(41)], "all")
         self.assertEqual(code, 0, err)
-        self.assertEqual([len(read(p)) for p in sorted((self.work / "all").glob("batch-*.jsonl"))], [40, 40, 1])
+        self.assertEqual([len(read(p)) for p in sorted((self.work / "all").glob("batch-*.jsonl"))], [20, 20, 1])
         # A name is split once: agents' results may be in its directory.
         (d / "result-001.jsonl").write_text("{}\n", encoding="utf-8")
         code, out, err = self.split(bundles[:2], "pilot", "--size", "3")
@@ -179,6 +179,13 @@ class SplitTests(Temporary):
         self.assertEqual(code, 2)
         self.assertIn(n[4], err)
         self.assertFalse((self.work / "retry-2").exists())
+        # A line that names no declaration, as the check of a result of no shape may, is left out and said so.
+        odd = jsonl(self.tmp / "odd.jsonl", read(checks) + [{"decl": ["not", "a", "name"], "ok": False,
+                                                             "problems": ["it is not a declaration of the bundles"]}])
+        code, out, err = self.split(bundles, "retry-odd", "--retry", str(odd), "--results", str(results))
+        self.assertEqual(code, 0, err)
+        self.assertIn("1 lines of CHECKS name no declaration", err)
+        self.assertEqual([b["decl"] for b in read(self.work / "retry-odd" / "batch-001.jsonl")], [n[1], n[2], n[4]])
         # A retry needs both files; nothing to retry writes no batch.
         code, out, err = self.split(bundles, "retry-3", "--retry", str(checks))
         self.assertEqual(code, 2)
@@ -188,6 +195,20 @@ class SplitTests(Temporary):
         self.assertEqual((code, out), (0, ""), err)
         self.assertIn("nothing to retry", err)
         self.assertFalse((self.work / "retry-4").exists())
+
+    def test_a_retry_round_takes_only_the_bundles_of_the_round_it_follows(self):
+        """Ruling R49: a bundle with no line in the RESULTS given was in no batch of that round. The third round, split
+        from the second's files, takes back neither what passed in the first round nor what the second did not hold."""
+        bundles = [bundle(f"TauCeti.Foo.n{k}") for k in range(5)]
+        n = [b["decl"] for b in bundles]
+        # The first round passed n0, n2 and n3; the second wrote n1 and n4 again, and n4 passed this time.
+        second = jsonl(self.tmp / "second.jsonl", [result(bundles[1], review="R1 again"), result(bundles[4])])
+        checks = jsonl(self.tmp / "second-checks.jsonl", [{"decl": n[1], "ok": False, "problems": ["p1 again"]},
+                                                          {"decl": n[4], "ok": True, "problems": []}])
+        code, out, err = self.split(bundles, "retry-2", "--retry", str(checks), "--results", str(second))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(read(self.work / "retry-2" / "batch-001.jsonl"),
+                         [{**bundles[1], "index": 1, "retry": {"problems": ["p1 again"], "previous": "R1 again"}}])
 
     def test_prompt_holds_the_marked_section(self):
         code, out, err = self.split([bundle()], "pilot")
@@ -213,9 +234,21 @@ class SplitTests(Temporary):
                 self.assertIn(word, heads[k])
         for word in ("`retry`", "`retry.problems`", "`retry.previous`", "result-", "batch-", "END_OF_REVIEW"):
             self.assertIn(word, prompt)
-        # The command that adds a result is this script's, runnable as written.
+        # The commands that list what is left and add a result are this script's, runnable as written.
         self.assertIn(f"{Path(migrate_write.__file__).resolve()}", prompt)
         self.assertIn(" add RESULT_FILE", prompt)
+        self.assertIn(" todo RESULT_FILE", prompt)
+        self.assertIn("deriving instance", prompt)
+        # The migration's own example passes the check, against the bundle it says it was written from.
+        example = prompt.split("## An example", 1)[1].split("~~~review\n", 1)[1].split("\n~~~", 1)[0]
+        decl = "TauCeti.Foo.nilradical_eq_sInf"
+        described = bundle(decl, signature=f"{decl} (R : Type u_1) [CommRing R] :\n  nilradical R = "
+                           "sInf {P : Ideal R | P.IsPrime}", docstring="The nilradical is the intersection of the prime "
+                           "ideals (Atiyah and Macdonald, *Introduction to Commutative Algebra*, Proposition 1.8).",
+                           reviews=[], tests=[{**TEST, "test": "TauCeti.Foo.nilradical_zmod_four"}])
+        self.assertEqual(migrate_check.problems(described, result(described, example)), [])
+        self.assertTrue(migrate_check.problems(described, result(described, section.split("~~~review\n", 1)[1]
+                                                                 .split("\n~~~", 1)[0])))  # the guide's has a Check
         # A guide that marks no section, or two, is refused.
         for guide in ("# AI-REVIEWS.md\n", f"{BEGIN}\na\n{END}\n{BEGIN}\nb\n{END}\n", f"{END}\na\n{BEGIN}\n"):
             with self.assertRaises(ValueError):
@@ -266,6 +299,21 @@ class AddTests(Temporary):
         self.assertIn("hx", out)
         self.assertEqual([r["decl"] for r in read(self.results)], [NILPOTENT, "TauCeti.Foo.other"])
         self.assertIn("2 of 2", out)
+
+    def test_todo_shows_an_agent_where_to_resume(self):
+        """Ruling R48: an agent sent to a batch another began resumes from the first bundle without a line."""
+        code, out, err = run(migrate_write.main, "todo", str(self.results))
+        self.assertEqual(code, 0, err)
+        self.assertIn("0 of 2", out)
+        self.assertIn(f"line 1: `{NILPOTENT}`", out)
+        self.assertIn("line 2: `TauCeti.Foo.other`", out)
+        code, out, err = self.add(text(), "--verdict", "approve")
+        self.assertIn("next: `TauCeti.Foo.other`, line 2 of the batch", out)
+        code, out, err = run(migrate_write.main, "todo", str(self.results))
+        self.assertEqual(code, 0, err)
+        self.assertIn("1 of 2", out)
+        self.assertNotIn(NILPOTENT, out)
+        self.assertIn("line 2: `TauCeti.Foo.other`", out)
 
     def test_add_refuses_what_the_contract_does_not_allow(self):
         before = "unchanged\n"
@@ -395,14 +443,26 @@ class CheckTests(Temporary):
         self.assertEqual(check("- Serre, *A Course in Arithmetic*, VII §4."), [])
         got = check("- Serre, *A Course in Arithmetic*, VII §4, Thm 99.")
         self.assertEqual(len(got), 1, got)
-        self.assertNamed(got, "Serre", "give it: 99")
-        # Its words and its numbers come from one text: Proposition 7 is in another review than Serre's book.
-        self.assertNamed(check("- Serre, *A Course in Arithmetic*, VII §4, Proposition 7."), "give it: 7")
+        self.assertNamed(got, "Serre", "no text of the bundle gives 99")
+        # Its words and its numbers come from one text: Proposition 7 is in another review than Serre's book, and the
+        # problem names both.
+        self.assertNamed(check("- Serre, *A Course in Arithmetic*, VII §4, Proposition 7."),
+                         "7 is in the review by Codex (GPT-6 Astra) via CBirkbeck of 2026-10-26",
+                         "not in the docstring")
         # A number counts glued to a word, as the text writes it, but not inside a longer number; words of the
         # writer's own, without a number, may follow.
         self.assertEqual(check("- [Proposition 7.3, pp. 40–41](https://example.org/notes.pdf), on Eisenstein series."),
                          [])
-        self.assertNamed(check("- Hartshorne, *Algebraic Geometry*, Theorem 7.3."), "give it: 7.3")
+        self.assertNamed(check("- Hartshorne, *Algebraic Geometry*, Theorem 7.3."),
+                         "7.3 is in the review by Claude Code (claude-fable-5-1)", "not in the review by Claude Code "
+                         "(claude-opus-5-5)")
+        # A range gives its ends, and no number between or beyond them.
+        ranged = bundle(docstring="Munkres, *Topology*, §§61–63.", reviews=[])
+        cites = lambda ref: self.problems(ranged, result(ranged, text(refs=REFS.split("\n")[1] + "\n" + ref)))
+        self.assertEqual(cites("- Munkres, *Topology*, §61."), [])
+        self.assertEqual(cites("- Munkres, *Topology*, §§61–63."), [])
+        self.assertNamed(cites("- Munkres, *Topology*, §62."), "§62")
+        self.assertNamed(cites("- Munkres, *Topology*, §61, Chapter 8."), "no text of the bundle gives 8")
         # A reference no text of the bundle gives is not in it, however well known.
         self.assertNamed(check("- Atiyah and Macdonald, *Introduction to Commutative Algebra*, Proposition 1.8."),
                          "Atiyah", "not in the bundle")
@@ -415,7 +475,70 @@ class CheckTests(Temporary):
         cite = "- TauCetiRoadmap, Arithmetic, `TauCetiRoadmap/Arithmetic/README.md`, Layer 1: tripling."
         self.assertEqual(self.problems(rb_, result(rb_, text(refs=REFS + "\n" + cite))), [])
         self.assertNamed(self.problems(rb_, result(rb_, text(refs=REFS + "\n" + cite.replace("1", "2")))),
-                         "give it: 2")
+                         "no text of the bundle gives 2")
+
+    def test_check_finds_every_citation(self):
+        """Ruling R48: a citation's number must be one a text of the bundle gives, wherever the review cites it."""
+        b = bundle()
+        check = lambda review: self.problems(b, result(b, review))
+        # What it says: its comparison with the literature, which the guide asks for, cites only what the bundle gives.
+        self.assertEqual(check(text(says=SAYS + "\n\nThis is Proposition 1.7 of Atiyah and Macdonald.")), [])
+        self.assertNamed(check(text(says=SAYS + "\n\nThis is Theorem 4.12 of Bourbaki, *Commutative Algebra*.")),
+                         "What it says", "Theorem 4.12", "4.12")
+        # The prose of References and tests, a test's line and the line indented under it, and Lean subtleties.
+        self.assertNamed(check(text(refs=REFS + "\n\nSee also Matsumura, *Commutative Ring Theory*, Theorem 1.2.")),
+                         "References and tests", "Theorem 1.2")
+        carrying = ("- `TauCeti.Foo.nilpotent_two_mem` — $2$ squares to $0$; this is Bourbaki, *Algèbre commutative*, "
+                    "Théorème 99.\n  - Matsumura, *Commutative Ring Theory*, Theorem 77.")
+        got = check(text(refs=REFS.split("\n")[0] + "\n" + carrying))
+        self.assertNamed(got, "Théorème 99")
+        self.assertNamed(got, "Theorem 77")
+        self.assertNamed(check(text(subtle=SUBTLE + "\n- As Lemma 2.4 of the book has it, `x` is implicit.")),
+                         "Lean subtleties", "Lemma 2.4")
+        # Abbreviations, `§`, a Stacks tag and a Roman numeral; not in code or mathematics.
+        for cited in ("Thm. 3.11", "Prop 9", "§5.2", "Stacks, Tag 0AB3", "Stacks 02IO", "Chapter VII", "Cor. 2B.2"):
+            self.assertNamed(check(text(says=SAYS + f"\n\nCompare {cited} of the book.")), cited)
+        self.assertEqual(check(text(says=SAYS + "\n\nIts proof is `Section 9`, and $\\S 8$ is not prose.")), [])
+        # A test named in prose that is none of `tests` is named.
+        self.assertNamed(check(text(refs=REFS + "\n\nThe test `TauCeti.Foo.nilpotent_three_mem` shows $3$ is not.")),
+                         "`TauCeti.Foo.nilpotent_three_mem`", "not one of the declaration's tests")
+        # But the declaration, what it rests on, a name by its last parts and a binder's projection may be named.
+        self.assertEqual(check(text(refs=REFS + "\n\nIt places `TauCeti.Foo.mem_nilradical_of_isNilpotent`, "
+                                    "`Foo.nilpotent_two_mem` and `nilradical` in the book; `x.1` is no name.")), [])
+
+    def test_check_traces_the_citation_itself(self):
+        """Ruling R48: a reference's citation, the words before its first `:` or ` — ` and its italic title, comes from
+        one text of the bundle, with every number and link of it; Lean code and tests' texts are no such text."""
+        b = bundle()
+        check = lambda *more: self.problems(b, result(b, text(refs="\n".join([REFS, *more]))))
+        # Words of the writer's own after the citation do not trace an invented one, nor do words of the Lean code.
+        self.assertNamed(check("- Bourbaki, *Algèbre commutative*, Chapter II: a nilpotent element is in the "
+                               "nilradical."), "Bourbaki", "not in the bundle")
+        self.assertNamed(check("- Matsumura, *Commutative Ring Theory*: here `x ∈ nilradical R` for nilpotent `x`."),
+                         "Matsumura", "not in the bundle")
+        self.assertNamed(check("- Mathlib, theorem mem_nilradical_of_isNilpotent."), "Mathlib", "not in the bundle")
+        self.assertNamed(check("- The class of 2 in ZMod 4 is nilpotent, so it is in the nilradical."),
+                         "not in the bundle")
+        # A short title in common does not trace another author's book, nor a run of common words a citation with no
+        # `:` or ` — `, which is all citation.
+        self.assertNamed(check("- Bourbaki, *Commutative Algebra*, Chapter II."), "Bourbaki", "not in the bundle")
+        self.assertNamed(check("- Bourbaki shows that a nilpotent element is in the nilradical."), "not in the bundle")
+        self.assertNamed(check("- A nilpotent element is in the nilradical."), "names no source")
+        # A numbered item is an item: an invented one fails as a bullet would.
+        self.assertNamed(check("1. Bourbaki, *Commutative Algebra*, Theorem 99."), "Bourbaki", "not in the bundle")
+        # Every link of a reference is in the text it comes from.
+        wiki = "https://en.wikipedia.org/wiki/Nilradical_of_a_ring"
+        self.assertNamed(check(f"- Atiyah and Macdonald, *Introduction to Commutative Algebra*, Proposition 1.7, and "
+                               f"[Wikipedia]({wiki})."), "the docstring does not hold the link", wiki)
+        # The comments of a definition's value are a text of the bundle; its code is not.
+        commented = bundle(docstring="", value=":= by\n  -- Serre, A Course in Arithmetic, VII §4\n  exact serre_vii 4")
+        cite = lambda ref: self.problems(commented, result(commented, text(refs=REFS.split("\n")[1] + "\n" + ref)))
+        self.assertEqual(cite("- Serre, *A Course in Arithmetic*, VII §4: the source."), [])
+        self.assertNamed(cite("- Exact serre_vii, at 4."), "not in the bundle")
+        # A reference that opens with a backticked name is read as a test, and told so.
+        self.assertNamed(check("- `STATUS.md`: the roadmap's status."), "`STATUS.md`",
+                         "a reference does not open with a backticked name")
+        self.assertNamed(check("- `Bourbaki/Algebra`, Chapter II."), "a reference does not open with a backticked name")
 
     def test_check_tests_and_checks_come_from_the_bundle(self):
         source = self.tmp / "tauceti"

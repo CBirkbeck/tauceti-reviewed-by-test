@@ -16,8 +16,17 @@ the batch a bundle at a time: the Read tool with `offset` at the bundle's line a
 Work from the bundles alone. Do not open Tau Ceti, Mathlib, TauCetiRoadmap or the web, and do not run Lean: what a
 review says must be borne out by its bundle, and the program checks it against the bundle.
 
-Take the bundles in order. For each: review its Lean (1), decide whether to hold it (2), write its review by the
-definition and rules below (3 to 5), and add its result (6), before you read the next one.
+Your result file is your batch file's path with `batch-` turned into `result-`: `result-007.jsonl` for
+`batch-007.jsonl`. First run
+
+```sh
+{{WRITE}} todo RESULT_FILE
+```
+
+It lists the bundles of your batch that have no line in your result file yet, by their line in the batch file. Take
+those, in order. If an agent before you began your batch, the bundles it finished are not listed: begin with the first
+one listed, and do not write the others again. For each bundle: review its Lean (1), decide whether to hold it (2),
+write its review by the definition and rules below (3 to 5), and add its result (6), before you read the next one.
 
 A bundle's fields:
 
@@ -105,12 +114,14 @@ The next section is quoted whole from AI-REVIEWS.md, the site's guide for AI age
 Write yours by it, with the migration's rules after it, which hold where the two differ, since you have only the
 bundle and the program checks the review against it:
 
-- a reference comes only from the bundle, never from a source you open or know (3);
+- a reference, and any book, paper or numbered result the review names, comes only from the bundle, never from a
+  source you open or know (3);
 - the roadmap is cited only where its block states the declaration, and without a link, since the bundle gives no
   commit (3);
 - no Check is listed that `checks` does not give, not even as missing (4);
 - an error is not filed as a no: the declaration is held (2), and the review still describes it.
 
+The guide's example lists a Check and names a book that a bundle may not give; the migration's own example follows 4.
 The guide's rules on edits do not concern you: you write first versions.
 
 {{STANDARD_REVIEW}}
@@ -123,34 +134,48 @@ conclusion. Instance groups that say one thing together may share a bullet:
 ``- `[NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]`: $E$ is a real Hilbert space.`` Implicit
 groups, `{…}` and `⦃…⦄`, and groups that only introduce a type, such as `(R : Type u_1)`, need no bullet of their own:
 say what they range over where they first matter. For a definition, then say what its value is; for a structure or a
-class, its fields; for an instance, what it provides.
+class, its fields; for an instance, what it provides, and for which types.
 
 The program reads What it says for each explicit group's binder name, and for each instance group its class (`Module`
 for `[Module ℚ V]`) or its name, as a whole word spelled as the signature spells it: `μ`, not `$\mu$`.
 
+An instance that carries data, one that defines operations or a structure (a `Module`, a `TopologicalSpace`, a
+`Field`), has a value in Tau Ceti: the data it chooses. A `deriving instance` has none of its own, and an instance of a
+class that is a proposition has only a proof. The bundle gives an instance's statement only, and its `value` is empty:
+say what the instance provides, and claim nothing about its data that the statement and the docstring do not say.
+
 ## 3. References only from the bundle, with their numbers as given
 
 A reference says where the definition or the result appears in this form: in a book, a paper, lecture notes, the
-Stacks Project, or the roadmap. Take each one from a single text of the bundle: the docstring, an earlier review,
-Voyager's announcement (`named`) or the roadmap block. Copy it with that text's words and numbers: its theorem,
-definition, section or page number, its tag, year or arXiv number, and a link's address as written there. You may
-shorten it, and add a few words of your own on what it shows, but no number that this one text does not give it.
+Stacks Project, or the roadmap. Take each one from a single text of the bundle: the docstring, a comment in `value`, an
+earlier review, Voyager's announcement (`named`) or the roadmap block. Open its bullet with the citation as that text
+gives it, in its words: its author, its title, and its theorem, definition, section or page number, its tag, year or
+arXiv number. You may shorten it. Words of your own, on what it shows, come after a colon or a dash (` — `), and add no
+number and no link that this one text does not give.
 
-- Nothing else is a reference, however standard or well known to you: no source the bundle does not name, and no number
-  it does not give. Nor is a link to Lean source, Tau Ceti's or Mathlib's, which shows the Lean, not where the
-  mathematics is stated.
-- The same holds for the rest of the review: name a book, a paper or a numbered result only as the bundle gives it. You
-  may say without a source that a notion or a result is the standard one.
+The program looks for the citation, the words before the first `:` or ` — ` (and any title in italics), in one text
+of the bundle, which must also give every number and hold every link of the bullet. The Lean code and the tests' texts
+are no such text: a citation that only shares a phrase with them, or with your own description, is not traced.
+
+- Nothing else is a reference, however standard or well known to you: no source the bundle does not name, no number it
+  does not give, and no link it does not hold. Nor is a link to Lean source, Tau Ceti's or Mathlib's, which shows the
+  Lean, not where the mathematics is stated.
+- The same holds for the whole review: wherever it names a theorem, proposition, lemma, corollary, definition, section,
+  chapter or tag with its number, in What it says, in the prose of References and tests, in a test's line or in Lean
+  subtleties, the program looks for that number in the bundle's texts. You may say without a source that a notion or a
+  result is the standard one.
 - The roadmap block is a reference when it states the definition or the result, as a target or a milestone does. A
   block that only reports progress, such as a dated entry of a `PROGRESS.md` or a note of a `STATUS.md`, is context
   for you, not a reference. Cite it by its roadmap, its file and its heading, without a link, since the bundle gives no
   commit: ``- TauCetiRoadmap, Arithmetic, `TauCetiRoadmap/Arithmetic/README.md`, Layer 1: tripling.`` A link to the
   roadmap at a commit that an earlier review gives may be copied as it is.
 - A reference never opens with a backticked name, which is how a test opens.
+- In References and tests, a Lean name in backticks is one of `tests`, the declaration, or one of `rests_on`; or a name
+  a reference copies from its text.
 - When the bundle gives no reference, list none, and say so in a line of prose: `No reference is recorded for it.`
-- Every bullet under References and tests is a reference, a test or a Check. Anything else, such as `No test is
-  recorded.`, is a line of prose, not a bullet: the program reads every other bullet as a reference, and looks for it
-  in the bundle.
+- Every bullet under References and tests, and every numbered item, is a reference, a test or a Check. Anything else,
+  such as `No test is recorded.`, is a line of prose, not a bullet: the program reads every other bullet as a reference,
+  and looks for it in the bundle.
 
 ## 4. Tests only from `tests`, Checks only from `checks`
 
@@ -162,6 +187,42 @@ shorten it, and add a few words of your own on what it shows, but no number that
 - `checks` is empty for every bundle today, so list no Check: not one an earlier review cites, and not one as missing.
   A Check that is not in `checks` was not found at its tag in Tau Ceti at the site's commit.
 
+## An example
+
+The guide's example, as the migration writes it. Suppose the bundle of `TauCeti.Foo.nilradical_eq_sInf` has the
+docstring "The nilradical is the intersection of the prime ideals (Atiyah and Macdonald, *Introduction to Commutative
+Algebra*, Proposition 1.8).", the test `TauCeti.Foo.nilradical_zmod_four` in `tests`, and no `checks`. Then:
+
+~~~review
+## What it says
+For a commutative ring $R$, the nilradical of $R$, the set of its nilpotent elements, is the
+intersection of its prime ideals.
+
+- `[CommRing R]`: a commutative ring structure on the type $R$, with a $1$.
+- The conclusion: `nilradical R`, the ideal of the $x \in R$ with $x^n = 0$ for some $n$, equals
+  `sInf {P : Ideal R | P.IsPrime}`, the greatest lower bound of the prime ideals $P$ of $R$ among its
+  ideals, which is their intersection.
+
+This is Proposition 1.8 of Atiyah and Macdonald, for the same rings: commutative, with a $1$.
+
+## References and tests
+- Atiyah and Macdonald, *Introduction to Commutative Algebra*, Proposition 1.8: the statement itself.
+- `TauCeti.Foo.nilradical_zmod_four` — in $\mathbb{Z}/4\mathbb{Z}$ both sides are the ideal $(2)$.
+
+The test works out both sides in a ring where the answer is known by hand, so `nilradical` and `sInf`
+mean here what they mean in the book.
+
+## Lean subtleties
+- `[CommRing R]` is a hypothesis carried as a typeclass: Lean finds the ring structure by itself.
+- The `sInf` of no ideals is the whole ring. The zero ring has no prime ideals, so there the right side
+  is the whole ring; so is the left, since $1 = 0$ is nilpotent there.
+~~~
+
+It differs from the guide's example in two ways. It lists no Check, since `checks` is empty. And its reference, and the
+book its comparison with the literature names, are the docstring's, word for word and with its number: in the
+migration, every citation of a review comes from the bundle. Its test is the one `tests` gives, and the group that only
+introduces a type, `(R : Type u_1)`, has no bullet of its own.
+
 ## 5. Each cell is `checked`, `na` or `error`
 
 Your result gives each of the eight checks of 1 a cell, once:
@@ -172,12 +233,11 @@ Your result gives each of the eight checks of 1 a cell, once:
 
 ## 6. Your result: one line per bundle
 
-Your result file is your batch file's path with `batch-` turned into `result-`: `result-007.jsonl` for
-`batch-007.jsonl`. For each bundle, add its result with this command, the review between the two `END_OF_REVIEW` lines
-exactly as you wrote it, with nothing escaped:
+For each bundle, add its result to your result file with this command, the review between the two `END_OF_REVIEW`
+lines exactly as you wrote it, with nothing escaped:
 
 ```sh
-{{ADD}} RESULT_FILE --decl "DECL" --verdict approve \
+{{WRITE}} add RESULT_FILE --decl "DECL" --verdict approve \
   --cells object,convention,edge-cases,junk,vacuous,choice=na,generality,naming <<'END_OF_REVIEW'
 ## What it says
 …
@@ -196,7 +256,8 @@ In `--cells`, a check alone is `checked`, `check=na` does not apply, and `check=
 The command writes the line the program reads, `{"decl", "cells", "verdict", "hold", "review"}`, in place of any line
 of that declaration the file had. It refuses a result that breaks the rules of 2 and 5, saying why, and writes nothing.
 Then it checks the review as the program will, and prints any problem it finds: fix the review, and add it again; the
-new line replaces the old one. If a problem remains after two more tries, leave it and go on.
+new line replaces the old one. If a problem remains after two more tries, leave it and go on. It also names the next
+bundle without a line, by its line in the batch.
 
 Your result file holds one line per bundle of your batch, and nothing else. Write nothing else: no other file, and no
 change to the batch. When every bundle has its line, reply in one line: how many you approved, and how many you held.
