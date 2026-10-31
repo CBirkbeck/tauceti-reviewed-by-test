@@ -185,7 +185,7 @@
     if (v.fix) box.append(el('div', 'faint small', 'Suggested fix:'), md(v.fix));
     for (const id of v.replies || []) {
       const r = byId.get(id);
-      if (!r || r.std) continue;  // a version of the standard review hangs from a record (a comment must reply to one) and says nothing to it
+      if (!r) continue;
       const reply = el('div', 'reply'), rh = el('div', 'thread-head');
       rh.append(who(r.by), el('span', 'faint', date(r.at)));
       reply.append(rh, md(r.text));
@@ -1185,7 +1185,7 @@
   function replies(box, v, byId) {
     for (const id of v.replies || []) {
       const r = byId.get(id);
-      if (!r || r.std) continue;
+      if (!r) continue;
       const reply = el('div', 'reply'), head = el('p', 'line');
       head.append(markWho(r.by), ', ' + date(r.at));
       reply.append(head, md(r.text));

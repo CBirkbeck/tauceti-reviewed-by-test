@@ -517,21 +517,6 @@ def standard_review_earlier_form(browser, url, errors):
 
 
 @check
-def standard_review_is_not_a_reply(browser, url, errors):
-    """A version held for the owner is a comment, and a comment must reply to a record: here, to the no on
-    `Fixture.triple_comm`. The no does not show it as a reply (it has no text to show)."""
-    def hang(e):
-        no = next(v for v in e["records"] if v["kind"] == "review" and v["verdict"] == "problem")
-        e["records"].append({**no, "id": "held", "kind": "comment", "std": "wrote", "text": "", "replies": []})
-        no["replies"] = ["held"]
-    page = visit(browser, url, "#/d/Fixture.triple_comm", errors,
-                 before=edited(("**/data/m/*.json", in_module("Fixture.triple_comm", hang))))
-    report = page.locator(".review .report")
-    expect(report.count() == 1 and "the definition, unfolded" in report.text_content() and report.locator(".reply").count() == 0,
-           "the no, and no reply under it")
-
-
-@check
 def noes_are_every_ones(browser, url, errors):
     """An AI agent's no is an answer as ever (its yes is an approver, or a number): here the no on `Fixture.triple_comm`
     is Astra's, not a person's."""
@@ -601,7 +586,7 @@ def standard_activity(browser, url, errors):
     link, said = approved.locator("a.decl-link").bounding_box(), approved.locator(".thread-head").bounding_box()
     expect(abs(link["y"] - said["y"]) < 8, f"one line, the declaration's link beside what was done ({link['y']}, {said['y']})")
     # The version held for the owner (a comment, which must reply to a record) hangs from the AI agent's yes of the
-    # earlier form; that yes is listed as it was, with no reply of nobody's under it.
+    # earlier form; the build leaves it out of that yes's replies, so the yes is listed as it was, with no reply under it.
     yes = latest.locator(".thread", has_text="positive when")
     expect(yes.count() == 1 and yes.locator(".reply").count() == 0,
            "a version of the standard review is not a reply to the yes it hangs from")

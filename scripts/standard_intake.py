@@ -33,7 +33,8 @@ store only later, as the migration's records will.
 An AI's write, edit and approval are accepts that carry the rubric's cells, and each supersedes its reviewer's
 latest earlier accept of the declaration, as evidence-store's accepts do. A maintainer's write, edit or restore
 approves nothing, so it is a comment: it replies to the version it replaces, or for a first version to the
-declaration's latest review. People say yes with the page's form, never with `Approve:`.
+declaration's latest yes, never to a no or a suggestion (a record with a reply is taken for answered), and with
+no yes it is refused. People say yes with the page's form, never with `Approve:`.
 
 The lines of evidence-store's own kinds (`Reviewed-by:`, `Test:`, `Named:`, `Challenge:`) are read as its bulk
 handler reads them, into the same records. An AI agent's yes of the earlier form, without the standard review, is
@@ -299,11 +300,13 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
     if agent:
         r.update(kind="review", verdict="accept", rubric=rubric.name, checked=cells, **supersedes(ctx, name, by))
     else:
-        # A comment replies to the version it replaces; a first version, to the declaration's latest review.
-        reviews = [x for x in mine if x.get("kind") == "review"]
-        target = now or max(reviews, key=lambda x: (x.get("at", ""), x.get("id", "")), default=None)
+        # A comment replies to the version it replaces; a first version, to the declaration's latest yes: not to a no or
+        # a suggestion, which the pages would take for answered by it.
+        yeses = [x for x in mine if standard.is_accept(x)]
+        target = now or max(yeses, key=lambda x: (x.get("at", ""), x.get("id", "")), default=None)
         if target is None:
-            return None, f"a maintainer's first version replies to a review of `{name}`, and it has none yet"
+            return None, (f"a maintainer's first version replies to a yes of `{name}`, and it has none yet "
+                          "(a no or a suggestion is not one)")
         r.update(kind="comment", links={"replies_to": target["id"]})
     r = rec.with_id(r)
     errs = rec.validate(r, {rubric.name: rubric})

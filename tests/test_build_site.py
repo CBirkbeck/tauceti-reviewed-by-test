@@ -476,9 +476,21 @@ class StandardReviewTests(unittest.TestCase):
         self.assertEqual(holding, {"standard"})
 
 
+#: A version of the standard review of `triple_comm` held for the owner (it has an open no).
+HELD_UNDER_A_NO = """## What it says
+`Fixture.triple_comm` says `triple b = b + b + b`.
+
+## References and tests
+- Fixture documentation, §3.
+
+## Lean subtleties
+None."""
+
+
 class StandardEdgeTests(unittest.TestCase):
-    """What the fixture's own records do not hold, read from a build with two more records: a held version made
-    for version A of `double`, and AGENT's withdrawal of its edit of `triple`."""
+    """What the fixture's own records do not hold, read from a build with more records: a held version made for
+    version A of `double`, AGENT's withdrawal of its edit of `triple`, a version held under the open no on `triple_comm`,
+    and a person's reply to the open suggestion on `triple`."""
 
     @classmethod
     def setUpClass(cls):
@@ -486,19 +498,48 @@ class StandardEdgeTests(unittest.TestCase):
         cls.held = {"schema": rec.SCHEMA, "kind": "comment", "subject": yes["subject"], "by": fixture_site.MIGRATION,
                     "text": fixture_site.DOUBLE_V1.replace("twice", "two times"), "standard": {"spec": standard.SPEC},
                     "links": {"replies_to": yes["id"]}, "at": "2026-10-29T09:00:00Z", "origin": fixture_site.bulk(4108)}
-        edit = next(r for r in fixture_site.extra_records(Dataset.load(fixture_site.DATASET))
-                    if r.get("text") == fixture_site.TRIPLE_V2)
+        extra = fixture_site.extra_records(Dataset.load(fixture_site.DATASET))
+        edit = next(r for r in extra if r.get("text") == fixture_site.TRIPLE_V2)
         undo = {"schema": rec.SCHEMA, "kind": "status", "target": rec.with_id(edit)["id"], "state": "withdrawn",
                 "by": fixture_site.AGENT, "text": "The edit was meant for another declaration.",
                 "at": "2026-10-28T09:00:00Z", "origin": fixture_site.bulk(4107)}
+        no = rec.with_id(next(r for r in extra if r["kind"] == "review" and r.get("verdict") == "problem"))
+        suggestion = rec.with_id(next(r for r in extra if r["kind"] == "review" and r.get("verdict") == "question"))
+        cls.hung = {"schema": rec.SCHEMA, "kind": "comment", "subject": no["subject"], "by": fixture_site.MIGRATION,
+                    "text": HELD_UNDER_A_NO, "standard": {"spec": standard.SPEC}, "links": {"replies_to": no["id"]},
+                    "at": "2026-10-29T10:00:00Z", "origin": fixture_site.bulk(4109)}
+        cls.reply = {"schema": rec.SCHEMA, "kind": "comment", "subject": suggestion["subject"], "by": fixture_site.SOMEONE,
+                     "text": "Good idea: any semiring will do.", "links": {"replies_to": suggestion["id"]},
+                     "at": "2026-10-29T11:00:00Z", "origin": {"kind": "issue", "ref": "example/fixture-store#18"}}
         cls.root = OUT / "standard-edges"
-        fixture_site.build(cls.root, more=[cls.held, undo])
+        fixture_site.build(cls.root, more=[cls.held, undo, cls.hung, cls.reply])
 
     def test_a_held_version_is_as_current_as_its_own_subject(self):
         # evidence-core calls every comment current, but this one was made for version A of `double`.
         s = std("Fixture.double", self.root)
         self.assertEqual(s["text"], self.held["text"])
         self.assertEqual((s["current"], s["approving"], s["approvers"], s["earlier"]), (False, False, [], 1))
+
+    def test_a_version_held_under_a_no_is_no_reply_to_it(self):
+        # A comment must reply to a record, and this one hangs from the open no on `triple_comm`: it answers nothing, so
+        # the no is not taken for answered.
+        records = entry("Fixture.triple_comm", self.root)["records"]
+        no = next(v for v in records if v["kind"] == "review" and v["verdict"] == "problem")
+        held = next(v for v in records if v["kind"] == "comment")
+        self.assertEqual((held["std"], held["repliesTo"]), ("wrote", no["id"]))  # it is a record of the page, hanging there
+        self.assertEqual((no["replies"], no["statuses"], no["state"]), ([], [], "open"))
+        # Activity lists the no open and unanswered, and the version as one line of its own.
+        act = data("activity.json", self.root)
+        self.assertEqual([(v["decl"], v["state"], v["replies"]) for v in act["problems"]],
+                         [("Fixture.triple_comm", "open", [])])
+        self.assertEqual([v["std"] for v in act["recent"] if v["id"] == held["id"]], ["wrote"])
+
+    def test_a_reply_that_is_one_is_kept(self):
+        records = entry("Fixture.triple", self.root)["records"]
+        suggestion = next(v for v in records if v["kind"] == "review" and v["verdict"] == "question")
+        reply = next(v for v in records if v["kind"] == "comment" and "std" not in v)
+        self.assertEqual(suggestion["replies"], [reply["id"]])
+        self.assertEqual(reply["text"], self.reply["text"])
 
     def test_an_edit_withdrawn_is_undone_and_what_it_superseded_stays_out(self):
         s = std("Fixture.triple", self.root)

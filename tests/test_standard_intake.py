@@ -308,9 +308,20 @@ class WriteEditTests(IntakeCase):
         self.assertEqual(r["subject"]["name"], "Fixture.triple")
         self.assertEqual(len(self.process(approve(7, B, VER2)).records), 1)  # it is the current version
 
-    def test_a_maintainers_write_replies_to_the_latest_review(self):
+    def said(self, n: int, verdict: str, decl: str = "Fixture.double") -> dict:
+        """A person's yes, no or suggestion of the declaration (`verdict`: accept, problem or question), as the page's
+        forms record one, made at the n-th minute: older than the comments with a number above n."""
+        text = {"accept": "It says what it should.", "problem": "It says the wrong thing.",
+                "question": "Could it be more general?"}[verdict]
+        extra = {"category": "other", "rubric": "ltb-rubric/1"} if verdict == "problem" else {}
+        return {"schema": rec.SCHEMA, "kind": "review", "verdict": verdict, "text": text,
+                "by": {"kind": "person", "identity": {"kind": "github", "id": "alice"}},
+                "subject": rec.subject_from_decl(self.ds.by_name[decl], self.ds), "at": f"2026-10-31T10:{n:02d}:00Z",
+                "origin": {"kind": "issue", "ref": f"o/r#{n}"}, **extra}
+
+    def test_a_maintainers_write_replies_to_the_latest_yes(self):
         out = self.process(person(1, "Write: Fixture.double", "~~~review", V1, "~~~"))
-        self.assertEqual(out.records, [])  # a comment needs a review to reply to, and there is none
+        self.assertEqual(out.records, [])  # a comment needs a yes to reply to, and there is none
         self.assertIn("Not recorded", self.last(out))
         self.process(comment(2, A, "Reviewed-by: Fixture.double — Matches the docs."),
                      comment(3, B, "Reviewed-by: Fixture.double — Twice its argument, as the docs say."))
@@ -321,6 +332,24 @@ class WriteEditTests(IntakeCase):
         r, = self.process(person(5, "Write: Fixture.double", "~~~review", V1, "~~~")).records
         self.assertEqual((r["kind"], r["standard"], r["links"]),
                          ("comment", {"spec": SPEC}, {"replies_to": latest["id"]}))
+
+    def test_a_first_version_hangs_from_the_latest_yes_not_from_a_newer_no_or_suggestion(self):
+        # A comment must reply to a record, and a record with a reply is taken for answered: so a version nobody approves
+        # never hangs from a no or a suggestion, newer than the yes though they are. A person's yes is a yes.
+        self.process(comment(1, A, "Reviewed-by: Fixture.double — Matches the docs."))
+        yes = self.said(2, "accept")
+        self.store.add([yes, self.said(3, "problem"), self.said(4, "question")])
+        r, = self.process(person(5, "Write: Fixture.double", "~~~review", V1, "~~~")).records
+        self.assertEqual((r["kind"], r["links"]), ("comment", {"replies_to": rec.with_id(yes)["id"]}))
+
+    def test_a_first_version_with_only_a_no_or_a_suggestion_is_refused_and_says_so(self):
+        self.store.add([self.said(1, "problem"), self.said(2, "question")])
+        out = self.process(person(3, "Write: Fixture.double", "~~~review", V1, "~~~"))
+        self.assertEqual(out.records, [])
+        said = self.last(out)
+        self.assertIn("Not recorded", said)
+        self.assertIn("replies to a yes", said)
+        self.assertIn("a no or a suggestion is not one", said)
 
 
 class RestoreTests(IntakeCase):

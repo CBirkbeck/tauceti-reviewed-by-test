@@ -398,8 +398,11 @@ class Site:
     def record_view(self, r: dict, s: Status, name: str) -> dict:
         """One record about ``name`` as the pages list it (evidence-core's view), but a record of the standard
         review as a line: ``std`` says what it did, and its text is left off. The page reads the current text, and
-        no other, from `standard/<k>.json`, so that the history of a review stays in the store."""
+        no other, from `standard/<k>.json`, so that the history of a review stays in the store. A version held for
+        the owner is a comment, and a comment must reply to a record, but it answers nothing: no record lists it among
+        its replies, or a no it hangs from would be taken for answered."""
         v = views.record_view(self.ev, r, s, name)
+        v["replies"] = [c["id"] for c in self.ev.replies.get(r["id"], []) if standard.kind_of(c) != "version"]
         if standard.kind_of(r):
             v["std"], v["text"] = standard.act(r), ""
         return v
