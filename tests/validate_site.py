@@ -479,6 +479,30 @@ def standard_review_states(browser, url, errors):
 
 
 @check
+def standard_review_where_the_site_asks(browser, url, errors):
+    """The standard review belongs to the box's question (Ruling R16). `Bool` is outside the library, in a package the
+    settings do not name, so the site does not ask about it: its page has no Standard review section, no line saying it
+    has none and no count of AI agents' yeses of the earlier form, though a store it imports holds one for it."""
+    def earlier_yes(data):
+        old = next(v for v in data["Int"]["records"] if v["kind"] == "review" and v["verdict"] == "accept" and v["by"]["kind"] == "agent")
+        data["Bool"] = {"records": [{**{k: x for k, x in old.items() if k != "std"}, "id": "earlier-form", "decl": "Bool",
+                                     "text": "Matches its definition."}]}
+    page = visit(browser, url, "#/d/Bool", errors, before=edited(("**/data/upstream.json", earlier_yes)))
+    expect(page.evaluate("async () => (await TauData.upstream()).Bool.records.map(v => [v.verdict, v.by.kind, v.std, v.inForce])")
+           == [["accept", "agent", None, True]], "an AI agent's yes of the earlier form is on record for it")
+    box = page.locator(".review")
+    expect(box.locator(".actions").count() == 0, "the site does not ask about it")
+    shown = box.text_content()
+    expect(box.locator(".standard-box").count() == 0 and box.locator(".standard").count() == 0 and "Standard review" not in shown
+           and "No standard review yet." not in shown and "earlier form" not in shown,
+           "so its page has no standard review section, empty or counting that yes")
+    page = visit(browser, url, "#/d/Int", errors)
+    box = page.locator(".review")
+    expect(box.locator(".standard").count() == 1 and "No standard review yet." not in box.text_content(),
+           "a declaration of a package it does name keeps its section")
+
+
+@check
 def standard_review_html_is_inert(browser, url, errors):  # Review Focus 3: the fixture's V2 holds `<img src=x onerror="window.pwned=1">`
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     page.wait_for_timeout(500)  # the handler of an <img> that failed to load would have run by now

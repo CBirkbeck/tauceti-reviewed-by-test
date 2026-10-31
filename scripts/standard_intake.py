@@ -45,6 +45,10 @@ restore approves nothing, so it is a comment: it replies to the version it repla
 declaration's latest yes, never to a no or a suggestion (a record with a reply is taken for answered), and with no
 yes it is refused. People say yes with the page's form, never with `Approve:`.
 
+The agent a comment names is read from its lines outside the review blocks, the lines of its commands and its
+`Dropped:` lines (`naming`): a review, a note or a reason that quotes a mark names no one, where evidence-store's
+`parse_agent_mark`, given the whole comment, would take the reviewed-by form wherever it is.
+
 The lines of evidence-store's own kinds (`Reviewed-by:`, `Test:`, `Named:`, `Challenge:`) are read as its bulk
 handler reads them, into the same records. An AI agent's yes of the earlier form, without the standard review, is
 recorded with a note on what agents do now, pointing to AI-REVIEWS.md in the repository the intake runs for, and a
@@ -53,20 +57,24 @@ replies say the same (`process_issue`), with the bulk issue the site's settings 
 
 A comment's records are made whenever it is read, each added to the store at once so that later lines see it, and
 none twice, since a record's origin names its comment and line; a run finds a line's records in a map of the store by
-origin that it makes once (`origins`). Every run reads the whole issue again, and evidence-store said the refusals of
-every old comment again each time. So a reply ends with a hidden line naming the comment it answers (`marker`), and a
-comment is answered while no reply of the bot names it in its closing lines (a reply quotes what it was given, so a
-marker anywhere else names nothing): one posted while a run was reading the issue is answered by the next, and one
-whose reply GitHub refused is answered again, with what it recorded then. The bot's replies from before these lines
-name nothing, so no comment older than the latest of them is read again. A reply holds what fits in a comment
-(`CAP`), a reason given once for all the lines it refused: GitHub refuses a comment over 65,536 characters, and the
-reply to the oldest comment unanswered is made first on every run. `install` puts this module in place of
+origin that it makes once (`origins`). It looks the latest dataset up once too, a failure included (`latest_once`):
+every line of a run is decided against one outcome, and a line waiting for a declaration is looked up before the store
+is read as of its comment, so it costs neither a request nor a pass over the store. Every run is given the whole issue
+again, and evidence-store read all of it, saying the refusals of every old comment again each time. So a reply ends with
+a hidden line naming the comment it answers (`marker`), and a comment is read whole while no reply of the bot names it
+in its closing lines (a reply quotes what it was given, so a marker anywhere else names nothing): one posted while a
+run was reading the issue is answered by the next, and one whose reply GitHub refused is answered again, with what it
+recorded then. An answered comment is read again only for the lines its latest reply deferred. The bot's replies from
+before these lines name nothing, so no comment older than the latest of them is read again. A reply holds what fits in
+a comment (`CAP`), a reason given once for all the lines it refused: GitHub refuses a comment over 65,536 characters,
+and the reply to the oldest comment unanswered is made first on every run. `install` puts this module in place of
 evidence-store's reading, for every run of its intake.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field, replace
+from functools import partial
 from typing import Callable, Sequence
 
 from evidence_core import records as rec
@@ -194,6 +202,25 @@ def commands(text: str) -> list[Command]:
             out[-1].dropped.append(pair(m[1]))
         k += 1
     return out
+
+
+def naming(text: str) -> str:
+    """The lines of a comment that can name its agent: those in no review block (`closing`), and no line of a command or
+    of a `Dropped:` item. A review's text, an edit's note and the reason for a dropped item are words about a declaration,
+    and may quote a mark. evidence-store's `parse_agent_mark` takes the reviewed-by form wherever it is in what it is
+    given, so over the whole comment it would credit the comment to the agent that text names."""
+    lines = (text or "").splitlines()
+    out: list[str] = []
+    k = 0
+    while k < len(lines):
+        end = closing(lines, k) if lines[k].rstrip() == OPEN else None
+        if end is not None:
+            k = end + 1
+            continue
+        if not (COMMAND.match(lines[k]) or DROPPED.match(lines[k])):
+            out.append(lines[k])
+        k += 1
+    return "\n".join(out)
 
 
 def as_of(ctx: Context, at: str, comment: int, line: int) -> Context:
@@ -331,11 +358,13 @@ def supersedes(mine: list[dict], by: dict) -> dict:
 
 
 def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: Context,
-         changed: Callable[[Dataset, Decl], bool]) -> tuple[dict | None, str]:
+         changed: Callable[[Dataset, Decl], bool], view: Callable[[], Context]) -> tuple[dict | None, str]:
     """The record an `Approve:`, `Write:`, `Edit:` or `Restore:` line asks for, or why it cannot be made: an AI
-    agent's accept, or a person's comment. `ctx` is as of the line (`as_of`), and `changed` says whether the comment
-    changes a declaration's review in another line. Raises `DatasetMissing`, as evidence-store's `record_for` does, and
-    `NotInDataset` for a declaration the latest dataset does not have."""
+    agent's accept, or a person's comment. The declaration is looked up in `ctx` first, and only one the latest dataset
+    has is read against the store, as of the line (`view`, which makes `as_of`'s context): a line waiting for a declaration
+    costs no pass over the store. `changed` says whether the comment changes a declaration's review in another line.
+    Raises `DatasetMissing`, as evidence-store's `record_for` does, and `NotInDataset` for a declaration the latest dataset
+    does not have."""
     agent = by["kind"] == "agent"
     refusal = may(cmd.keyword, agent, maintainer)
     if refusal:
@@ -350,6 +379,7 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
         if name:
             raise NotInDataset(intake.not_found(name, ds))
         return None, intake.not_found(name, ds)  # no dataset will have it
+    ctx = view()
     mine = records_of(ctx, ds, decl)
     versions = [r for r in mine if standard.kind_of(r) == "version"]
     now = current(ctx, versions)
@@ -409,10 +439,12 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
     return (None, "; ".join(errs)) if errs else (r, "")
 
 
-def theirs(cmd: Command, by: dict, at: str, origin: dict, ctx: Context, bulk: int) -> tuple[dict | None, str]:
+def theirs(cmd: Command, by: dict, at: str, origin: dict, ctx: Context, bulk: int,
+           view: Callable[[], Context]) -> tuple[dict | None, str]:
     """The record a line of evidence-store's own kinds asks for, as its bulk handler makes it, or why it cannot be
-    made; an AI agent's bare yes is told what it is now, an approval on the bulk issue, number `bulk`. Raises
-    `DatasetMissing`, and `NotInDataset` for a declaration the latest dataset does not have."""
+    made; an AI agent's bare yes is told what it is now, an approval on the bulk issue, number `bulk`. As in `ours`, the
+    declaration is looked up in `ctx` before the store is read as of the line (`view`). Raises `DatasetMissing`, and
+    `NotInDataset` for a declaration the latest dataset does not have."""
     kind, answers = intake.bulk_answers(cmd.keyword, *cmd.fields)
     name = intake.clean(answers.get("decl"))
     if name:
@@ -421,7 +453,7 @@ def theirs(cmd: Command, by: dict, at: str, origin: dict, ctx: Context, bulk: in
             raise NotInDataset(intake.not_found(name, ds))
         # record_for looks the declaration up again, in the latest dataset (a bulk line names no commit): this one.
         dataset = ctx.dataset
-        ctx = replace(ctx, dataset=lambda commit: dataset(commit) if commit else ds)
+        ctx = replace(view(), dataset=lambda commit: dataset(commit) if commit else ds)
     r, errs = intake.record_for(kind, answers, by, at, origin, ctx)
     instead = BARE_YES.format(repo=ctx.repo, bulk=bulk)
     return r, "; ".join(instead if e == NEEDS_TEXT else e for e in errs)
@@ -535,6 +567,29 @@ def origins(records: list[dict]) -> dict[str, list[dict]]:
     return out
 
 
+def latest_once(dataset: Callable[[str], Dataset]) -> Callable[[str], Dataset]:
+    """`dataset` with its look-up of the latest dataset (commit `""`) made once, a failure too, so that every line of a run
+    sees the outcome of the first. evidence-store's `Datasets` lists the library's releases at each look-up of the latest,
+    a request to GitHub, so a line cost one; and one failing partway through a run left some of its lines read and the rest
+    waiting, which can make a typo first met during an outage be said never. A commit asked for by name goes through. The
+    memory is this function's: `process` makes one for each run."""
+    found: list[Dataset | Exception] = []  # what the first look-up gave, once it was made
+
+    def look(commit: str) -> Dataset:
+        if commit:
+            return dataset(commit)
+        if not found:
+            try:
+                found.append(dataset(commit))
+            except Exception as e:  # as `intake.lookup` takes it: no dataset, or none yet
+                found.append(e)
+        outcome = found[0]
+        if isinstance(outcome, Exception):
+            raise outcome.with_traceback(None)  # a traceback is one raise's, not the sum of a run's
+        return outcome
+    return look
+
+
 def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: bool = True,
                          index: dict[str, list[dict]] | None = None,
                          deferred: Sequence[int] | None = None, unread: bool = False) -> Outcome:
@@ -551,10 +606,11 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
     index = origins(ctx.store.records) if index is None else index
     base = comment.get("html_url") or f"{ctx.repo}#{issue['number']}/comment/{comment.get('id')}"
     text = comment.get("body") or ""
-    by = intake.author_of(user, intake.parse_agent_mark(text))
+    by = intake.author_of(user, intake.parse_agent_mark(naming(text)))
     at = intake.iso(comment.get("created_at", ""))
     maintainer = intake.is_maintainer(ctx, comment)
     cmds = commands(text)
+    comment_id = int(comment.get("id") or 0)
     versions = [r for cmd in cmds for r in index.get(f"{base}/line/{cmd.line}", []) if standard.kind_of(r) == "version"]
 
     def changed(ds: Dataset, decl: Decl) -> bool:
@@ -575,11 +631,11 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
             made += had  # said again if the comment is answered now: the reply that said them was refused
             continue
         origin = {"kind": "comment", "ref": ref}
-        then = as_of(ctx, at, int(comment.get("id") or 0), cmd.line)
+        view = partial(as_of, ctx, at, comment_id, cmd.line)  # the store as of this line, made when a declaration is found
         name = intake.clean(cmd.fields[0]) if cmd.fields else ""
         try:
-            r, why = ours(cmd, by, maintainer, at, origin, then, changed) if cmd.keyword in OURS else \
-                theirs(cmd, by, at, origin, then, issue["number"])
+            r, why = ours(cmd, by, maintainer, at, origin, ctx, changed, view) if cmd.keyword in OURS else \
+                theirs(cmd, by, at, origin, ctx, issue["number"], view)
         except intake.DatasetMissing:
             r, why, name = None, NO_DATASET, ""
             waiting.append(cmd.line)
@@ -625,9 +681,12 @@ def process(issue: dict, comments: list[dict], ctx: Context, announce: bool = Tr
     """evidence-store's `process`, with the bulk issue read here: its comments in the order `as_of` reads them, by
     time and then id. A comment that no reply of the bot names (`answered`), newer than the bot's latest reply from
     before the replies named any, is read whole and answered. One a reply names is read again only for the lines its
-    latest reply deferred, and one older than those replies, decided and answered then, is not read again."""
+    latest reply deferred, and one older than those replies, decided and answered then, is not read again. The latest
+    dataset is looked up once for the call (`latest_once`), which is the issue's part of a run of the intake: every line
+    sees the one outcome, and the next run looks again."""
     if not intake.is_bulk(issue):
         return THEIR_PROCESS(issue, comments, ctx, announce, events)
+    ctx = replace(ctx, dataset=latest_once(ctx.dataset))  # one look-up of the latest dataset for this run, a failure too
     deferred: dict[str, tuple[int, ...]] = {}  # each comment answered, and the lines its latest reply deferred
     unread: set[str] = set()  # those whose latest reply said there was no dataset to read a line against
     legacy = ""  # when the bot made its latest reply from before the replies named the comments they answer

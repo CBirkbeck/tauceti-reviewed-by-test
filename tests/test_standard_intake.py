@@ -597,6 +597,63 @@ class BodyTests(IntakeCase):
         self.assertIn("line 2: there is no dataset of the library yet; it will be read again", self.last(out))
 
 
+class AgentMarkTests(IntakeCase):
+    """A comment names its agent on a line of its own. A review's text, an edit's note and the reason for a dropped item are
+    words an agent writes about a declaration, and may quote a mark; evidence-store's `parse_agent_mark` takes the
+    reviewed-by form wherever it is in a comment, so read over the whole comment it would credit the comment to the agent
+    that text names (Task 8's review, Part B's final review)."""
+
+    FORM = '<!--reviewed-by:v1 {"agent": "Codex, GPT-6 Astra"}-->'  # B, as the reviewed-by form names it
+    LINE = "<!-- agent: tool=Codex; model=GPT-6 Astra -->"  # B, as an agent line does
+    A_IS = {"tool": "Claude Code", "model": "claude-opus-5-5"}
+
+    @staticmethod
+    def quoting(mark: str) -> str:
+        return V1.replace("None.", f"A review may quote a mark, {mark}, which is only text.")
+
+    def test_a_reviewed_by_mark_in_a_review_does_not_name_the_comments_agent(self):
+        r, = self.process(write(1, A, self.quoting(self.FORM))).records
+        self.assertIn(self.FORM, r["text"])  # the text goes in whole
+        self.assertEqual(r["by"]["agent"], self.A_IS)
+
+    def test_an_agent_mark_in_a_review_does_not_name_it_either(self):
+        # A's line comes last, so the first mark of the comment is the one in the text.
+        c = comment(1, f"Write: Fixture.triple — {CELLS}", "~~~review", self.quoting(self.LINE), "~~~", A)
+        r, = self.process(c).records
+        self.assertIn(self.LINE, r["text"])
+        self.assertEqual(r["by"]["agent"], self.A_IS)
+
+    def test_a_mark_in_a_note_or_in_a_reason_for_a_dropped_item_does_not_name_it(self):
+        self.process(write(1, A))
+        shorter = V1.replace("- `Fixture.triple_two` — its value at 2\n", "")
+        why = f"it is no test of the definition {self.FORM}"
+        r, = self.process(edit(2, A, VER1, shorter, note=f"shorter {self.LINE}",
+                               dropped=(("`Fixture.triple_two`", why),))).records
+        self.assertEqual(r["standard"]["note"], f"shorter {self.LINE}")
+        self.assertEqual(r["standard"]["dropped"], [{"item": "`Fixture.triple_two`", "why": why}])
+        self.assertEqual(r["by"]["agent"], self.A_IS)
+
+    def test_a_mark_in_the_reasons_of_an_earlier_form_line_does_not_name_it(self):
+        r, = self.process(comment(1, A, f"Reviewed-by: Fixture.double — Matches the docs. {self.FORM}")).records
+        self.assertIn(self.FORM, r["text"])
+        self.assertEqual(r["by"]["agent"], self.A_IS)
+
+    def test_the_line_naming_the_agent_is_read_wherever_it_is_outside_the_blocks(self):
+        self.process(write(1, B))
+        approval = f"Approve: Fixture.triple — {VER1} — {CELLS}"
+        for n, lines in enumerate([(A, approval), (approval, "", A), (approval, "A comment about it.", f"  {A}  ")], 2):
+            with self.subTest(lines=lines):
+                r, = self.process(comment(n, *lines)).records
+                self.assertEqual(r["by"]["agent"], self.A_IS)
+
+    def test_a_text_that_quotes_a_mark_is_still_its_maintainers(self):
+        # No mark outside the block: the account's own comment, as a comment without one is.
+        self.process(comment(1, A, "Reviewed-by: Fixture.double — Matches the docs."))  # a yes for the text to hang from
+        r, = self.process(person(2, "Write: Fixture.double", "~~~review", self.quoting(self.FORM), "~~~")).records
+        self.assertEqual((r["kind"], r["by"]["kind"]), ("comment", "person"))
+        self.assertEqual(r["text"], self.quoting(self.FORM).rstrip("\n"))
+
+
 class OriginTests(IntakeCase):
     def test_a_run_reads_the_store_by_origin_once(self):
         # A comment's lines each look up what the store holds from them, and the comment's changes, in a map made once a
@@ -878,6 +935,87 @@ class FinalityTests(IssueCase):
             "at": "2026-10-31T10:00:30Z", "origin": {"kind": "migration", "ref": "late"}, "text": V1,
             "rubric": "ltb-rubric/1", "checked": CHECKED, "standard": {"spec": SPEC}})])
         self.quiet()
+
+
+class LatestDatasetTests(IssueCase):
+    """The latest dataset is looked up once a run, and what that look-up found, a failure too, is what every line of the run
+    sees. evidence-store's `Datasets` lists the library's releases (a request to GitHub) at each look-up of the latest, so a
+    line cost one; and a request failing partway through a run left some of its lines read and the rest waiting, which can
+    make a typo first met during an outage be said never (Task 7b's review)."""
+
+    def scripted(self, *outcomes) -> list[str]:
+        """The dataset answers its look-ups by `outcomes`, one for each call and the last for those after it: a dataset to give
+        or an exception to raise. Returns the commits asked for, one for each call."""
+        calls: list[str] = []
+
+        def dataset(commit):
+            calls.append(commit)
+            outcome = outcomes[min(len(calls), len(outcomes)) - 1]
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+        self.ctx.dataset = dataset
+        return calls
+
+    def test_every_line_of_a_run_sees_the_first_lookup(self):
+        calls = self.scripted(self.ds, LookupError("the list of releases failed"))  # the second look-up would fail
+        out = self.process(write(1, A), approve(2, B, VER1), comment(3, B, f"Approve: Fixture.double — {VER1} — {CELLS}"))
+        self.assertEqual([standard.kind_of(r) for r in out.records], ["version", "approval"])
+        self.assertEqual(calls, [""])
+        said = out.replies[-1][1]
+        self.assertIn("`Fixture.double` has no standard review yet", said)  # the line was read, not left waiting
+        self.assertNotIn(standard_intake.NO_DATASET, said)
+
+    def test_a_failure_is_what_the_whole_run_sees_and_the_next_run_looks_again(self):
+        calls = self.scripted(LookupError("the list of releases failed"), self.ds)  # the second look-up would not
+        c1, c2 = write(1, A), approve(2, B, VER1)
+        out = self.process(c1, c2)
+        self.assertEqual((out.records, calls), ([], [""]))
+        self.assertEqual(len(out.replies), 2)
+        for n, said in out.replies:
+            self.assertIn(standard_intake.NO_DATASET, said)
+        out = self.process(c1, c2)  # a later run: the memory of the last is gone
+        self.assertEqual([standard.kind_of(r) for r in out.records], ["version", "approval"])
+        self.assertEqual(calls, ["", ""])
+
+    def test_only_the_latest_is_remembered(self):
+        asked: list[str] = []
+        look = standard_intake.latest_once(lambda commit: asked.append(commit) or commit + "!")
+        self.assertEqual([look(""), look(""), look("a1"), look("a1")], ["!", "!", "a1!", "a1!"])
+        self.assertEqual(asked, ["", "a1", "a1"])
+
+    def test_lines_waiting_for_a_declaration_cost_one_lookup_a_run_and_no_pass_over_the_store(self):
+        typos = [f"Approve: Fixture.tripel{k} — {VER1} — {CELLS}" for k in range(5)]  # no dataset will have them
+        self.issue += [comment(1, A, *typos), comment(2, B, *typos, "Reviewed-by: Fixture.tripel")]
+        calls = self.scripted(self.ds)
+        with mock.patch.object(standard_intake, "as_of", wraps=standard_intake.as_of) as view:
+            (n1, first), (n2, second) = self.run_all().replies
+        self.assertEqual((calls, view.call_count), ([""], 0))
+        self.assertTrue(first.endswith("\n\n<!-- bulk-reply: 901 deferred: 2,3,4,5,6 -->"), first)
+        self.assertTrue(second.endswith("\n\n<!-- bulk-reply: 902 deferred: 2,3,4,5,6,7 -->"), second)
+        for run in range(2):  # and each later run reads them again
+            calls.clear()
+            with mock.patch.object(standard_intake, "as_of", wraps=standard_intake.as_of) as view:
+                self.quiet()
+            self.assertEqual((calls, view.call_count), ([""], 0), f"run {run + 2}")
+
+    def test_a_typo_first_met_during_an_outage_is_said_once(self):
+        typo = f"Approve: Fixture.tripel — {VER1} — {CELLS}"
+        self.issue += [comment(1, A, typo, f"Write: Fixture.double — {CELLS}", "~~~review", V1, "~~~")]
+        self.scripted(LookupError("an outage"))
+        (n, said), = self.run_all().replies
+        self.assertIn("- there is no dataset of the library yet; it will be read again\n  - line 2\n  - line 3\n", said)
+        # The outage goes on, but a look-up made once would not know: its first look-up fails and its second would not.
+        calls = self.scripted(LookupError("an outage"), self.ds)
+        out = self.run_all()
+        self.assertEqual((out.records, out.replies, calls), ([], [], [""]))  # the typo's line and the write's both wait
+        self.scripted(self.ds)
+        out = self.run_all()
+        (n, said), = out.replies
+        self.assertTrue(said.startswith("Recorded 1 of 2 lines:\n\n"), said)
+        self.assertEqual(said.count("line 2 (`Fixture.tripel`): `Fixture.tripel` is not a declaration of the library at "
+                                    "`B`. Did you mean `Fixture.triple`"), 1)
+        self.quiet()  # said once
 
 
 class AsOfTests(IssueCase):

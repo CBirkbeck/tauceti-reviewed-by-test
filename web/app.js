@@ -692,10 +692,12 @@
     });
     // An AI agent's yes is not an answer here: it shows as an approver of the standard review, or, while there is
     // none, as a number (its yeses of the earlier form: those that did nothing to a standard review, with no `std`),
-    // and its reasons are not on the page. The answers are people's yeses and every no.
+    // and its reasons are not on the page. The answers are people's yeses and every no. The standard review belongs to
+    // the question the box asks: a declaration the site does not ask about has no section, whatever yeses are on
+    // record for it (an imported store's, say).
     const yes = reviews('accept'), people = yes.filter(v => v.by.kind !== 'agent');
     const earlierYes = yes.filter(v => v.by.kind === 'agent' && !v.std).length;
-    if (open || std || earlierYes) card.append(el('p', 'sub', 'Standard review'), standardReview(std, earlierYes));
+    if (open) card.append(el('p', 'sub', 'Standard review'), standardReview(std, earlierYes));
     card.append(el('p', 'sub', 'Answers'), answers(people, reviews('problem'), byId));
     // A line offering a form: what it is for, and its button.
     const offer = (text, spec) => {

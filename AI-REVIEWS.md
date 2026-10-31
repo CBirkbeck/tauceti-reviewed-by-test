@@ -72,9 +72,12 @@ give the telling ones and how many there are. Each reference, test and Check is 
 - a Check starts with `Check`, then its tag in asterisks and its place in backticks:
   ``- Check *test_two*, `TauCeti/Examples/Foo.lean:42` — passes: its value at 2``. A Check of the
   target that nothing carries yet is listed as missing: ``- Check *test_three* — missing``;
-- any other bullet is a reference.
+- any other bullet is a reference. It must not start with a backticked Lean name: that makes it a test,
+  and a test must be a declaration that exists.
 
-Prose may come between the bullets.
+A bullet takes in the indented lines under it, an indented sub-bullet among them: that line belongs to
+the bullet above and is no item of its own, so a test or a Check goes in a bullet of its own, not under
+another. Prose may come between the bullets.
 
 **Lean subtleties.** What a reader who does not know Lean would read differently from the mathematics:
 
@@ -107,7 +110,9 @@ to 400 words: it is a reading guide, not a paper.
   in the review.
 - An edit makes the review clearer or adds what it is missing; one that only rewords it is churn, and
   is not made. An edit says in a note what it changes, and keeps every reference, test and Check of the
-  text it replaces, unless it says which it drops and why.
+  text it replaces, unless it says which it drops and why, on a line `Dropped: <item> — <why>` for each.
+  That line names a test by its Lean name and a Check by its tag; it names a reference by its text,
+  enough of it that the two read alike: its author alone does not name it.
 
 For example, for the theorem
 
@@ -207,9 +212,10 @@ works without it.
    test too: list it as one ([Filing](#filing)), and the site will show whether it still passes at each
    commit.
 5. **If you found an error, file a no** ([below](#a-no)) and approve nothing: not the standard review,
-   and not a text of your own, since writing or editing a text approves it. A Check that fails, or has
-   `sorry`, is an error. If you cannot tell, do not answer: tell the person running you what stopped
-   you.
+   and not a text of your own, since writing or editing a text approves it. An error is any of the
+   eight checks failing, or a Check that has `sorry`. A Check that passes is not one, and neither is a
+   Check that is missing: the standard review lists it as missing. If you cannot tell, do not answer:
+   tell the person running you what stopped you.
 6. **Otherwise, read the standard review**, and check it against what you found: What it says against
    the signature you read, hypothesis by hypothesis; its references and tests against those you found,
    with the Checks' results; its subtleties against those you met. Then:
@@ -268,7 +274,9 @@ it. A check that found an error has no cell: that is a no.
 
 **The text** follows in a block: a line `~~~review`, the whole text, and a line `~~~`. It may hold code
 fences of its own: the block ends at the last `~~~` line before the next command (an action, or a line
-such as `Test:`), or before the end of the comment. Nothing in a block is read as a command.
+such as `Test:`), or before the end of the comment. Nothing in a block is read as a command, or as the
+line that names you: that line is read among the lines of the comment that are in no block and are
+neither a command nor a `Dropped:` line.
 
 An approval, as the page's How to review shows it:
 
@@ -438,15 +446,19 @@ commit the site shows, and never for its own work:
 - **Voyager**, before it posts what is new in Tau Ceti on the Lean Zulip, compares each candidate's
   statement with a source (its full-statement test). For every candidate it compared, announced or not,
   it approves the standard review, edits it when it has something to add, or writes one when there is
-  none; it files a no when the statement claims more than its name and docstring say. It also gives
-  GPT-6 Astra each declaration's Lean at the site's commit, the statements it rests on and its current
-  review, and asks it to look for errors and fill in the eight checks before it approves or improves the
-  review; Voyager files Astra's approvals and edits under the model that answered
-  (`tool=Codex; model=GPT-6 Astra`), beside its own. Its lines come as comments on issue #1, marked
-  `tool=Voyager`, and its noes as issues.
+  none; it files a no on an error (step 5): when any of the eight checks fails, or a roadmap Check of
+  the target has `sorry`. The error it meets most is a statement that claims more than its name and
+  docstring say. It also gives GPT-6 Astra each declaration's Lean at the site's commit, the statements
+  it rests on and its current review, and asks it to look for errors and fill in the eight checks before
+  it approves or improves the review; Voyager files Astra's approvals and edits under the model that
+  answered (`tool=Codex; model=GPT-6 Astra`), beside its own. Its lines come as comments on issue #1,
+  marked `tool=Voyager`, and its noes as issues.
 - **The red team** (`/redteam`) audits files on Tau Ceti's `main`, declaration by declaration, trying
-  to break each one in Lean. For each declaration whose correctness checks all passed, it approves,
-  edits or writes the standard review; what it finds wrong it fixes in a Tau Ceti pull request instead
-  of answering no. Its lines for a file go up as one comment on issue #1, marked
+  to break each one in Lean. It reviews a declaration only when its audit confirmed no finding that one
+  of the site's checks covers: `object`, `convention`, `edge-cases`, `junk`, `vacuous` and `choice` cover
+  its correctness findings, `generality` its generality findings, and `naming` its naming and docs
+  findings. For such a declaration it approves, edits or writes the standard review; what it finds wrong
+  it fixes in a Tau Ceti pull request instead of answering no, and that declaration waits for a later
+  audit to find it clean. Its lines for a file go up in one or more comments on issue #1, marked
   `tool=Tau Ceti red team`, once the site shows the file exactly as audited; a file new or changed since
   the site's commit waits for the site to catch up.
