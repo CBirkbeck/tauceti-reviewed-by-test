@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""evidence-store's command line, with one more sweep for its intake, the evidence issues still open, and
-replies that outlast GitHub's limits.
+"""evidence-store's command line, with one more sweep for its intake, the evidence issues still open, replies
+that outlast GitHub's limits, and our reading of the bulk issue.
 
 Intake reads the issue its event names, and with `--sweep-days N` every evidence issue updated in the
 last N days, for those whose own run was dropped: GitHub keeps one waiting run of a workflow, so a burst
@@ -19,6 +19,11 @@ hour, and evidence-store's `apply` stops at the first reply it refuses, before c
 which has the records, never answers those issues again. So `apply` here goes issue by issue and leaves
 an issue whose reply was refused open, and the open sweep finishes what an earlier run left undone
 (`unfinished`).
+
+Every intake run, the sweep of the last 14 days among them, reads the bulk issue our way
+(scripts/standard_intake.py): approvals, writes, edits and restores of the standard review, and evidence-store's
+own lines, but none inside a review's text, where evidence-store's reading would take a `Test:` line for a test.
+The replies to an AI agent's yes of the earlier form say what agents do now, here too (`recorded`).
 
   python3 scripts/evidence_intake.py intake --repo OWNER/NAME --outcome FILE [--event PATH --event-name NAME] --sweep-open
   python3 scripts/evidence_intake.py apply --repo OWNER/NAME --outcome FILE
@@ -39,6 +44,8 @@ from evidence_store import cli, github, intake
 from evidence_store.forms import FORMS
 from evidence_store.intake import BULK_LABEL
 
+import standard_intake
+
 #: What GitHub says when it refuses for a while: the secondary limit on comments, or the hourly one.
 LIMITED = re.compile(r"rate limit", re.I)
 #: The records whose issue intake closes once it has recorded them (evidence-store's process_issue).
@@ -58,13 +65,14 @@ def open_issues(repo: str, since: str = "") -> list[dict]:
 
 
 def recorded(r: dict) -> str:
-    """What intake replies on recording `r` from its issue, as evidence-store's process_issue says it."""
+    """What intake replies on recording `r` from its issue, as evidence-store's process_issue says it, with the
+    note our intake adds for an AI agent's yes of the earlier form (standard_intake.process_issue)."""
     k = intake.kind_key(r)
     footer = intake.FOOTER[k].format(name=r["subject"]["name"])
     if k == "accept" and r["by"]["kind"] == "agent":
         footer = footer.replace("It counts from now on.", "It is recorded as an AI agent's review: each reader "
                                 "chooses whether those count.")
-    return intake.describe(r) + "\n\n" + footer
+    return standard_intake.noted(intake.describe(r) + "\n\n" + footer, r)
 
 
 def unfinished(repo: str, store: Store, swept: list[dict], outcome: dict, comments_of: Callable[[int], list[dict]],
@@ -157,6 +165,8 @@ def main(argv: list[str] | None = None) -> int:
         for n in apply(json.loads(Path(outcome_file).read_text(encoding="utf-8")), repo):
             print(f"::warning::GitHub refused the reply on #{n}: it stays open, and the next run answers it")
         return 0
+    if argv[:1] == ["intake"]:
+        standard_intake.install()
     if "--sweep-open" not in argv:
         return cli.main(argv)
     argv.remove("--sweep-open")

@@ -6,13 +6,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from evidence_store import cli, github
+from evidence_store import cli, github, intake
 from evidence_store.forms import FORMS
 from evidence_store.intake import BULK_LABEL
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "scripts"))
 import evidence_intake  # noqa: E402
+import standard_intake  # noqa: E402
 
 LABELS = {f["label"] for f in FORMS.values()} | {BULK_LABEL}
 
@@ -67,8 +68,11 @@ class IntakeTests(unittest.TestCase):
             self.read.append(n)
             return {"number": n, "labels": [], "comments": 0, "closed_at": None, "body": ""}
 
+        # main puts our intake in evidence-store's place (standard_intake.install); put back as it was
         with mock.patch.object(github, "gh_json", gh_json), mock.patch.object(github, "issue", issue), \
-                mock.patch.object(github, "recent_issues", github.recent_issues):
+                mock.patch.object(github, "recent_issues", github.recent_issues), \
+                mock.patch.object(cli, "process", cli.process), \
+                mock.patch.object(intake, "process_issue", intake.process_issue):
             return evidence_intake.main(["intake", "--repo", "o/r", "--store", str(self.dir / "evidence"),
                                          "--event", str(self.event), "--event-name", "issues", *sweep,
                                          "--outcome", str(self.dir / "outcome.json")])
@@ -103,7 +107,9 @@ FIXTURE = json.loads((HERE / "fixtures" / "intake" / "recorded.json").read_text(
 class RecordedTests(unittest.TestCase):
     def test_the_reply_intake_posted(self):
         for case, f in FIXTURE.items():  # issues 556, 557 and 103, as the bot answered them
-            self.assertEqual(evidence_intake.recorded(f["record"]), f["reply"], case)
+            # and an AI agent's yes of the earlier form, as it is answered now: with what to do instead
+            want = f["reply"] + ("\n\n" + standard_intake.EARLIER_FORM if case == "agent-accept" else "")
+            self.assertEqual(evidence_intake.recorded(f["record"]), want, case)
 
 
 class FakeStore:
@@ -142,7 +148,9 @@ class UnfinishedTests(unittest.TestCase):
     def test_replies_where_it_had_not_and_closes(self):
         out = self.finish([self.issue(10), self.issue(11, comments=1, labels=["evidence:test", "evidence:needs-fix"])],
                           {"replies": [], "labels": [], "close": []})
-        self.assertEqual(out["replies"], [[10, FIXTURE["agent-accept"]["reply"]]])
+        # an AI agent's yes of the earlier form, answered as intake answers it now
+        self.assertEqual(out["replies"],
+                         [[10, FIXTURE["agent-accept"]["reply"] + "\n\n" + standard_intake.EARLIER_FORM]])
         self.assertEqual(out["labels"], [[11, [], ["evidence:needs-fix"]]])
         self.assertEqual(out["close"], [[10, "completed"], [11, "completed"]])
 
