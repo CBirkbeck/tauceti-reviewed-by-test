@@ -145,7 +145,19 @@
   }
   const STATE_WORDS = {fixed: 'Fixed', intended: 'Behaves as intended', invalid: 'Not a problem', answered: 'Answered',
                        met: 'Met', failed: 'Failed', declined: 'Declined', withdrawn: 'Withdrawn', open: 'Open'};
+  /* A record of the standard review (`std`: wrote, edited, restored or approved it) as one line, who did what and when,
+     with a link to its comment; the declaration's link goes before it, as before any record. No text: the review is
+     the review box's, and the page keeps one version of it. */
+  function standardLine(v) {
+    const box = el('article', 'thread std' + (applies(v) ? '' : ' old')), head = el('div', 'thread-head'), did = el('span');
+    did.append(who(v.by), ` ${v.std} the standard review`);
+    head.append(did, el('span', 'faint', date(v.at)));
+    if (v.url) head.append(ext(v.url, 'comment', 'faint'));
+    box.append(head);
+    return box;
+  }
   function thread(v, byId) {
+    if (v.std) return standardLine(v);
     const box = el('article', 'thread' + (v.applies === false || !v.inForce ? ' old' : ''));
     const head = el('div', 'thread-head');
     head.append(verdictBadge(v), who(v.by), el('span', 'faint', date(v.at)));
@@ -173,7 +185,7 @@
     if (v.fix) box.append(el('div', 'faint small', 'Suggested fix:'), md(v.fix));
     for (const id of v.replies || []) {
       const r = byId.get(id);
-      if (!r) continue;
+      if (!r || r.std) continue;  // a version of the standard review hangs from a record (a comment must reply to one) and says nothing to it
       const reply = el('div', 'reply'), rh = el('div', 'thread-head');
       rh.append(who(r.by), el('span', 'faint', date(r.at)));
       reply.append(rh, md(r.text));
@@ -535,7 +547,7 @@
   };
 
   VIEWS.decl = async (name, gen) => {
-    const [meta, d, named] = await Promise.all([TauData.meta(), TauData.decl(name), TauData.named()]);
+    const [meta, d, named, std] = await Promise.all([TauData.meta(), TauData.decl(name), TauData.named(), TauData.standard(name)]);
     if (gen !== generation) return;
     if (!d) return VIEWS.missing(name, gen, 'No declaration of that name is in this build.');
     const n = d.node, project = !!(n.flags & FLAG.PROJECT), lib = meta.library.name;
@@ -614,7 +626,7 @@
     const records = project ? (e.records || []) : (up.records || []);
     const read = !answerable ? null : project ? {url: URLS.docs(meta, name, modName), label: 'Read it in the API docs ↗'}
       : {url: URLS.mathlib(name, modName), label: "Read it in Mathlib's docs ↗", from: home};
-    parts.push(reviewCard(meta, name, read, records, e.tests || [], questionWord(n.kind, e.kw)));
+    parts.push(reviewCard(meta, name, read, records, e.tests || [], questionWord(n.kind, e.kw), std));
     // The map; then, as lists, how it is proved and what rests on it beyond the map's first level.
     const mapHost = el('div');
     if (project) {
@@ -649,10 +661,11 @@
   };
 
   /* The review box, as the site had it in September (scripts/build_site.py before the rebuild), asking one
-     question: is it correctly stated? Yes, or no and why. Below it the answers, people counted apart from AI
-     agents and each answerer a click away, each no in full; then what could be better, people's suggestions
-     for it when it is correct; and what tests it, with a test to suggest. */
-  function reviewCard(meta, name, read, records, tests, word) {
+     question: is it correctly stated? Yes, or no and why. Below it the standard review, the one text of the
+     declaration, with the AI agents that approved it; then the answers, people's yeses and every no, each answerer
+     a click away, each no in full; then what could be better, people's suggestions for it when it is correct; and
+     what tests it, with a test to suggest. */
+  function reviewCard(meta, name, read, records, tests, word, std) {
     const card = el('section', 'review'), open = !!read;
     card.id = 'review';
     if (open) {
@@ -661,7 +674,7 @@
       const answers = ANSWERS.map(a => formFor(meta, name, a));
       answers.forEach(f => ask.append(f.button));
       ask.append(ext(read.url, read.label, 'btn docs'));
-      card.append(ask, ...answers.flatMap(f => f.parts), howTo(meta), aiOffer(meta, name, read.from));
+      card.append(ask, ...answers.flatMap(f => f.parts), howTo(meta), aiOffer(meta, name, read.from, std));
     } else {
       card.append(hint(records.length ? `Reviews of ${name} are kept in the stores that review it; they show here as they are.`
                                       : `Outside ${meta.library.name}: review it where it lives.`));
@@ -677,7 +690,13 @@
       if (v.url) line.append(' · ', ext(v.url, issueText(v.url)));
       card.append(line);
     });
-    card.append(el('p', 'sub', 'Reviews'), answers(reviews('accept'), reviews('problem'), byId));
+    // An AI agent's yes is not an answer here: it shows as an approver of the standard review, or, while there is
+    // none, as a number (its yeses of the earlier form: those that did nothing to a standard review, with no `std`),
+    // and its reasons are not on the page. The answers are people's yeses and every no.
+    const yes = reviews('accept'), people = yes.filter(v => v.by.kind !== 'agent');
+    const earlierYes = yes.filter(v => v.by.kind === 'agent' && !v.std).length;
+    if (open || std || earlierYes) card.append(el('p', 'sub', 'Standard review'), standardReview(std, earlierYes));
+    card.append(el('p', 'sub', 'Answers'), answers(people, reviews('problem'), byId));
     // A line offering a form: what it is for, and its button.
     const offer = (text, spec) => {
       const f = formFor(meta, name, spec), line = el('div', 'offer'), frag = document.createDocumentFragment();
@@ -701,6 +720,40 @@
       card.append(testMarks(tests, challenges, byId));
     }
     return card;
+  }
+  /* The standard review: the one text a declaration has, as the build kept it (the current version only; the store
+     keeps the history), rendered as Markdown and never as HTML. Under it, who wrote it and when, and the AI agents
+     that approved this text, each with what it checked on hover, and how many approved an earlier one. Written for
+     an earlier version of the declaration, it says so above. Without one: that, and how many AI agents said yes in the
+     earlier form of review, a number and no more. */
+  function standardReview(std, earlierYes) {
+    const box = el('div', 'standard-box');
+    if (!std) {
+      box.append(el('p', 'empty', 'No standard review yet.'));
+      if (earlierYes) box.append(el('p', 'empty', `${plural(earlierYes, 'AI agent')} said yes in the earlier form of review.`));
+      return box;
+    }
+    if (!std.current) box.append(el('p', 'status-note', 'Written for an earlier version of this declaration, which has changed since.'));
+    const version = el('p', 'std-version'), approvers = el('p', 'approvers');
+    version.append(`Version ${std.version.slice(0, 8)} · `, std.url ? ext(std.url, date(std.at)) : date(std.at), ' · ', markWho(std.by));
+    if (std.approvers.length) {
+      approvers.append('Approved by');
+      std.approvers.forEach(a => approvers.append(' ', approverMark(a)));
+    } else approvers.append('Not yet approved by an AI agent.');
+    if (std.earlier) approvers.append(` · ${std.earlier} approved ${std.earlier === 1 ? 'an earlier version' : 'earlier versions'}`);
+    box.append(md(std.text, 'standard'), version, approvers);
+    return box;
+  }
+  /* An AI agent that approved the text, as a mark (the tick of an AI agent's yes: blue), linking to the comment that
+     approved it; on hover, the checks it made, those that did not apply to this declaration, and when. */
+  function approverMark(a) {
+    const cls = 'mark yes ' + (a.by.kind === 'agent' ? 'agent' : 'person'), m = a.url ? ext(a.url, null, cls) : el('span', cls);
+    const axes = state => Object.entries(a.checked || {}).filter(([, s]) => s === state).map(([axis]) => axis);
+    const [made, na] = [axes('checked'), axes('na')];
+    m.append(sign('yes'), markWho(a.by));
+    m.title = [made.length ? 'Checked: ' + made.join(', ') : '', na.length ? 'Not applicable: ' + na.join(', ') : '', date(a.at)]
+      .filter(Boolean).join(' · ');
+    return m;
   }
   /* What the answers do, under them; and, signed in with GitHub, as whom, with a way out. */
   function howTo(meta) {
@@ -904,12 +957,18 @@
     return {button, parts: [form, note]};
   }
   /* Instructions for an AI agent to review it as AI-REVIEWS.md says, for this declaration at this commit: copied
-     with one click, and shown, to copy by hand where the browser will not. */
-  function aiOffer(meta, name, from) {
+     with one click, and shown, to copy by hand where the browser will not. They name the version of its standard
+     review and where the raw text is, in its shard of data/standard/: an agent edits Markdown, and the page shows
+     it rendered. */
+  function aiOffer(meta, name, from, std) {
     const at = from ? `, from the ${from} that ${meta.library.name} commit ${meta.library.commit} builds on`
                     : ` at ${meta.library.name} commit ${meta.library.commit}`;
+    const review = std ? `Its standard review is version ${std.version}; its text is under its name in ` +
+      `${meta.site.url}data/standard/${TauData.fnv(name, meta.shards.standard)}.json.` : 'It has no standard review yet.';
     const text = `Review ${name} for the ${meta.store.name} review site, following\n` +
       `https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md\n` +
+      `Read its Lean in depth and look for errors first; then approve, edit or write its standard review.\n` +
+      `${review}\n` +
       `Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.\n` +
       `The site shows it${at}: ${meta.site.url}#/d/${encodeURIComponent(name)}`;
     const box = el('div', 'ai-offer'), line = el('div', 'offer'), btn = el('button', 'btn offer', 'Copy instructions for your AI');
@@ -1126,7 +1185,7 @@
   function replies(box, v, byId) {
     for (const id of v.replies || []) {
       const r = byId.get(id);
-      if (!r) continue;
+      if (!r || r.std) continue;
       const reply = el('div', 'reply'), head = el('p', 'line');
       head.append(markWho(r.by), ', ' + date(r.at));
       reply.append(head, md(r.text));
@@ -1329,18 +1388,23 @@
         p("An answer is pinned to the declaration as it was: to its meaning hash, which changes when the declaration changes or anything it rests on does. ",
           `A yes about an earlier version stays, greyed: "the declaration has changed since", or "something it rests on has changed since". Nothing is written into ${lib}.`))),
       section('AI agents', null, prose(
-        p('The forms are for people. An AI agent answers from the command line, following ',
+        p('The forms are for people. An AI agent reviews from the command line, following ',
           ext(`https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`, 'AI-REVIEWS.md'),
-          `: it reads the declaration against its source, runs the Checks its roadmap gives it (the examples in ${lib} that carry their tags), `,
-          "and files its answer with its reasons, which list each Check. Its answers are marked AI and counted apart from people's. ",
-          'An agent always answers, but its reasons give only what the answers already there do not, such as a second source that ',
-          'states it as Lean does; with nothing to add, its yes has no reasons. To ask an agent for one, give it this:'),
+          `: it reads the declaration's Lean in depth and looks for errors first, along the rubric's eight checks and the Checks its roadmap `,
+          `gives it (the examples in ${lib} that carry their tags). If it finds one, it answers no. If not, it reads the standard review, `,
+          'the one text a declaration\'s page shows, and approves it when it is right and complete, edits it when something is missing or ',
+          'unclear, or writes one when there is none. Its approval carries the checks it made, which show on hover, and its approvals ',
+          "and edits are marked AI and counted apart from people's. To ask an agent for one, give it this:"),
         code(`Review TauCeti.Foo.bar for the Tau Ceti review site, following\nhttps://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md\n` +
+             'Read its Lean in depth and look for errors first; then approve, edit or write its standard review.\n' +
              'Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.'),
         p('Each declaration\'s review box has a button, ', el('b', null, 'Copy instructions for your AI'), ', that copies these, filled in ',
-          'with the declaration and the commit the site shows.'),
-        p('Many yeses at once: comment lines like these on ', ext(URLS.bulk(meta), `issue #${meta.store.bulk}`), ', one each, after a line naming the agent:'),
-        code('<!-- agent: tool=Claude Code; model=claude-opus-5-5; session=… -->\nReviewed-by: TauCeti.Foo.bar — why it is correctly stated'))),
+          'with the declaration, the version of its standard review and where its text is, and the commit the site shows.'),
+        p('Many approvals at once: comment lines like this on ', ext(URLS.bulk(meta), `issue #${meta.store.bulk}`), ', one each, after a ',
+          'line naming the agent. The version is the one on the declaration\'s page, and the last field lists the eight checks, ',
+          'a check that does not apply marked n/a:'),
+        code('<!-- agent: tool=Claude Code; model=claude-opus-5-5 -->\nApprove: TauCeti.Foo.bar — dd83c85a488e22c8 — object, convention, edge-cases, junk, vacuous, choice n/a, generality, naming'),
+        p('Writing and editing a standard review are lines of their own, with the text; AI-REVIEWS.md gives the forms.'))),
       section("On an answer's issue", null, prose(
         p('A comment whose first line is a command changes where the answer stands: ', el('code', null, '/withdraw'),
           ' takes it back; on a no, ', el('code', null, '/fixed <commit>'), ', ', el('code', null, '/intended'), ' or ',

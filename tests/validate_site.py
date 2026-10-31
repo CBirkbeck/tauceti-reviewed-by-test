@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The browser check: serves a built site as GitHub Pages would and checks, in Chromium, what a
 reader does: the shell and its two themes, the old addresses, the home page, the Named page, search,
-a declaration, its review box and its one question, the Reviewed page, formulas typeset, its dependency
-map, the other pages, and a phone. Without --site it
+a declaration, its review box (its one question, its standard review and who approved it, the answers),
+the Reviewed page, formulas typeset, its dependency map, the other pages, and a phone. Without --site it
 builds the fixture's site first (tests/fixture_site.py).
 
   python3 tests/validate_site.py [--site DIR | --url URL] [--only NAME,NAME] [--smoke]
@@ -203,6 +203,24 @@ def on_github(url: str, kind: str):
     return title, label_for({"title": title, "body": body}, template_forms(TEMPLATES)), forms.parse(kind, body)
 
 
+def fixture():
+    """tests/fixture_site.py, for the standard reviews it holds."""
+    sys.path.insert(0, str(HERE))
+    sys.path.insert(0, str(HERE.parent / "scripts"))
+    import fixture_site
+    return fixture_site
+
+
+def its_standard_review(name: str, text: str) -> str:
+    """What the copy instructions say of a declaration whose standard review is ``text``: its version, as
+    scripts/standard.py hashes a text, and where its text is, in the shard scripts/common.py gives its name (the
+    page computes both its own way, so this is the build's)."""
+    from common import fnv_shard
+    from standard import version_of
+    return (f"Its standard review is version {version_of(text)}; "
+            f"its text is under its name in https://example.org/data/standard/{fnv_shard(name, 256)}.json.")
+
+
 def without_signin(page):
     """The site as it is with no sign-in in its settings: data/meta.json without `signin`."""
     def handle(route):
@@ -244,25 +262,24 @@ def review(browser, url, errors):
     expect(box.locator(".actions a", has_text="Read it in the API docs").get_attribute("href")
            == "https://example.org/docs/Fixture/Basic.html#Fixture.triple", "the review box links to the docs")
     tally = box.locator(".mark.tally.yes")
-    expect(tally.locator(".trailer").inner_text() == "Correctly stated" and tally.locator(".who").inner_text() == "1 person · 1 AI",
-           "the yeses, people counted apart from AI agents")
-    expect(box.locator(".answers-list .mark.person").count() == 1 and box.locator(".answers-list .mark.agent .ai").count() == 1,
-           "each answer's mark, the AI agent's marked")
+    expect(tally.locator(".trailer").inner_text() == "Correctly stated" and tally.locator(".who").inner_text() == "1 person",
+           "the yeses are people's; the AI agents' are the approvers of the standard review")
+    expect(box.locator(".answers-list .mark.person").count() == 1 and box.locator(".answers-list .mark.agent").count() == 0,
+           "each answer's mark, a person's and no AI agent's")
     colours = page.evaluate("""() => { const probe = document.createElement('span'); document.body.append(probe);
       const of = v => { probe.style.color = `var(${v})`; return getComputedStyle(probe).color; };
       const person = of('--result'), ai = of('--ai'); probe.remove();
       const q = s => getComputedStyle(document.querySelector(s));
-      return [q('.answers-list .mark.person .tick').backgroundColor === person, q('.answers-list .mark.agent .tick').color === ai,
-              q('.answers-list .mark.agent .ai').color === ai, person !== ai]; }""")
-    expect(all(colours), f"a person's yes is a green tick, an AI agent's a blue one, its AI mark blue too ({colours})")
-    why = box.locator(".answers-list details.why", has=page.locator(".mark.agent"))
-    expect(why.count() == 1 and not why.evaluate("d => d.open"), "the AI agent's reasons, a closed twisty")
+      return [q('.answers-list .mark.person .tick').backgroundColor === person, q('.approvers .mark.agent .tick').color === ai,
+              q('.approvers .mark.agent .ai').color === ai, person !== ai]; }""")
+    expect(all(colours), f"a person's yes is a green tick, an approving AI agent's a blue one, its AI mark blue too ({colours})")
+    why = box.locator(".answers-list details.why")
+    expect(why.count() == 1 and not why.evaluate("d => d.open"), "the person's reasons, a closed twisty")
     expect(box.locator(".answers-list .mark.stale").count() == 0 and "withdrawn" not in box.locator(".answers-list").inner_text()
-           and "earlier version" not in tally.inner_text(), "its answer withdrawn under an old name, left out")
+           and "earlier version" not in tally.inner_text(), "an answer withdrawn under an old name, left out")
     why.locator("summary").click()
-    expect(why.evaluate("d => d.open") and "Compared with its definition" in why.inner_text()
-           and why.locator(".twisty-body a[href='https://github.com/example/fixture-store/issues/11']").count() == 1,
-           "which opens to why, and its issue")
+    expect(why.evaluate("d => d.open") and "Compared with Fixture documentation" in why.inner_text(), "which opens to why")
+    expect("Compared with its definition" not in box.inner_text(), "no AI agent's reasons on a declaration's page")
     expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".tests-list .pass").count() == 1, "Tested by: the listed test passes")
     test = box.locator(".tests-list details.test").first
     expect("triple_two" in test.locator("summary").inner_text() and "its value at 2" in test.locator("summary").inner_text(),
@@ -293,10 +310,12 @@ def review(browser, url, errors):
     page.wait_for_function("document.querySelector('.ai-offer button').textContent.startsWith('Copied')")
     expected = ("Review Fixture.triple for the Fixture review site, following\n"
                 "https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md\n"
+                "Read its Lean in depth and look for errors first; then approve, edit or write its standard review.\n"
+                f"{its_standard_review('Fixture.triple', fixture().TRIPLE_V2)}\n"
                 "Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.\n"
                 "The site shows it at Fixture commit B: https://example.org/#/d/Fixture.triple")
     expect(box.locator(".ai-prompt").is_visible() and box.locator(".ai-prompt").inner_text() == expected,
-           "instructions for an AI agent to review it, filled in and shown")
+           "instructions for an AI agent to review it, filled in and shown: the Lean first, then its standard review's version")
     expect(page.evaluate("navigator.clipboard.readText()") == expected, "and copied with one click")
     expect(page.evaluate("[TauRender.questionWord('theorem', 'lemma'), TauRender.questionWord('structure', 'structure')]")
            == ["lemma", "structure"], "a lemma is asked about as a lemma")
@@ -338,10 +357,259 @@ def review(browser, url, errors):
     page.context.grant_permissions(["clipboard-read", "clipboard-write"])
     box.locator(".ai-offer button").click()
     page.wait_for_function("document.querySelector('.ai-offer button').textContent.startsWith('Copied')")
-    expect("The site shows it, from the Init that Fixture commit B builds on: https://example.org/#/d/Int"
-           in box.locator(".ai-prompt").inner_text(), "its instructions for an AI agent say which version")
+    prompt = box.locator(".ai-prompt").inner_text()
+    expect("The site shows it, from the Init that Fixture commit B builds on: https://example.org/#/d/Int" in prompt
+           and its_standard_review("Int", fixture().INT_V1) in prompt, "its instructions for an AI agent say which version, and its review's")
     page = visit(browser, url, "#/d/Bool", errors)
     expect(page.locator(".review .actions").count() == 0, "a package the settings do not name is not asked about")
+    expect("Standard review" not in page.locator(".review").text_content(), "and has no standard review to say it lacks")
+
+
+def edited(*changes):
+    """A `before` for `visit`: files of the site as the page gets them, but changed, to make a case the fixture lacks.
+    Each change is a glob and a function that changes the file's parsed JSON in place."""
+    def answering(change):
+        def answer(route):
+            resp = route.fetch()
+            data = resp.json()
+            change(data)
+            route.fulfill(response=resp, json=data)
+        return answer
+
+    def before(page):
+        for pattern, change in changes:
+            page.route(pattern, answering(change))
+    return before
+
+
+def in_module(name: str, change):
+    """A change (for `edited`) of the entry of declaration ``name`` in its module's file, `change(entry)`."""
+    def apply(data):
+        for e in data["decls"]:
+            if e["name"] == name:
+                change(e)
+    return apply
+
+
+@check
+def standard_review(browser, url, errors):
+    """The standard review of `Fixture.triple`: the one current text in its three parts, who wrote it, which AI agents
+    approved it and what each checked (on hover), how many approved an earlier one; and the answers, people's only."""
+    page = visit(browser, url, "#/d/Fixture.triple", errors)
+    box = page.locator(".review")
+    expect(box.locator(".sub").all_text_contents() == ["Standard review", "Answers", "What could be better", "Tests"],
+           "after the question, the standard review, then the answers, the suggestions and the tests")
+    expect([h.inner_text() for h in box.locator(".standard h2").all()] == ["What it says", "References and tests", "Lean subtleties"],
+           "the three parts")
+    expect(box.locator(".standard").count() == 1 and "three times n." not in box.inner_text(),
+           "one text, the current one: the earlier version of it is not on the page")
+    version = fixture().standard.version_of(fixture().TRIPLE_V2)
+    expect(box.locator(".std-version").inner_text()
+           == f"Version {version[:8]} · 26 Oct 2026 · Claude Code, claude-opus-5-5 AI via @example", "its version, when it was written and by whom")
+    expect("Written for an earlier version" not in box.inner_text(), "and not marked out of date: the declaration has not changed")
+    approvers = box.locator(".approvers")
+    marks = approvers.locator(".mark.agent")
+    expect(approvers.inner_text().startswith("Approved by") and marks.count() == 2
+           and "1 approved an earlier version" in approvers.inner_text(), "who approved this text, and how many an earlier one")
+    expect(marks.locator(".who").all_inner_texts() == ["Voyager, claude-fable-5-1 AI via @example",
+                                                       "Claude Code, claude-opus-5-5 AI via @example"],
+           "each AI agent, the latest first, with its exact model")
+    # What each checked, on hover: the checks it made, those that did not apply, and when.
+    axes = set(fixture().rb.STANDARD.names)
+    voyager, claude = (m.get_attribute("title").split(" · ") for m in (marks.nth(0), marks.nth(1)))
+    expect("Not applicable: choice" in marks.first.get_attribute("title"), "what each approver checked, on hover")
+    expect(voyager[0].startswith("Checked: ") and set(voyager[0][9:].split(", ")) == axes - {"choice"}
+           and voyager[1:] == ["Not applicable: choice", "27 Oct 2026"], f"Voyager found one not applicable ({voyager})")
+    expect(claude[0].startswith("Checked: ") and set(claude[0][9:].split(", ")) == axes and claude[1:] == ["26 Oct 2026"],
+           f"Claude Code checked all eight, with no half left empty ({claude})")
+    comment = "https://github.com/example/fixture-store/issues/1#issuecomment-"
+    expect([m.get_attribute("href") for m in marks.all()] == [comment + "4103", comment + "4102"]
+           and box.locator(".std-version a").get_attribute("href") == comment + "4102",
+           "each approval a link to its comment, and so the version to the comment that wrote it")
+    expect(box.locator(".answers-list .mark.agent").count() == 0 and box.locator(".answers-list .mark.person").count() == 1,
+           "people's yeses only")
+
+
+@check
+def standard_review_states(browser, url, errors):
+    """What the review box says of a standard review that is out of date, held, outside the library, or not there."""
+    # Written for version A of the declaration, which has changed since: the text is still shown, and marked.
+    page = visit(browser, url, "#/d/Fixture.double", errors)
+    box = page.locator(".review")
+    expect("Written for an earlier version of this declaration, which has changed since." in box.inner_text()
+           and box.locator(".standard h2").count() == 3, "a review written for an earlier version of the declaration says so")
+    expect(box.locator(".approvers").inner_text() == "Not yet approved by an AI agent. · 1 approved an earlier version"
+           and box.locator(".approvers .mark").count() == 0, "and has no approver for the declaration as it is")
+    # Held for the owner: written, not approved.
+    page = visit(browser, url, "#/d/Fixture.triple_pos", errors)
+    box = page.locator(".review")
+    expect(box.locator(".approvers").inner_text() == "Not yet approved by an AI agent. · 1 approved an earlier version"
+           and "Written for an earlier version" not in box.inner_text(), "a review nobody has approved says so")
+    expect(box.locator(".std-version").inner_text().endswith("Tau Ceti review migration, claude-opus-5-5 AI via @example"),
+           "and who wrote it")
+    # More than one approved an earlier version: their number.
+    page = visit(browser, url, "#/d/Fixture.triple_pos", errors,
+                 before=edited(("**/data/standard/*.json", lambda data: data.get("Fixture.triple_pos", {}).update(earlier=3))))
+    expect(page.locator(".approvers").inner_text() == "Not yet approved by an AI agent. · 3 approved earlier versions", "and how many")
+    # Outside the library, as inside it.
+    page = visit(browser, url, "#/d/Int", errors)
+    box = page.locator(".review")
+    expect([h.inner_text() for h in box.locator(".standard h2").all()] == ["What it says", "References and tests", "Lean subtleties"],
+           "a declaration of Mathlib shows its standard review")
+    expect(box.locator(".approvers .mark.agent .who").all_inner_texts() == ["Claude Code, claude-opus-5-5 AI via @example"]
+           and "earlier" not in box.locator(".approvers").inner_text(), "approved by its writer, and by no one for an earlier text")
+    # None yet.
+    page = visit(browser, url, "#/d/Fixture.one", errors)
+    box = page.locator(".review")
+    expect("No standard review yet." in box.inner_text() and box.locator(".standard").count() == 0
+           and box.locator(".approvers").count() == 0 and "said yes in the earlier form" not in box.inner_text(),
+           "a declaration without one says so, and has no AI yes to count")
+    expect(page.evaluate("Promise.all(['constructor', '__proto__', 'toString'].map(n => TauData.standard(n)))") == [None] * 3,
+           "a name that every object has is not a declaration with a review")
+    # An approver with no cell at all, and one that found every check not applicable: the half left empty is left out.
+    def bare(data):
+        if "Fixture.triple" in data:
+            first, second = data["Fixture.triple"]["approvers"]
+            first["checked"] = {}
+            second["checked"] = {axis: "na" for axis in second["checked"]}
+    page = visit(browser, url, "#/d/Fixture.triple", errors, before=edited(("**/data/standard/*.json", bare)))
+    titles = page.locator(".approvers .mark").evaluate_all("marks => marks.map(m => m.title)")
+    expect(len(titles) == 2 and titles[0] == "27 Oct 2026" and titles[1].startswith("Not applicable: ")
+           and titles[1].endswith(" · 26 Oct 2026") and "Checked" not in titles[1], f"on hover, only what there is ({titles})")
+
+
+@check
+def standard_review_html_is_inert(browser, url, errors):  # Review Focus 3: the fixture's V2 holds `<img src=x onerror="window.pwned=1">`
+    page = visit(browser, url, "#/d/Fixture.triple", errors)
+    page.wait_for_timeout(500)  # the handler of an <img> that failed to load would have run by now
+    expect(page.evaluate("window.pwned") is None and "<img" in page.locator(".review .standard").inner_text(), "raw HTML stays text")
+    expect(page.locator(".review .standard img").count() == 0, "and makes no element")
+
+
+def without_standard(name: str, extra_yeses: int = 0):
+    """A `before` for `visit`: the site as it was before ``name`` had a standard review, its entry gone from its
+    shard in data/standard/. With ``extra_yeses``, that many more AI agents have said yes in the earlier form (copies
+    of the one that has, under other ids)."""
+    def more(e):
+        yes = next(v for v in e["records"] if v["kind"] == "review" and v["verdict"] == "accept" and v["by"]["kind"] == "agent")
+        e["records"] += [{**yes, "id": f"{yes['id']}-{i}"} for i in range(extra_yeses)]
+    return edited(("**/data/standard/*.json", lambda data: data.pop(name, None)),
+                  *([("**/data/m/*.json", in_module(name, more))] if extra_yeses else []))
+
+
+@check
+def standard_review_earlier_form(browser, url, errors):
+    """Without a standard review, the AI agents that said yes in the earlier form are counted, and what they wrote is
+    not shown."""
+    page = visit(browser, url, "#/d/Fixture.triple_pos", errors, before=without_standard("Fixture.triple_pos"))
+    box = page.locator(".review")
+    expect("No standard review yet." in box.inner_text() and "1 AI agent said yes in the earlier form of review." in box.inner_text(),
+           "no standard review yet, and the one AI agent that said yes before")
+    expect("3 * n" not in box.inner_text() and box.locator(".answers-list .mark.agent").count() == 0
+           and box.locator(".answers-list .mark.person").count() == 1, "counted, not shown: the answers are people's")
+    page = visit(browser, url, "#/d/Fixture.triple_pos", errors, before=without_standard("Fixture.triple_pos", extra_yeses=1))
+    expect("2 AI agents said yes in the earlier form of review." in page.locator(".review").inner_text(), "and the number of them")
+    # An AI agent's yes of the new form (a write, an edit, an approval) is not one of the earlier form.
+    page = visit(browser, url, "#/d/Fixture.triple", errors, before=without_standard("Fixture.triple"))
+    text = page.locator(".review").inner_text()
+    expect("No standard review yet." in text and "said yes in the earlier form" not in text,
+           "the new form's yeses are not counted as the earlier's")
+
+
+@check
+def standard_review_is_not_a_reply(browser, url, errors):
+    """A version held for the owner is a comment, and a comment must reply to a record: here, to the no on
+    `Fixture.triple_comm`. The no does not show it as a reply (it has no text to show)."""
+    def hang(e):
+        no = next(v for v in e["records"] if v["kind"] == "review" and v["verdict"] == "problem")
+        e["records"].append({**no, "id": "held", "kind": "comment", "std": "wrote", "text": "", "replies": []})
+        no["replies"] = ["held"]
+    page = visit(browser, url, "#/d/Fixture.triple_comm", errors,
+                 before=edited(("**/data/m/*.json", in_module("Fixture.triple_comm", hang))))
+    report = page.locator(".review .report")
+    expect(report.count() == 1 and "the definition, unfolded" in report.text_content() and report.locator(".reply").count() == 0,
+           "the no, and no reply under it")
+
+
+@check
+def noes_are_every_ones(browser, url, errors):
+    """An AI agent's no is an answer as ever (its yes is an approver, or a number): here the no on `Fixture.triple_comm`
+    is Astra's, not a person's."""
+    def astra(e):
+        no = next(v for v in e["records"] if v["kind"] == "review" and v["verdict"] == "problem")
+        no["by"] = {"kind": "agent", "login": "example", "agent": {"tool": "Codex", "model": "GPT-6 Astra"},
+                    "label": "Codex (GPT-6 Astra) via example", "involvement": "unknown"}
+    page = visit(browser, url, "#/d/Fixture.triple_comm", errors,
+                 before=edited(("**/data/m/*.json", in_module("Fixture.triple_comm", astra))))
+    box = page.locator(".review")
+    expect(box.locator(".mark.tally.no .who").inner_text() == "1 AI" and box.locator(".answers-list .mark.no.agent").count() == 1
+           and box.locator(".answers-list .mark.yes.person").count() == 1,
+           "an AI agent's no counted as its own, beside the person's yes")
+    expect("answered no by" in box.locator(".report").text_content() and "Codex, GPT-6 Astra" in box.locator(".report").text_content()
+           and "the definition, unfolded" in box.locator(".report").text_content(), "and shown in full, as ever")
+
+
+@check
+def standard_instructions(browser, url, errors):
+    """The instructions for an AI agent say whether the declaration has a standard review and where its raw Markdown
+    is: an agent edits Markdown, and the page shows it rendered."""
+    def copied(route):
+        page = visit(browser, url, route, errors)
+        page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+        page.locator(".ai-offer button").click()
+        page.wait_for_function("document.querySelector('.ai-offer button').textContent.startsWith('Copied')")
+        return page, page.locator(".ai-prompt").inner_text()
+    page, prompt = copied("#/d/Fixture.one")
+    expected = ("Review Fixture.one for the Fixture review site, following\n"
+                "https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md\n"
+                "Read its Lean in depth and look for errors first; then approve, edit or write its standard review.\n"
+                "It has no standard review yet.\n"
+                "Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.\n"
+                "The site shows it at Fixture commit B: https://example.org/#/d/Fixture.one")
+    expect(prompt == expected and page.evaluate("navigator.clipboard.readText()") == expected,
+           "without a standard review, the instructions say so, and to write one")
+    page, prompt = copied("#/d/Fixture.triple_pos")
+    found = re.search(r"version (\w{16}); its text is under its name in https://example\.org/(data/standard/\d+\.json)\.", prompt)
+    expect(found is not None and its_standard_review("Fixture.triple_pos", fixture().TRIPLE_POS_V1) in prompt,
+           f"with one, its version and where its text is ({prompt!r})")
+    # The address is the build's: its Markdown, raw, under the name, and of the version the instructions name.
+    raw = page.evaluate("async path => (await (await fetch(path)).json())['Fixture.triple_pos']", found.group(2))
+    expect(raw["version"] == found.group(1) and raw["text"] == fixture().TRIPLE_POS_V1,
+           "and there the raw text of that version, which an agent can edit")
+
+
+@check
+def standard_activity(browser, url, errors):
+    """A record of the standard review is one line in Activity's Latest: who did what, the declaration's link, no text."""
+    page = visit(browser, url, "#/activity", errors)
+    latest = page.locator(".section", has=page.locator("h2", has_text="Latest"))
+    lines = latest.locator(".thread.std")
+    did = lambda line: re.search(r"(wrote|edited|restored|approved) the standard review", line.inner_text()).group(1)  # noqa: E731
+    seen = [(line.locator("a.decl-link").inner_text(), did(line)) for line in lines.all()]
+    expect(seen == [("Fixture.triple_pos", "wrote"), ("Fixture.triple", "approved"), ("Fixture.triple", "edited"),
+                    ("Fixture.triple", "wrote"), ("Int", "wrote"), ("Fixture.double", "wrote")],
+           f"what was done to each standard review, the latest first ({seen})")
+    approved = lines.nth(1)
+    expect("Voyager · claude-fable-5-1" in approved.inner_text() and "27 Oct 2026" in approved.inner_text(), "by whom, and when")
+    expect(approved.locator("a[href='https://github.com/example/fixture-store/issues/1#issuecomment-4103']").inner_text() == "comment",
+           "with a link to its comment")
+    expect([line.evaluate("l => l.classList.contains('old')") for line in lines.all()] == [False] * 5 + [True],
+           "dimmed when it no longer speaks for the declaration, as a record is (the one written for version A of `double`)")
+    expect(lines.locator(".md, .verdict, details, pre, p").count() == 0
+           and "What it says" not in page.inner_text("main") and "three times the natural number" not in page.inner_text("main"),
+           "with no body: the text of a review is not in Activity")
+    link, said = approved.locator("a.decl-link").bounding_box(), approved.locator(".thread-head").bounding_box()
+    expect(abs(link["y"] - said["y"]) < 8, f"one line, the declaration's link beside what was done ({link['y']}, {said['y']})")
+    # The version held for the owner (a comment, which must reply to a record) hangs from the AI agent's yes of the
+    # earlier form; that yes is listed as it was, with no reply of nobody's under it.
+    yes = latest.locator(".thread", has_text="positive when")
+    expect(yes.count() == 1 and yes.locator(".reply").count() == 0,
+           "a version of the standard review is not a reply to the yes it hangs from")
+
+    def restore(data):
+        next(v for v in data["recent"] if v.get("std") == "approved")["std"] = "restored"
+    page = visit(browser, url, "#/activity", errors, before=edited(("**/data/activity.json", restore)))
+    expect(page.locator(".thread.std", has_text="restored the standard review").count() == 1, "a restore is said so")
 
 
 class FakeGitHub:
@@ -543,15 +811,18 @@ def reviewed(browser, url, errors):
     expect(items.count() == 11, "every declaration answered for")
     expect(page.locator(".list a[href='#/d/Int'] .answers .badge").inner_text() == "Init", "one outside the library, its package said")
     first = items.first
-    expect(first.locator(".item-sub").inner_text() == "Fixture.triple_comm", "the latest answer first")
-    expect(first.locator(".answer.yes").count() == 1 and first.locator(".answer.no").count() == 1, "with its yes and its no")
+    expect(first.locator(".item-sub").inner_text() == "Fixture.triple", "the latest answer first: Voyager's approval of its standard review")
+    expect(first.locator(".answer.yes").text_content() == "✓1 person · 3 AI" and first.locator(".answer.no").count() == 0,
+           "with its yes, a person's and three AI agents' (who wrote, edited and approved its standard review)")
+    both = items.filter(has=page.locator("a[href='#/d/Fixture.triple_comm']"))
+    expect(both.locator(".answer.yes").count() == 1 and both.locator(".answer.no").count() == 1, "one with its yes and its no")
     page.click("[data-answer=no]")
     expect(page.locator(".list > li").count() == 1, "the noes still open")
     page.click("[data-answer=yes]")
     expect(page.locator(".list > li").count() == 6, "the yeses")
     page.select_option("select[aria-label='Answered by']", "ai")
-    expect(page.locator(".list .item-sub").all_inner_texts() == ["Fixture.triple", "Fixture.triple_pos"], "the AI agents' yeses")
-    expect(page.locator(".list .answer.yes").first.text_content() == "✓1 AI", "counted as AI")
+    expect(page.locator(".list .item-sub").all_inner_texts() == ["Fixture.triple", "Int", "Fixture.triple_pos"], "the AI agents' yeses")
+    expect(page.locator(".list .answer.yes").all_text_contents() == ["✓3 AI", "✓1 AI", "✓1 AI"], "counted as AI")
     page.click(".list > li a")
     settle(page, "decl:Fixture.triple")
     expect(page.locator(".review .mark.tally.yes").count() == 1, "an item opens its declaration")
@@ -564,25 +835,25 @@ def reviewed_filters(browser, url, errors):
     who, order, roadmap = (f"select[aria-label='{label}']" for label in ("Answered by", "Order", "Roadmap"))
     # One AI model's answers: each model that answered, how many it answered for, the withdrawn one not among them.
     models = page.locator(who + " optgroup option").all_inner_texts()
-    expect(models == ["claude-opus-5-5 (1)", "GPT-6 Astra (1)"], f"the models that answered ({models})")
+    expect(models == ["claude-opus-5-5 (3)", "GPT-6 Astra (2)", "claude-fable-5-1 (1)"], f"the models that answered ({models})")
     page.select_option(who, "model:GPT-6 Astra")
-    expect(names() == ["Fixture.triple_pos"], "one model's answers")
-    expect(page.locator(".list .answer.yes").text_content() == "✓1 AI", "counted alone")
+    expect(names() == ["Fixture.triple", "Fixture.triple_pos"], "one model's answers")
+    expect(page.locator(".list .answer.yes").all_text_contents() == ["✓1 AI", "✓1 AI"], "counted alone")
     # Those with most answers standing first (this version's yeses and the noes still open, of whoever is counted),
     # the latest first among as many; there is no filter by how many (the user, 2026-10-30).
     page.select_option(who, "anyone")
     expect(page.locator("select[aria-label='How many answers']").count() == 0, "no filter by how many answers")
     latest = names()
     page.select_option(order, "most")
-    expect(names() == ["Fixture.triple_comm", "Fixture.triple", "Fixture.triple_pos", "Int", "Fixture.triple_two",
-                       "Fixture.triple_three'", "Fixture.one", "Fixture.triple_one", "Fixture.double_zero",
-                       "Fixture.double_triple", "Fixture.double"], f"the most answers first ({names()})")
+    expect(names() == ["Fixture.triple", "Int", "Fixture.triple_comm", "Fixture.triple_pos", "Fixture.triple_two",
+                       "Fixture.triple_three'", "Fixture.double", "Fixture.one", "Fixture.triple_one", "Fixture.double_zero",
+                       "Fixture.double_triple"], f"the most answers first ({names()})")
     page.select_option(order, "latest")
     expect(names() == latest and latest.index("Fixture.one") < latest.index("Fixture.triple_two"), "the latest first again")
     # A roadmap's declarations: each roadmap, how many of its declarations have been answered for.
     expect(page.locator(roadmap + " option").all_inner_texts() == ["Every roadmap", "Arithmetic (3)", "Doubling (2)"], "the roadmaps")
     page.select_option(roadmap, "Doubling")
-    expect(names() == ["Fixture.double_triple", "Fixture.double"], "a roadmap's declarations, their earlier answers too")
+    expect(names() == ["Fixture.double", "Fixture.double_triple"], "a roadmap's declarations, their earlier answers too")
     page.click("[data-answer=yes]")
     expect(names() == [], "neither with a yes for this version")
 
@@ -692,9 +963,14 @@ def other_pages(browser, url, errors):
                "With that usual hypothesis it is the positive integers, so the declaration says what it should."],
            "which opens to how, by whom, and why, in full")
     page = visit(browser, url, "#/help", errors)
-    expect("Reviewed-by: TauCeti.Foo.bar" in page.inner_text("body"), "the bulk issue's lines")
+    body = page.inner_text("body")
+    expect("<!-- agent: tool=Claude Code; model=claude-opus-5-5 -->\nApprove: TauCeti.Foo.bar — dd83c85a488e22c8 — object, convention, "
+           "edge-cases, junk, vacuous, choice n/a, generality, naming" in body and "Reviewed-by:" not in body,
+           "the bulk issue's lines: an approval with its checks, and no yes with reasons")
     expect(page.locator("a[href='https://github.com/example/fixture-store/blob/main/AI-REVIEWS.md']").count() == 1
-           and "Review TauCeti.Foo.bar for the Tau Ceti review site" in page.inner_text("body"), "how to ask an AI agent for a review")
+           and "Review TauCeti.Foo.bar for the Tau Ceti review site" in body, "how to ask an AI agent for a review")
+    expect("Read its Lean in depth and look for errors first; then approve, edit or write its standard review." in body,
+           "which starts with the Lean, then approves, edits or writes the standard review")
 
 
 @check

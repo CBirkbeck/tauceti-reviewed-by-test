@@ -234,6 +234,17 @@ a.stat span { color: var(--accent); }
 .review .ai-prompt { margin: 6px 0 0; padding: 8px 12px; border: 1px dashed var(--edge); border-radius: 8px; background: var(--code);
   font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
 .review .sub { margin: 16px 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+/* The standard review: the one text of a declaration (its three parts are headings of the text), then who wrote it and
+   which AI agents approved it, each a pill with an AI agent's blue tick. */
+.review .standard { margin: 2px 0 8px; font-size: 14.5px; overflow-wrap: anywhere; }
+.review .standard h2 { margin: 14px 0 3px; font-size: 1.02rem; }
+.review .standard h2:first-child { margin-top: 2px; }
+.review .standard ul, .review .standard ol { margin: 4px 0 .6em; padding-left: 22px; }
+.review .standard pre { margin: 6px 0; padding: 8px 12px; border-radius: 8px; background: var(--code); font-size: 12.5px; overflow-x: auto; }
+.review .std-version, .review .approvers { margin: 4px 0; font-size: 12.5px; color: var(--faint); }
+.review .approvers { line-height: 2.1; }
+.review .approvers .mark { line-height: 1.5; }
+.review .status-note { margin: 4px 0 6px; }
 .review .empty { margin: 4px 0; font-size: 14px; }
 .review details { margin: 2px 0 8px; }
 .review details > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
@@ -331,6 +342,9 @@ details.twisty > summary:hover .gist { color: var(--ink); }
 .record-actions a { font-family: var(--mono); color: var(--muted); }
 .decl-link { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 13px; }
 .records .thread:first-child { border-top: 0; }
+/* A record of the standard review: one line, the declaration's link beside who did what. */
+.thread.std { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; padding: 8px 0; }
+.thread.std .decl-link { display: inline; margin: 0; }
 .thread .twisty.fold > summary { font-size: 13.5px; }
 .thread .twisty.fold > summary .state-word { margin: 0; }
 pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: var(--code); font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }

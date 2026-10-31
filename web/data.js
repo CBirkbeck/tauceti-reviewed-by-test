@@ -53,13 +53,20 @@
     const module = await json(`${n.flags & FLAG.PROJECT ? 'm' : 'u'}/${n.mod}.json`);
     return {node: n, entry: module.decls.find(e => e.id === id) || null, module};
   }
+  /* A declaration's standard review: its entry in the shard of its name in data/standard/, or null while it has
+     none. Only the current text is there, with its approvers; the history stays in the store. */
+  async function standard(name) {
+    const m = await meta();
+    const shard = await json(`standard/${fnv(name, m.shards.standard)}.json`);
+    return Object.hasOwn(shard, name) ? shard[name] : null;
+  }
   async function moduleByName(name) {
     const rows = await json('modules.json');
     const n = rows.findIndex(r => r[0] === name);
     return n < 0 ? null : {index: n, row: rows[n], file: n < (await meta()).counts.modules ? await json(`m/${n}.json`) : null};
   }
   window.TauData = Object.freeze({
-    json, meta, node, nodes, idOf, decl, moduleByName, fnv, KINDS, FLAG, STATES,
+    json, meta, node, nodes, idOf, decl, standard, moduleByName, fnv, KINDS, FLAG, STATES,
     modules: () => json('modules.json'), named: () => json('named.json'), search: () => json('search.json'),
     titles: () => json('titles.json'), activity: () => json('activity.json'), upstream: () => json('upstream.json'),
     reviewed: () => json('reviewed.json'),
