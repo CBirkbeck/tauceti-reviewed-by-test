@@ -121,6 +121,16 @@ class ItemsTests(StandardTests):
         self.assertEqual((it.tests, it.checks), ([], []))
         self.assertEqual(it.references, [e[2:] for e in elsewhere])
 
+    def test_a_dash_a_star_or_a_plus_opens_a_bullet(self):
+        text = review(SAYS, refs("- `Fixture.a` — a test", "* `Fixture.b` — a test", "+ `Fixture.c` — a test",
+                                 "* Check *tag_b*, `x:1` — passes", "+ A reference", "*  Another, after two spaces", "",
+                                 "*Note:* emphasis is not a bullet", "**Bold** is not one", "+1 is not one", "-1 neither", "-", "* "),
+                      SUBTLE)
+        it = standard.items(text)
+        self.assertEqual(it.tests, ["Fixture.a", "Fixture.b", "Fixture.c"])
+        self.assertEqual(it.checks, ["tag_b"])
+        self.assertEqual(it.references, ["A reference", "Another, after two spaces"])
+
     def test_a_bullet_goes_on_over_its_indented_lines(self):
         text = review(SAYS, refs("- Stacks Project, Tag 0BSC,", "  Lemma 10.156.3 (the same", "\tring).", "", "Prose between.",
                                  "- Hartshorne, II.1.", "  - a nested one", "", "More prose."), SUBTLE)
@@ -205,6 +215,30 @@ class CheckTests(StandardTests):
         edit = long.replace("Algebraic ", "").replace("section 2.2.", "section 2.2, p. 22.")
         self.assertEqual(standard.check(review(SAYS, refs(f"- {edit}"), SUBTLE), parent=review(SAYS, refs(f"- {long}"), SUBTLE),
                                         note="shortens the title and adds the page"), [])
+
+    def test_an_extended_reference_is_kept(self):
+        # More said after a reference leaves it the same reference, though it then reads too little like the old
+        # one (0.40) to be that one reworded.
+        old = review(SAYS, refs("- Stacks Project, Tag 0BSC", TEST), SUBTLE)
+        new = review(SAYS, refs("- Stacks Project, Tag 0BSC, the strict henselisation of a local ring and its universal "
+                                "property", TEST), SUBTLE)
+        self.assertEqual(standard.check(new, parent=old, note="says what the tag is about"), [])
+        # Its text must be inside, as likeness is read: whatever the case and punctuation.
+        new = new.replace("Stacks Project, Tag", "STACKS PROJECT; tag")
+        self.assertEqual(standard.check(new, parent=old, note="n"), [])
+        # A reference with no letter or digit is inside no other.
+        old = review(SAYS, refs("- —", TEST), SUBTLE)
+        self.assertNamed(standard.check(review(SAYS, refs("- Another book", TEST), SUBTLE), parent=old, note="n"), "—")
+
+    def test_a_reference_in_any_bullet_is_not_dropped_silently(self):
+        edit = review(SAYS, refs(TEST, CHECK), SUBTLE)  # without the reference
+        said = [("Fixture documentation, §1.", "not about this")]
+        for marker in ("-", "*", "+"):
+            old = review(SAYS, refs(f"{marker} Fixture documentation, §1.", TEST, CHECK), SUBTLE)
+            problems = standard.check(edit, parent=old, note="n")
+            self.assertEqual(len(problems), 1, marker)
+            self.assertNamed(problems, "Fixture documentation, §1.")
+            self.assertEqual(standard.check(edit, parent=old, dropped=said, note="n"), [], marker)
 
     def test_adding_drops_nothing(self):
         edit = review(SAYS, refs(REFERENCE, "- Another book, Theorem 2.", TEST, CHECK), "## Lean subtleties\nx / 0 = 0 here.")

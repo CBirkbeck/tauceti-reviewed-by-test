@@ -15,9 +15,10 @@ tests/test_standard.py, which its tests hold too, pins the copies equal.
 An edit goes live as soon as it passes `check`, so the check is all that stands between an agent and the
 text every reader sees. It asks that the three parts are there, that a test the text lists exists, and
 that an edit says what it changes and loses no reference, test or example Check without a stated reason.
-A reference that is only reworded counts as kept, by how alike the two read. A first version, and a
-restore, which puts back a text that passed the check when it was recorded, are not compared with a
-parent: they get the first two questions only.
+A reference that is only reworded counts as kept, by how alike the two read, and so does one with more
+said after it, since the new text then holds the old. A first version, and a restore, which puts back a
+text that passed the check when it was recorded, are not compared with a parent: they get the first two
+questions only.
 """
 from __future__ import annotations
 
@@ -34,8 +35,9 @@ HEADINGS = ("## What it says", "## References and tests", "## Lean subtleties")
 SIMILAR = 0.6
 #: A Lean identifier, as the dataset spells declarations: Greek letters, subscripts and primes included.
 IDENT = r"[^\W\d][\w'!?]*"
-#: A bullet of Part 2. A test opens with the Lean name in backticks, an example Check with `Check *tag*`.
-BULLET = re.compile(r"^-[ \t]+(\S.*)$")
+#: A bullet of Part 2, opened by `- `, `* ` or `+ `. A test opens with the Lean name in backticks, an example
+#: Check with `Check *tag*`.
+BULLET = re.compile(r"^[-*+][ \t]+(\S.*)$")
 TEST = re.compile(rf"^`({IDENT}(?:\.[\w'!?]+)*)`")
 CHECK = re.compile(r"^Check\s+\*([^*]+)\*")
 #: A cell: its axis alone, `axis n/a`, or `axis=state`.
@@ -97,8 +99,8 @@ class Items:
 
 
 def bullets(body: str) -> list[str]:
-    """The `- ` bullets of a part's body, each on one line: lines indented under a bullet go on from it,
-    and a blank line or a line of prose ends it."""
+    """The bullets of a part's body, each on one line: lines indented under a bullet go on from it, and a
+    blank line or a line of prose ends it."""
     out: list[list[str]] = []
     going = False
     for line in body.split("\n"):
@@ -140,6 +142,14 @@ def like(a: str, b: str) -> bool:
     return SequenceMatcher(None, squash(a), squash(b), autojunk=False).ratio() >= SIMILAR
 
 
+def extends(new: str, old: str) -> bool:
+    """Whether reference `new` is `old` with more said: the squashed text of `old` is inside that of `new`.
+    A clause said after a reference can leave it reading too little like itself for `like`, though nothing
+    of it is gone. A reference with no letter or digit is inside no other."""
+    mine = squash(old)
+    return bool(mine) and mine in squash(new)
+
+
 def mentions(item: str, name: str) -> bool:
     """Whether `item` holds `name` whole: `Foo.bar` is in `Foo.bar.` but not in `Foo.bar_two`, `Foo.bar'`
     or `Foo.bar.baz`, which are other names."""
@@ -148,7 +158,8 @@ def mentions(item: str, name: str) -> bool:
 
 def losses(old: Items, new: Items, dropped: Sequence[tuple[str, str]]) -> list[str]:
     """What `new` leaves out of `old` that no `dropped` line names, with a reason: a test or a Check is
-    named by a line whose item holds its name or tag, a reference by one whose item reads alike."""
+    named by a line whose item holds its name or tag, a reference by one whose item reads alike. A
+    reference is not left out while a new one reads alike or extends it."""
     said = [item for item, why in dropped if why.strip()]
     ask = "keep it, or give the reason on a `Dropped:` line that names it"
     problems = [f"the edit drops the test `{name}`: {ask}" for name in dict.fromkeys(old.tests)
@@ -156,7 +167,8 @@ def losses(old: Items, new: Items, dropped: Sequence[tuple[str, str]]) -> list[s
     problems += [f"the edit drops the Check *{tag}*: {ask}" for tag in dict.fromkeys(old.checks)
                  if tag not in new.checks and not any(mentions(item, tag) for item in said)]
     problems += [f'the edit drops the reference "{ref}": {ask}' for ref in dict.fromkeys(old.references)
-                 if not any(like(ref, other) for other in new.references + said)]
+                 if not any(like(ref, other) or extends(other, ref) for other in new.references)
+                 and not any(like(ref, item) for item in said)]
     return problems
 
 
