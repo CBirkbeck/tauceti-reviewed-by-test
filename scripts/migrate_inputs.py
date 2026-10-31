@@ -22,11 +22,14 @@ name. `--only` keeps the names it is given, in that order, and refuses any out o
 - `decl`, `kind`, `package`; `commit`, the dataset's;
 - `signature`, as the API docs head the declaration, else as Lean prints it (the site's);
 - `docstring`;
-- `source`, its statement as written, without its doc comment; `value`, what follows it, for a definition, structure,
-  class or inductive type, and empty for anything else. Each holds at most 4,000 characters (`TEXT_CAP`). A
+- `source`, its statement as written, without its doc comment; `value`, what follows it, for whatever is no proof
+  (`isProp` false: a definition, a structure, class or inductive type, an instance that carries data), and empty for a
+  theorem or an instance of a proposition (Ruling R42). Each holds at most 4,000 characters (`TEXT_CAP`). A
   declaration that another's text makes, whose range lies within that one's, has that one's text under a comment that
-  names it: the additive version `@[to_additive]` makes, an `_assoc` lemma `@[reassoc]` makes, a structure's field.
-  This is the dataset's `source` facet in the library, and Lean's ranges (RANGES) outside it;
+  names it: the additive version `@[to_additive]` makes, an `_assoc` lemma `@[reassoc]` makes, a structure's field. One
+  whose range starts within a line and lies in no declaration's, as an instance `deriving instance … for T` makes
+  (its range is the word `T`), has the whole lines of its command. The ranges are the dataset's `source` facet in the
+  library, and Lean's (RANGES) outside it;
 - `rests_on`: what it rests on, as its map draws it (`Site.above`), the first 12, each with its signature and the first
   sentence of its docstring (the dataset's, else Lean's). Empty outside the library, whose declarations the site does
   not follow;
@@ -50,8 +53,9 @@ name. `--only` keeps the names it is given, in that order, and refuses any out o
   `name`, its roadmap, and `path`, its file. A roadmap is a directory `TauCetiRoadmap/<name>/` or `Completed/<name>/`
   that has a `metadata.toml`. Of several lines, one of a README.md comes first, then of a STATUS.md, a PROGRESS.md and
   any other file, in that order, then the first. Null for a declaration of no roadmap (Mathlib's among them), and when
-  its roadmap's files do not name it, whatever other roadmaps say (Ruling R38). `--roadmap-rev` reads the roadmaps at a
-  revision (`origin/main`, after a fetch) instead of the files of the checkout, whatever branch that is on;
+  its roadmap's files do not name it, whatever other roadmaps say (Ruling R38). The roadmaps are read at `origin/main`
+  (fetch it first), or at the revision `--roadmap-rev` names, never in the files of the checkout, whatever branch that
+  is on (Ruling R43);
 - `open_no`: whether a no on it is open.
 
 **Lean's ranges** (RANGES, written by scripts/migrate_ranges.lean from the names `--names-for-ranges` lists: the
@@ -59,8 +63,9 @@ declarations outside the library in scope, and those outside it that the others 
 the library its docstring and the place of its text, read from TAUCETI/.lake/packages/<package>/<file>. Without them
 such a declaration has its signature only, and the script says how many lack them.
 
+The summary line counts the bundles by part, those with a roadmap block and those with another declaration's text.
 Exit 0 when the bundles (or the names) are written; 1 when a name given to `--only` is out of scope; 2 on bad input,
-such as a checkout of the library at another commit than the dataset's.
+such as a checkout of the library at another commit than the dataset's, or a roadmap revision that cannot be read.
 """
 from __future__ import annotations
 
@@ -107,6 +112,8 @@ ROADMAP_DIR = re.compile(r"^((?:TauCetiRoadmap|Completed)/[^/]+)/metadata\.toml$
 FILE_RANK = {"README.md": 0, "STATUS.md": 1, "PROGRESS.md": 2}
 HEADING = re.compile(r"^(#{1,6})(?:\s|$)")
 FENCE = re.compile(r"^\s*(```|~~~)")
+#: The line above the text of a declaration that another's text makes.
+HOSTED = "-- Written as part of `{}`.\n"
 #: Nothing but attributes, `@[simp] @[ext]`, or nothing at all.
 ATTRIBUTES = re.compile(r"\s*(?:@\[[^\]]*\]\s*)*")
 
@@ -128,6 +135,18 @@ def better(name: str, a: tuple[str, dict], b: tuple[str, dict]) -> bool:
         return ra["end"] > rb_["end"]
     pa, pb = name.startswith(na + "."), name.startswith(nb + ".")
     return pa if pa != pb else len(na) < len(nb)
+
+
+def command_lines(lines: list[str], row: dict) -> dict:
+    """A range that starts within a line, and that no declaration's range holds, widened to the whole lines of its
+    command: from the nearest line at the margin above it to the last line indented below it. Such is the range of an
+    instance that `deriving instance … for T` makes, which is the word `T` (Ruling R42)."""
+    a, b = row["start"][0] - 1, min(row["end"][0], len(lines)) - 1
+    while a > 0 and not (lines[a][:1] and not lines[a][0].isspace()):
+        a -= 1
+    while b + 1 < len(lines) and lines[b + 1][:1].isspace() and lines[b + 1].strip():
+        b += 1
+    return {**row, "start": [a + 1, 0], "end": [b + 1, sum(2 if ord(c) > 0xFFFF else 1 for c in lines[b])]}
 
 
 def holds(a: dict, b: dict) -> bool:
@@ -412,7 +431,9 @@ class Bundler:
     def text(self, d: Decl) -> tuple[str, str, str]:
         """Its statement and value as written, and its docstring: in the library from the dataset and the checkout,
         outside it from Lean's ranges and the package's files. A declaration another's text makes has that text, under a
-        comment that names that one."""
+        comment that names that one; one whose range starts within a line, and that no declaration's range holds, has
+        the whole lines of its command (`command_lines`). There is a value only for what is no proof (`isProp` false):
+        a definition's, a type's fields or constructors, an instance's operations (Ruling R42)."""
         if d.is_project:
             row, doc = self.ds.facet_row("source", d.name), self.site.docstrings.get(d.name, "")
             host, row = self.host(d.name, row) if row else (None, row)
@@ -424,12 +445,14 @@ class Bundler:
             row = {"path": got["file"], "start": got["start"], "end": got["end"]} if placed else None
             host = got.get("host")
             files = self.package(d.package)
+        if row and not host and row["start"][1] > 0 and (lines := files.lines(row["path"])):
+            row = command_lines(lines, row)
         span = files.span(row, doc_comment=False) if row else None
         if not span:
             return "", "", doc
         stmt, rest = split_statement(span[2])
-        stmt = (f"-- Written as part of `{host}`.\n" if host else "") + capped(stmt, TEXT_CAP)
-        return stmt, capped(rest, TEXT_CAP) if d.kind in site_data.VALUE_KINDS else "", doc
+        stmt = (HOSTED.format(host) if host else "") + capped(stmt, TEXT_CAP)
+        return stmt, "" if d.is_prop else capped(rest, TEXT_CAP), doc
 
     def package(self, package: str) -> Sources:
         """The files of a package outside the library, as lake fetched them into the checkout."""
@@ -526,7 +549,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--source", required=True, type=Path, help="a checkout of the library at that commit")
     p.add_argument("--store", type=Path, default=STORE, help="the evidence store (default: evidence/)")
     p.add_argument("--roadmap", type=Path, help="a clone of TauCetiRoadmap")
-    p.add_argument("--roadmap-rev", help="read the roadmaps at this revision (origin/main, after a fetch)")
+    p.add_argument("--roadmap-rev", default="origin/main",
+                   help="the revision of TauCetiRoadmap to read (default origin/main: fetch it first)")
     p.add_argument("--ranges", type=Path,
                    help="Lean's ranges of declarations outside the library (scripts/migrate_ranges.lean)")
     p.add_argument("--out", type=Path, help="the bundles to write, one JSON object a line")
@@ -567,14 +591,18 @@ def main(argv: list[str]) -> int:
     try:
         roadmap = Roadmap(a.roadmap, a.roadmap_rev)
     except RuntimeError as e:
-        print(f"error: TauCetiRoadmap cannot be read: {e}", file=sys.stderr)
+        print(f"error: TauCetiRoadmap cannot be read at {a.roadmap_rev} (fetch it, or name a revision with "
+              f"--roadmap-rev): {e}", file=sys.stderr)
         return 2
     bundler = Bundler(site, a.source, roadmap, ranges)
     bundles = [bundler.bundle(n) for n in names]
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text("".join(json.dumps(b, ensure_ascii=False) + "\n" for b in bundles), encoding="utf-8")
     parts = [sum(1 for n in names if part(site, n) == k) for k in range(len(PARTS))]
-    print(f"wrote {len(bundles)} bundles to {a.out}: " + ", ".join(f"{k} {p}" for k, p in zip(parts, PARTS)))
+    blocks = sum(1 for b in bundles if b["roadmap"])
+    hosted = sum(1 for b in bundles if b["source"].startswith(HOSTED.split("{")[0]))
+    print(f"wrote {len(bundles)} bundles to {a.out}: " + ", ".join(f"{k} {p}" for k, p in zip(parts, PARTS))
+          + f"; {blocks} with a roadmap block, {hosted} with another declaration's text")
     unranged = [n for n in names if not site.ds.by_name[n].is_project and n not in ranges]
     if unranged:
         print(f"warning: {len(unranged)} declarations outside the library have no range, so no source or docstring: "

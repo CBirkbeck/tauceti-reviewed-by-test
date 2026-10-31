@@ -206,12 +206,20 @@ LEMMAS = """-- A file of a package outside the library.
 /-- Casting a sum to `Int` is the sum of the casts. -/
 @[simp, norm_cast] theorem natCast_add (n m : Nat) : ((n + m : Nat) : Int) = n + m :=
   rfl
+
+deriving instance
+  Inhabited,
+  DecidableEq
+  for Int
 """
 RANGES = [{"name": "Int.natCast_add", "module": "Init.Data.Int.Lemmas", "file": "Init/Data/Int/Lemmas.lean",
            "start": [2, 0], "end": [4, 5], "doc": "Casting a sum to `Int` is the sum of the casts."},
           # Made by another declaration's text: Lean gives that one's range, and names it.
           {"name": "List.decidableBAll", "module": "Init.Data.List.Basic", "file": "Init/Data/Int/Lemmas.lean",
-           "start": [2, 0], "end": [4, 5], "doc": None, "host": "Int.natCast_add"}]
+           "start": [2, 0], "end": [4, 5], "doc": None, "host": "Int.natCast_add"},
+          # Made by `deriving instance … for Int`: its range is `Int`, within a line, and no declaration's holds it.
+          {"name": "Int.instDecidableEq", "module": "Init.Data.Int.Basic", "file": "Init/Data/Int/Lemmas.lean",
+           "start": [9, 6], "end": [9, 9], "doc": None}]
 #: Voyager's announcement of one more declaration, later than the fixture's two.
 ANNOUNCED = {"decl": "Fixture.isDouble_double", "name": "Doubling is double", "what": "result",
              "about": "`double n` is twice `n`.", "prs": [9], "source": {"voyager": 103, "stream": 610393},
@@ -219,7 +227,7 @@ ANNOUNCED = {"decl": "Fixture.isDouble_double", "name": "Doubling is double", "w
 #: The order the bundles come in: Voyager's named results, the newest announcement first; the library's others by
 #: roadmap, then those of none; then those outside the library.
 ORDER = ["Fixture.isDouble_double", "Fixture.IsDouble", "Fixture.triple_comm", "Fixture.double_triple",
-         "Fixture.IsSmall", "Int.natCast_add", "List.decidableBAll"]
+         "Fixture.IsSmall", "Int.instDecidableEq", "Int.natCast_add", "List.decidableBAll"]
 
 
 def git(root: Path, *args: str) -> None:
@@ -254,6 +262,7 @@ class MigrationInputsTests(unittest.TestCase):
         git(cls.roadmap, "init", "-q")
         git(cls.roadmap, "add", ".")
         git(cls.roadmap, "commit", "-q", "-m", "roadmaps")
+        git(cls.roadmap, "update-ref", "refs/remotes/origin/main", "HEAD")
         cls.ranges = tmp / "ranges.jsonl"
         cls.ranges.write_text("".join(json.dumps(r) + "\n" for r in RANGES), encoding="utf-8")
         cls.settings = tmp / "settings.json"
@@ -275,7 +284,7 @@ class MigrationInputsTests(unittest.TestCase):
         cls.more = [yes("Fixture.IsDouble", astra, 1), yes("Fixture.isDouble_double", agent, 2),
                     yes("Fixture.triple_comm", agent, 3, CITING), yes("Fixture.double_triple", astra, 4),
                     yes("Fixture.IsSmall", agent, 5), yes("Int.natCast_add", agent, 6),
-                    yes("List.decidableBAll", agent, 7),
+                    yes("List.decidableBAll", agent, 7), yes("Int.instDecidableEq", agent, 12),
                     yes("Nat.pred", agent, 8),  # outside the library, and not a declaration the site asks about
                     withdrawn, *noes] + [
                     {"schema": rec.SCHEMA, "kind": "status", "target": r["id"], "state": "withdrawn", "by": agent,
@@ -351,6 +360,7 @@ class MigrationInputsTests(unittest.TestCase):
         # declaration outside the library the site does not ask about (`Nat.pred`); and none with a standard review
         # (`triple`, `triple_pos`, `double`, `Int`).
         self.assertEqual(self.order, ORDER)
+        self.assertIn("; 1 with a roadmap block, 1 with another declaration's text", self.said)
         self.assertEqual(self.bundles["Fixture.IsDouble"]["named"], {"name": "Being double", "text": "`m` is twice `n`."})
         self.assertTrue(self.bundles["Fixture.triple_comm"]["open_no"])  # someone's no is open
         # A no withdrawn is no open no, and it is listed once, as withdrawn, its category the cell it found in error.
@@ -431,6 +441,17 @@ class MigrationInputsTests(unittest.TestCase):
         self.assertTrue({"Int.natCast_add", "List.decidableBAll", "Nat"} <= set(wanted), wanted)
         self.assertFalse([n for n in wanted if n.startswith("Fixture.")], wanted)
 
+    def test_what_is_no_proof_has_its_value(self):
+        # An instance that carries data shows its value, as a definition does; a proof is left out.
+        inst = self.bundle("Fixture.instInhabitedPos")
+        self.assertEqual((inst["kind"], inst["source"], inst["value"]),
+                         ("instance", "instance : Inhabited Pos", ":= ⟨one⟩"))
+        self.assertEqual(self.bundle("Fixture.triple_comm")["value"], "")
+        # Made by `deriving instance … for Int`: the whole lines of that command.
+        derived = self.bundles["Int.instDecidableEq"]
+        self.assertEqual((derived["kind"], derived["source"], derived["value"]),
+                         ("instance", "deriving instance\n  Inhabited,\n  DecidableEq\n  for Int", ""))
+
     def test_a_declaration_made_by_another_s_text(self):
         # As `@[to_additive]` makes the additive version: its range is the attribute's word, here `claim` in
         # `@[claim "Fixture, Theorem 1"]` above `triple_pos`. Its bundle has that text, under a line that says so.
@@ -468,6 +489,21 @@ class MigrationInputsTests(unittest.TestCase):
         # Of no roadmap, or outside the library: none, though Arithmetic's block names them.
         for name in ("Fixture.IsDouble", "Int.natCast_add", "Fixture.IsSmall"):
             self.assertIsNone(self.bundles[name]["roadmap"], name)
+
+    def test_the_roadmap_is_read_at_origin_main(self):
+        # The clone on 2026-10-31 was on a branch of its own, with edits: what it holds now is not read.
+        (self.roadmap / "TauCetiRoadmap" / "Doubling" / "README.md").write_text("# Emptied\n", encoding="utf-8")
+        git(self.roadmap, "commit", "-q", "-am", "a branch of its own")
+        try:
+            code, out, said = self.run_main("--only", "Fixture.double_triple", out=self.tmp / "at-main.jsonl")
+            self.assertEqual(code, 0, said)
+            self.assertEqual(self.read(out)[0]["roadmap"]["path"], "TauCetiRoadmap/Doubling/README.md")
+            code, out, said = self.run_main("--only", "Fixture.double_triple", "--roadmap-rev", "HEAD",
+                                            out=self.tmp / "at-head.jsonl")
+            self.assertEqual(code, 0, said)
+            self.assertIsNone(self.read(out)[0]["roadmap"])
+        finally:
+            git(self.roadmap, "reset", "-q", "--hard", "origin/main")
 
     def test_roadmap_blocks_come_from_roadmaps(self):
         self.assertEqual(self.code, 0, self.said)
