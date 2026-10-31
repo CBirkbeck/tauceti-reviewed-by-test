@@ -243,8 +243,9 @@ class SplitTests(Temporary):
         example = prompt.split("## An example", 1)[1].split("~~~review\n", 1)[1].split("\n~~~", 1)[0]
         decl = "TauCeti.Foo.nilradical_eq_sInf"
         described = bundle(decl, signature=f"{decl} (R : Type u_1) [CommRing R] :\n  nilradical R = "
-                           "sInf {P : Ideal R | P.IsPrime}", docstring="The nilradical is the intersection of the prime "
-                           "ideals (Atiyah and Macdonald, *Introduction to Commutative Algebra*, Proposition 1.8).",
+                           "sInf {P : Ideal R | P.IsPrime}",
+                           docstring="The nilradical is the intersection of the prime ideals (Atiyah and Macdonald, "
+                           "*Introduction to Commutative Algebra*, Proposition 1.8).",
                            reviews=[], tests=[{**TEST, "test": "TauCeti.Foo.nilradical_zmod_four"}])
         self.assertEqual(migrate_check.problems(described, result(described, example)), [])
         self.assertTrue(migrate_check.problems(described, result(described, section.split("~~~review\n", 1)[1]
@@ -524,8 +525,16 @@ class CheckTests(Temporary):
         self.assertNamed(check("- Bourbaki, *Commutative Algebra*, Chapter II."), "Bourbaki", "not in the bundle")
         self.assertNamed(check("- Bourbaki shows that a nilpotent element is in the nilradical."), "not in the bundle")
         self.assertNamed(check("- A nilpotent element is in the nilradical."), "names no source")
-        # A numbered item is an item: an invented one fails as a bullet would.
-        self.assertNamed(check("1. Bourbaki, *Commutative Algebra*, Theorem 99."), "Bourbaki", "not in the bundle")
+        # A numbered item is refused, since the site's edit check protects bullets only (Ruling R51); the citation scan
+        # still reads it. One indented under a bullet goes on from that bullet, as the edit check reads it too.
+        numbered = check("1. Bourbaki, *Commutative Algebra*, Theorem 99.")
+        self.assertNamed(numbered, "a numbered item", "Bourbaki",
+                         "use `- ` bullets, which the site's edit check protects")
+        self.assertNamed(numbered, "Theorem 99", "no text of the bundle gives 99")
+        self.assertNamed(check("2) Atiyah and Macdonald, *Introduction to Commutative Algebra*, Proposition 1.7."),
+                         "a numbered item", "use `- ` bullets")
+        self.assertEqual(self.problems(b, result(b, text(refs=REFS + "\n  1. in $\\mathbb{Z}/4\\mathbb{Z}$, and\n"
+                                                         "  2. in no other ring here."))), [])
         # Every link of a reference is in the text it comes from.
         wiki = "https://en.wikipedia.org/wiki/Nilradical_of_a_ring"
         self.assertNamed(check(f"- Atiyah and Macdonald, *Introduction to Commutative Algebra*, Proposition 1.7, and "

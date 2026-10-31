@@ -35,10 +35,11 @@ A bundle's fields:
   Tau Ceti's commit the site shows.
 - `signature`: the statement as the API docs print it, every argument included. What it says follows this.
 - `docstring`: its docstring, which may be empty.
-- `source`: the statement as written in its file. `value`: what follows it, for a definition, structure, class or
-  inductive type: its value, its fields or its constructors. Each holds at most 4,000 characters, and a last line `…`
-  marks a cut. A first line ``-- Written as part of `X`.`` says that the text is `X`'s, which makes this declaration
-  too: the additive version `@[to_additive]` makes, a structure's field.
+- `source`: the statement as written in its file. `value`: what follows it, for whatever is not a proof: a
+  definition's value, a structure's, class's or inductive type's fields or constructors, the operations of an instance
+  that carries data. It is empty for a theorem, and for an instance of a class that is a proposition. Each holds at
+  most 4,000 characters, and a last line `…` marks a cut. A first line ``-- Written as part of `X`.`` says that the
+  text is `X`'s, which makes this declaration too: the additive version `@[to_additive]` makes, a structure's field.
 - `rests_on`: up to 12 declarations its statement uses, each with its `signature` and the first sentence of its `doc`.
   Empty for a declaration outside Tau Ceti.
 - `reviews`: its earlier reviews, oldest first. `by`: who. `verdict`: `accept` is a yes, `problem` a no, `question` a
@@ -140,9 +141,10 @@ The program reads What it says for each explicit group's binder name, and for ea
 for `[Module ℚ V]`) or its name, as a whole word spelled as the signature spells it: `μ`, not `$\mu$`.
 
 An instance that carries data, one that defines operations or a structure (a `Module`, a `TopologicalSpace`, a
-`Field`), has a value in Tau Ceti: the data it chooses. A `deriving instance` has none of its own, and an instance of a
-class that is a proposition has only a proof. The bundle gives an instance's statement only, and its `value` is empty:
-say what the instance provides, and claim nothing about its data that the statement and the docstring do not say.
+`Field`), has a value: the data it chooses, which `value` gives. Review it as a definition's value, since another
+choice of data would be another instance (`choice`, `convention`), and say in What it says what the data is. An
+instance of a class that is a proposition has only a proof, and its `value` is empty, as a theorem's is. A
+`deriving instance` has no value of its own: its `source` is the `deriving instance … for T` command that makes it.
 
 ## 3. References only from the bundle, with their numbers as given
 
@@ -173,9 +175,10 @@ are no such text: a citation that only shares a phrase with them, or with your o
 - In References and tests, a Lean name in backticks is one of `tests`, the declaration, or one of `rests_on`; or a name
   a reference copies from its text.
 - When the bundle gives no reference, list none, and say so in a line of prose: `No reference is recorded for it.`
-- Every bullet under References and tests, and every numbered item, is a reference, a test or a Check. Anything else,
-  such as `No test is recorded.`, is a line of prose, not a bullet: the program reads every other bullet as a reference,
-  and looks for it in the bundle.
+- Every bullet under References and tests is a reference, a test or a Check, and each is a bullet, `- `, never an item
+  of a numbered list: the site's edit check protects bullets only, so the program refuses a numbered item. Anything
+  else, such as `No test is recorded.`, is a line of prose, not a bullet: the program reads every other bullet as a
+  reference, and looks for it in the bundle.
 
 ## 4. Tests only from `tests`, Checks only from `checks`
 

@@ -19,18 +19,19 @@ result, the bundle, and Tau Ceti's files for the Checks a review lists, and asks
   bundle's signature (`site_data.binder_groups`), Part 1 must name one of its binder names, or, for an instance
   group, its class, by the class's last component, as a whole word. A group that only introduces a type,
   `(R : Type u_1)`, needs nothing, nor does an implicit one;
-- **a reference cannot be traced** (Ruling R48). A reference is an item of References and tests, a bullet or a numbered
-  item, that does not open with a backticked name or `Check`. One text of the bundle (its docstring, the comments in
-  its value, an earlier review, Voyager's announcement, the roadmap block; not its Lean code, nor its tests' texts) must
-  hold its citation: three consecutive words (all, when fewer) of what comes before its first `:` or ` — `, and the
-  words of each title it gives in italics. The same text must give every number of it, glued to no other digit, and
-  hold every link of it;
+- **a reference cannot be traced** (Ruling R48). A reference is a bullet of References and tests that does not open
+  with a backticked name or `Check`. One text of the bundle (its docstring, the comments in its value, an earlier
+  review, Voyager's announcement, the roadmap block; not its Lean code, nor its tests' texts) must hold its citation:
+  three consecutive words (all, when fewer) of what comes before its first `:` or ` — `, a name or a number among them,
+  and the words of each title it gives in italics (Ruling R52). The same text must give every number of it, glued to
+  no other digit (a range gives its ends), and hold every link of it;
 - **a citation anywhere in the review gives a number no text of the bundle gives.** A theorem, proposition, lemma,
   corollary, definition, section, chapter, tag or `§` with its number (in English, abbreviated, French or German) is
   looked for in What it says, the prose of References and tests, its tests' lines, and Lean subtleties alike;
 - **a test is not one of the bundle's `tests`, or a Check is not one of its `checks`**, at the place the bundle gives
-  for it, with its tag at that line of TAUCETI; and **References and tests names in backticks a Lean name** that is
-  none of its tests, the declaration or what it rests on, unless a reference copies it from its text.
+  for it, with its tag at that line of TAUCETI; or **References and tests names in backticks a Lean name** that is
+  none of its tests, the declaration or what it rests on, unless a reference copies it from its text; or **it holds a
+  numbered item**, which the site's edit check, reading bullets only, would not protect (Ruling R51).
 
 `problems` gives all of them; `shape` and `review_problems` each half, for `migrate_write.py add`, which refuses a
 result the shape rules forbid and shows an agent what the rest find while it can still fix it.
@@ -106,8 +107,10 @@ URL = re.compile(r"https?://[^\s<>()\[\]]+(?:\([^\s<>()]*\)[^\s<>()\[\]]*)*")
 SPLIT = re.compile(r":\s| [—–] | -- ")
 #: A title in italics, `*…*` or `_…_`.
 ITALIC = re.compile(r"(?<![*\w])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![*\w])|(?<![_\w])_(?!\s)([^_\n]+?)(?<!\s)_(?![_\w])")
-#: An item of References and tests: a bullet, `- `, `* ` or `+ `, or a numbered item, `1. ` or `1) `.
-ITEM = re.compile(r"^([-*+]|\d+[.)])[ \t]+(\S.*)$")
+#: An item of References and tests: a bullet, `- `, `* ` or `+ `, as `standard.bullets` reads them.
+ITEM = re.compile(r"^[-*+][ \t]+(\S.*)$")
+#: A numbered item, `1. ` or `1) `, at the margin: refused, since the site's edit check protects bullets only (R51).
+NUMBERED = re.compile(r"^\d+[.)][ \t]+(\S.*)$")
 #: A comment of Lean's, where a definition's value may cite its source: `/-- … -/`, `/- … -/`, `-- …`.
 COMMENT = re.compile(r"/-.*?-/|--[^\n]*", re.S)
 #: A Lean name of two parts or more, `TauCeti.Foo.bar`, as a backticked span may be; and the endings of a file's name.
@@ -383,33 +386,31 @@ def trace(ref: str, texts: list[Source]) -> tuple[Source | None, str | None]:
 @dataclass(frozen=True)
 class Item:
     """An item of References and tests: a `test`, a `check` or a `reference`; its text, on one line; the lines of the
-    part it takes; whether it is numbered rather than a bullet; and a test's name or a Check's tag."""
+    part it takes; and a test's name or a Check's tag."""
     kind: str
     text: str
     lines: tuple[int, ...]
-    numbered: bool
     name: str | None
 
 
 def items_of(body: str) -> list[Item]:
-    """The items of References and tests, read as `standard.bullets` reads its bullets, and its numbered items as
-    bullets too (Ruling R48): an item's indented lines go on from it, and a blank line or a line of prose ends it. One
-    that opens with a backticked Lean name is a test, one that opens with `Check *tag*` a Check, any other a
-    reference."""
-    found: list[tuple[str, list[str], list[int]]] = []
+    """The items of References and tests, its bullets, read as `standard.bullets` reads them: an item's indented lines
+    go on from it, and a blank line or a line of prose, a numbered item among them, ends it. One that opens with a
+    backticked Lean name is a test, one that opens with `Check *tag*` a Check, any other a reference."""
+    found: list[tuple[list[str], list[int]]] = []
     going = False
     for i, line in enumerate(body.split("\n")):
         m = ITEM.match(line)
         if m:
-            found.append((m[1], [m[2]], [i]))
+            found.append(([m[1]], [i]))
             going = True
         elif going and line[:1] in (" ", "\t") and line.strip():
-            found[-1][1].append(line.strip())
-            found[-1][2].append(i)
+            found[-1][0].append(line.strip())
+            found[-1][1].append(i)
         else:
             going = False
     out = []
-    for marker, said, lines in found:
+    for said, lines in found:
         text = " ".join(said)
         if m := standard.TEST.match(text):
             kind, name = "test", m[1]
@@ -417,7 +418,7 @@ def items_of(body: str) -> list[Item]:
             kind, name = "check", m[1].strip()
         else:
             kind, name = "reference", None
-        out.append(Item(kind, text, tuple(lines), marker[0].isdigit(), name))
+        out.append(Item(kind, text, tuple(lines), name))
     return out
 
 
@@ -483,8 +484,9 @@ def placed(item: Item, places: dict[str, list[tuple[str, int]]], source: Path | 
 
 def listed(review: str, bundle: dict, texts: list[Source], source: Path | None) -> list[str]:
     """What is wrong with the items of References and tests (`items_of`): a test that is not one of the bundle's
-    `tests`, or that it gives as missing; a Check that is not one of its `checks` (`placed`); a reference that cannot be
-    traced (`trace`); and a Lean name in backticks it may not name (`strangers`), in an item or in its prose."""
+    `tests`; a Check that is not one of its `checks` (`placed`); a reference that cannot be traced (`trace`); a Lean
+    name in backticks it may not name (`strangers`), in an item or in its prose; and a numbered item, which the site's
+    edit check, reading bullets only, would not protect (Ruling R51)."""
     body = part(review, standard.HEADINGS[1]) or ""
     items = items_of(body)
     tests = {t.get("test"): t for t in bundle.get("tests") or []}
@@ -499,15 +501,14 @@ def listed(review: str, bundle: dict, texts: list[Source], source: Path | None) 
             if item.name not in tests:
                 problems.append(f"the test `{item.name}` is not one of the declaration's tests in the bundle "
                                 "(`tests`): name only those; a reference does not open with a backticked name")
-            elif item.numbered and tests[item.name].get("result") == "missing":
-                problems.append(f"the test `{item.name}` is not a declaration that exists: `tests` gives it as missing "
-                                "at the site's commit")
             problems += strangers(item.text[len(item.name) + 2:], allowed, heads)
         elif item.kind == "check":
             problems += placed(item, places, source)
         else:
             found, why = trace(item.text, texts)
             problems += [why] if why else strangers(item.text, allowed, heads, found.text)
+    problems += [f'a numbered item, "{m[1]}": use `- ` bullets, which the site\'s edit check protects'
+                 for m in map(NUMBERED.match, body.split("\n")) if m]
     taken = {i for item in items for i in item.lines}
     return problems + strangers("\n".join(line for i, line in enumerate(body.split("\n")) if i not in taken),
                                 allowed, heads)
