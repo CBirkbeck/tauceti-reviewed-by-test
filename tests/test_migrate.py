@@ -167,7 +167,9 @@ CITING = (f"**Correctly stated.** `triple b` is `b + b + b`, by *definition*. It
           f"*test_gone* was removed ([once here]({BASIC}#L63)).\n\n"
           f"*test_elsewhere* is in [another file](https://github.com/test/fixture/blob/A/Fixture/Gone.lean#L3).")
 #: The roadmap of `Fixture.triple`: a heading block that names it, under a title whose paragraph names only a longer
-#: name that begins with it; and an audit, which is no roadmap (it has no `metadata.toml`), that names two others.
+#: name that begins with it. Its second layer names declarations that are not its own: one of no roadmap, one of the
+#: roadmap Doubling and one outside the library. Doubling names its own and one of Arithmetic's. And an audit, which is
+#: no roadmap (it has no `metadata.toml`), names two others.
 ROADMAP_README = """# Arithmetic
 
 Tripling and doubling. The first unit test is `Fixture.triple_two`.
@@ -182,7 +184,14 @@ Define `Fixture.triple`, three times a natural number, as `n + n + n`.
 
 ## Layer 2: doubling
 
-Being double (`Fixture.IsDouble`) is the graph of doubling.
+Being double (`Fixture.IsDouble`) is the graph of doubling. It meets tripling in `Fixture.double_triple`, and casts
+sums as `Int.natCast_add` does.
+"""
+DOUBLING_README = """# Doubling
+
+## D1. Doubling and tripling
+
+`Fixture.double_triple`: `double n + n = triple n`, which `Fixture.triple_comm` unfolds.
 """
 TRIPLE_BLOCK = """## Layer 1: tripling
 
@@ -237,6 +246,8 @@ class MigrationInputsTests(unittest.TestCase):
         cls.roadmap = tmp / "roadmap"
         for path, text in (("TauCetiRoadmap/Arithmetic/README.md", ROADMAP_README),
                            ("TauCetiRoadmap/Arithmetic/metadata.toml", 'topic = "math.NT"\n'),
+                           ("TauCetiRoadmap/Doubling/README.md", DOUBLING_README),
+                           ("TauCetiRoadmap/Doubling/metadata.toml", 'topic = "math.NT"\n'),
                            ("Completed/Audit/notes.md", AUDIT)):
             (cls.roadmap / path).parent.mkdir(parents=True, exist_ok=True)
             (cls.roadmap / path).write_text(text, encoding="utf-8")
@@ -446,13 +457,20 @@ class MigrationInputsTests(unittest.TestCase):
         self.assertFalse(out.exists())
         self.assertIn("TauCetiRoadmap cannot be read", said)
 
+    def test_a_roadmap_block_comes_from_the_declaration_s_own_roadmap(self):
+        self.assertEqual(self.code, 0, self.said)
+        # `double_triple` is Doubling's, and Arithmetic's block names it too: it has Doubling's block only.
+        self.assertEqual(self.bundles["Fixture.double_triple"]["roadmap"],
+                         {"name": "Doubling", "path": "TauCetiRoadmap/Doubling/README.md",
+                          "block": DOUBLING_README.split("\n", 2)[2].strip("\n")})
+        # `triple_comm` is Arithmetic's, whose files do not name it: none, though Doubling's block names it.
+        self.assertIsNone(self.bundles["Fixture.triple_comm"]["roadmap"])
+        # Of no roadmap, or outside the library: none, though Arithmetic's block names them.
+        for name in ("Fixture.IsDouble", "Int.natCast_add", "Fixture.IsSmall"):
+            self.assertIsNone(self.bundles[name]["roadmap"], name)
+
     def test_roadmap_blocks_come_from_roadmaps(self):
         self.assertEqual(self.code, 0, self.said)
-        # A declaration of no roadmap named in one has that roadmap's block; one named only outside the roadmaps has none.
-        self.assertEqual(self.bundles["Fixture.IsDouble"]["roadmap"],
-                         {"name": "Arithmetic", "path": "TauCetiRoadmap/Arithmetic/README.md",
-                          "block": "## Layer 2: doubling\n\nBeing double (`Fixture.IsDouble`) is the graph of doubling."})
-        self.assertIsNone(self.bundles["Fixture.IsSmall"]["roadmap"])
         # The roadmap's main, read whatever its checkout holds.
         (self.roadmap / "TauCetiRoadmap" / "Arithmetic" / "README.md").write_text("# Emptied\n", encoding="utf-8")
         try:

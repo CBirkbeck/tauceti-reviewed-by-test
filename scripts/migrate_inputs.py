@@ -43,13 +43,14 @@ name. `--only` keeps the names it is given, in that order, and refuses any out o
   the one nearest the cited line) and `result`: `sorry` when the declaration below the tag's doc comment holds
   `sorry`, else `passes`, since Tau Ceti's CI builds every file;
 - `named`: Voyager's name and sentence for it, or null;
-- `roadmap`: the block of a roadmap of TauCetiRoadmap that names the declaration whole, in Markdown (`git grep -n -F`;
-  a name of one part counts only in code or as a link's anchor, since it is a word too: `Path lifting`), from the
-  nearest heading above that line to the next heading of the same or a higher level, at most 4,000
-  characters (`BLOCK_CAP`; around the line when the block is longer), with `name`, its roadmap, and `path`, its file.
-  A roadmap is a directory `TauCetiRoadmap/<name>/` or `Completed/<name>/` that has a `metadata.toml`. Of several
-  lines, a line of the declaration's own roadmap comes first, then one of a README.md, a STATUS.md, a PROGRESS.md and
-  any other file, in that order, then the first. Null when no roadmap names it. `--roadmap-rev` reads the roadmaps at a
+- `roadmap`: the block of the declaration's own roadmap (the facet `roadmap` names it) that names the declaration
+  whole, in that roadmap's Markdown files (`git grep -n -F`; a name of one part counts only in code or as a link's
+  anchor, since it is a word too: `Path lifting`), from the nearest heading above that line to the next heading of the
+  same or a higher level, at most 4,000 characters (`BLOCK_CAP`; around the line when the block is longer), with
+  `name`, its roadmap, and `path`, its file. A roadmap is a directory `TauCetiRoadmap/<name>/` or `Completed/<name>/`
+  that has a `metadata.toml`. Of several lines, one of a README.md comes first, then of a STATUS.md, a PROGRESS.md and
+  any other file, in that order, then the first. Null for a declaration of no roadmap (Mathlib's among them), and when
+  its roadmap's files do not name it, whatever other roadmaps say (Ruling R38). `--roadmap-rev` reads the roadmaps at a
   revision (`origin/main`, after a fetch) instead of the files of the checkout, whatever branch that is on;
 - `open_no`: whether a no on it is open.
 
@@ -219,12 +220,12 @@ class Roadmap:
             self.files[path] = text.split("\n")
         return self.files[path]
 
-    def hits(self, name: str) -> list[tuple[str, int, str]]:
-        """The lines of the roadmaps' Markdown files that name `name` whole, in the order of their paths: (path, line,
-        roadmap)."""
+    def hits(self, name: str, dirs: list[str]) -> list[tuple[str, int]]:
+        """The lines of the Markdown files under the directories `dirs` that name `name` whole, in the order of their
+        paths: (path, line)."""
         out = []
         found = self.git("grep", "-n", "-I", "--null", "-F", "-e", name, *([self.rev] if self.rev else []),
-                         "--", "*.md", ok=(0, 1))
+                         "--", *(f"{d}/*.md" for d in dirs), ok=(0, 1))
         for row in found.split("\n"):
             parts = row.split("\0")
             if len(parts) != 3:
@@ -232,19 +233,19 @@ class Roadmap:
             path, k, text = parts
             if self.rev and path.startswith(self.rev + ":"):
                 path = path[len(self.rev) + 1:]
-            roadmap = self.dirs.get("/".join(path.split("/")[:2])) if path.count("/") >= 2 else None
-            if roadmap and names_whole(text, name):
-                out.append((path, int(k), roadmap))
+            if names_whole(text, name):
+                out.append((path, int(k)))
         return out
 
     def block_of(self, name: str, own: str | None) -> dict | None:
-        """The roadmap block that names `name`, whose own roadmap (the facet's) is `own`: {name, path, block}."""
-        hits = self.hits(name)
+        """The block of the declaration's own roadmap, `own` (the facet's), that names `name`: {name, path, block}. None
+        for a declaration of no roadmap, or when its roadmap's files do not name it, whatever other roadmaps say."""
+        dirs = [d for d, roadmap in self.dirs.items() if own is not None and roadmap == own]
+        hits = self.hits(name, dirs) if dirs else []
         if not hits:
             return None
-        rank = lambda h: (h[2] != own, FILE_RANK.get(PurePosixPath(h[0]).name, 3), h[0], h[1])
-        path, k, roadmap = min(hits, key=rank)
-        return {"name": roadmap, "path": path, "block": block(self.lines(path), k, name)}
+        path, k = min(hits, key=lambda h: (FILE_RANK.get(PurePosixPath(h[0]).name, 3), h[0], h[1]))
+        return {"name": own, "path": path, "block": block(self.lines(path), k, name)}
 
 
 def cited(text: str) -> list[tuple[str, str, int]]:
