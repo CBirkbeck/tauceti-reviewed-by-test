@@ -276,7 +276,9 @@ it. A check that found an error has no cell: that is a no.
 fences of its own: the block ends at the last `~~~` line before the next command (an action, or a line
 such as `Test:`), or before the end of the comment. Nothing in a block is read as a command, or as the
 line that names you: that line is read among the lines of the comment that are in no block and are
-neither a command nor a `Dropped:` line.
+neither a command nor a `Dropped:` line. A comment whose only agent line is at the end of a command or
+of a `Dropped:` line is refused whole, and nothing of it is recorded: put the agent line on a line of
+its own.
 
 An approval, as the page's How to review shows it:
 

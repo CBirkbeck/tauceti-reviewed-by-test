@@ -653,6 +653,48 @@ class AgentMarkTests(IntakeCase):
         self.assertEqual((r["kind"], r["by"]["kind"]), ("comment", "person"))
         self.assertEqual(r["text"], self.quoting(self.FORM).rstrip("\n"))
 
+    def test_a_mark_only_at_the_end_of_a_command_line_refuses_the_comment(self):
+        # The final review's Important 1: read as no agent's, such a comment was the owner's account's, as a person: the
+        # agent's yes became the owner's own yes, and its edit the owner's own edit, for good. Every line of it is
+        # refused, and nothing of it is recorded.
+        self.process(write(1, A))
+        shorter = V1.replace("- `Fixture.triple_two` — its value at 2\n", "")
+        approval = f"Approve: Fixture.triple — {VER1} — {CELLS}"
+        for n, lines in enumerate([
+                (f"Reviewed-by: Fixture.double — Matches the docs. {self.LINE}",),
+                (f"Reviewed-by: Fixture.double — Matches the docs. {self.FORM}",),
+                (f"{approval} {self.LINE}",),
+                (f"Edit: Fixture.triple — {VER1} — {CELLS} — {NOTE} {self.LINE}", "~~~review", V2, "~~~"),
+                (f"Edit: Fixture.triple — {VER1} — {CELLS} — shorter",
+                 f"Dropped: `Fixture.triple_two` — it is no test of the definition {self.LINE}",
+                 "~~~review", shorter, "~~~"),
+                (f"Write: Fixture.double — {CELLS} {self.LINE}", "~~~review", V1, "~~~"),
+                (f"Reviewed-by: Fixture.double — Matches the docs. {self.LINE}",
+                 "Test: Fixture.triple — Fixture.triple_two — its value at 2", approval)], 2):
+            with self.subTest(lines=lines):
+                before = list(self.store.records)
+                out = self.process(comment(n, *lines))
+                self.assertEqual(out.records, [])
+                self.assertEqual(self.store.records, before)
+                said = self.last(out)
+                self.assertNotIn("Recorded", said)
+                self.assertIn("put the agent line on a line of its own", said)
+                commands = [k for k, line in enumerate(lines, 1) if standard_intake.COMMAND.match(line)]
+                for k in commands:
+                    self.assertIn(f"line {k} (`", said)  # each line of the comment, for good: none waits
+                self.assertTrue(said.endswith(f"<!-- bulk-reply: {900 + n} -->"), said)
+
+    def test_the_same_lines_with_the_mark_on_a_line_of_its_own_are_the_agents(self):
+        # What the refusal asks for: the mark on a line of its own, before the lines or after them.
+        self.process(write(1, A))
+        B_IS = {"tool": "Codex", "model": "GPT-6 Astra"}
+        yes, = self.process(comment(2, self.LINE, "Reviewed-by: Fixture.double — Matches the docs.")).records
+        approval, = self.process(comment(3, f"Approve: Fixture.triple — {VER1} — {CELLS}", self.LINE)).records
+        edited, = self.process(comment(4, self.LINE, f"Edit: Fixture.triple — {VER1} — {CELLS} — {NOTE}",
+                                       "~~~review", V2, "~~~")).records
+        self.assertEqual([r["by"]["agent"] for r in (yes, approval, edited)], [B_IS] * 3)
+        self.assertEqual([standard.kind_of(r) for r in (approval, edited)], ["approval", "version"])
+
 
 class OriginTests(IntakeCase):
     def test_a_run_reads_the_store_by_origin_once(self):

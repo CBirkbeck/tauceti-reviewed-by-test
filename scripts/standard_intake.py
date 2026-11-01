@@ -47,7 +47,10 @@ yes it is refused. People say yes with the page's form, never with `Approve:`.
 
 The agent a comment names is read from its lines outside the review blocks, the lines of its commands and its
 `Dropped:` lines (`naming`): a review, a note or a reason that quotes a mark names no one, where evidence-store's
-`parse_agent_mark`, given the whole comment, would take the reviewed-by form wherever it is.
+`parse_agent_mark`, given the whole comment, would take the reviewed-by form wherever it is. A comment whose mark is
+only on the line of a command or of a `Dropped:` item, as `Reviewed-by: X — reasons <!-- agent: … -->`, has every line
+refused, and nothing of it recorded (`misplaced`): its author meant an agent, and read as no agent's, its records would
+be the account's own, as a person's, for good. The reply asks for the agent line on a line of its own.
 
 The lines of evidence-store's own kinds (`Reviewed-by:`, `Test:`, `Named:`, `Challenge:`) are read as its bulk
 handler reads them, into the same records. An AI agent's yes of the earlier form, without the standard review, is
@@ -102,6 +105,9 @@ FORMS = {("Approve", True): "Approve: <decl> — <version> — <cells>",
          ("Edit", False): "Edit: <decl> — <parent> — <note>",
          ("Restore", False): "Restore: <decl> — <earlier version> — <note>"}
 TEXT = "its text is missing: a `~~~review` line, the text, then a line `~~~`"
+#: Why each line of a comment is refused whose agent mark is only on a command or `Dropped:` line (`misplaced`).
+MISPLACED = ("the comment's agent mark is on the line of a command or of a `Dropped:` item, where it names no one: put "
+             "the agent line on a line of its own, `<!-- agent: tool=…; model=… -->`")
 #: What a reply says of a line read when there was no dataset of the library: it waits, and is read again.
 NO_DATASET = "there is no dataset of the library yet; it will be read again"
 #: A row of a reply that says so (`refusals`): for one line, or as the reason given for the lines after it. A row of a line
@@ -204,11 +210,8 @@ def commands(text: str) -> list[Command]:
     return out
 
 
-def naming(text: str) -> str:
-    """The lines of a comment that can name its agent: those in no review block (`closing`), and no line of a command or
-    of a `Dropped:` item. A review's text, an edit's note and the reason for a dropped item are words about a declaration,
-    and may quote a mark. evidence-store's `parse_agent_mark` takes the reviewed-by form wherever it is in what it is
-    given, so over the whole comment it would credit the comment to the agent that text names."""
+def outside(text: str) -> list[str]:
+    """The lines of a comment in no review block (`closing`)."""
     lines = (text or "").splitlines()
     out: list[str] = []
     k = 0
@@ -217,10 +220,26 @@ def naming(text: str) -> str:
         if end is not None:
             k = end + 1
             continue
-        if not (COMMAND.match(lines[k]) or DROPPED.match(lines[k])):
-            out.append(lines[k])
+        out.append(lines[k])
         k += 1
-    return "\n".join(out)
+    return out
+
+
+def naming(text: str) -> str:
+    """The lines of a comment that can name its agent: those in no review block (`outside`), and no line of a command or
+    of a `Dropped:` item. A review's text, an edit's note and the reason for a dropped item are words about a declaration,
+    and may quote a mark. evidence-store's `parse_agent_mark` takes the reviewed-by form wherever it is in what it is
+    given, so over the whole comment it would credit the comment to the agent that text names."""
+    return "\n".join(line for line in outside(text) if not (COMMAND.match(line) or DROPPED.match(line)))
+
+
+def misplaced(text: str) -> bool:
+    """Whether a comment's agent mark is only on the line of a command or of a `Dropped:` item, as at the end of
+    `Reviewed-by: X — reasons <!-- agent: … -->`: there is a mark outside the review blocks, and none on the lines that
+    can name the comment's agent (`naming`). Its author meant an agent, but read by `naming` the comment would be the
+    account's own, as a person's, and its records would say so for good: its lines are refused instead (`MISPLACED`)."""
+    return intake.parse_agent_mark(naming(text)) is None and \
+        intake.parse_agent_mark("\n".join(outside(text))) is not None
 
 
 def as_of(ctx: Context, at: str, comment: int, line: int) -> Context:
@@ -607,6 +626,7 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
     base = comment.get("html_url") or f"{ctx.repo}#{issue['number']}/comment/{comment.get('id')}"
     text = comment.get("body") or ""
     by = intake.author_of(user, intake.parse_agent_mark(naming(text)))
+    astray = misplaced(text)  # its agent mark is on a command's line: none of it is recorded
     at = intake.iso(comment.get("created_at", ""))
     maintainer = intake.is_maintainer(ctx, comment)
     cmds = commands(text)
@@ -633,6 +653,9 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
         origin = {"kind": "comment", "ref": ref}
         view = partial(as_of, ctx, at, comment_id, cmd.line)  # the store as of this line, made when a declaration is found
         name = intake.clean(cmd.fields[0]) if cmd.fields else ""
+        if astray:
+            refused.append((cmd.line, name, MISPLACED))
+            continue
         try:
             r, why = ours(cmd, by, maintainer, at, origin, ctx, changed, view) if cmd.keyword in OURS else \
                 theirs(cmd, by, at, origin, ctx, issue["number"], view)
