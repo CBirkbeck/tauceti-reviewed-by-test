@@ -592,6 +592,22 @@ class StandardRecordsTests(unittest.TestCase):
         self.assertEqual(second["subject"]["name"], "Fixture.double")
         self.assertEqual(second["origin"]["ref"], f"{ORIGIN}{PREFIX}-02.jsonl#L1")
 
+    def test_the_records_name_the_model_that_wrote_them(self):
+        """A run takes one model's results, and its records name that model: Claude Opus wrote the first reviews, and
+        Claude Sonnet writes the rest."""
+        for name in ("Fixture.triple", "Fixture.double", "Fixture.IsSmall"):
+            self.yes(name)
+        code, said = self.run_main([self.result("Fixture.triple")])
+        self.assertEqual(code, 0, said)
+        sonnet = {**MIGRATION, "agent": {**MIGRATION["agent"], "model": "claude-sonnet-5-5"}}
+        code, said = self.run_main([self.result("Fixture.double"), self.result("Fixture.IsSmall", "hold", "Look.")],
+                                   None, None, "--model", "claude-sonnet-5-5")
+        self.assertEqual(code, 0, said)
+        self.assertIn("claude-sonnet-5-5", said)
+        self.assertEqual([(r["subject"]["name"], r["kind"], r["by"]) for r in self.written()],
+                         [("Fixture.triple", "review", MIGRATION),  # claude-opus-5-5 unless a run names another
+                          ("Fixture.double", "review", sonnet), ("Fixture.IsSmall", "comment", sonnet)])
+
     def test_the_time_is_the_run_s_unless_given(self):
         self.yes("Fixture.triple")
         code, said = self.run_main([self.result("Fixture.triple")], at=None)

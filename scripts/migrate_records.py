@@ -4,7 +4,7 @@
   python3 scripts/migrate_records.py voyager-refused TSV --dataset DIR [--store DIR] --comment-url URL
                                      --at TIME --session S --out FILE
   python3 scripts/migrate_records.py standard BUNDLES RESULTS CHECKS --dataset DIR --source TAUCETI [--store DIR]
-                                     [--out-dir DIR] --prefix PREFIX [--held FILE] [--at TIME]
+                                     [--out-dir DIR] --prefix PREFIX [--model MODEL] [--held FILE] [--at TIME]
 
 `voyager-refused`: Voyager's yeses that the intake refused for want of their reasons, filed with the reasons
 transcribed from Voyager's run notes. On 2026-10-30 Voyager posted bare `Reviewed-by: <decl>` lines on the bulk
@@ -27,15 +27,16 @@ RESULTS the writers' (scripts/migrate_write.py collect, or merge for several rou
 to each result. The run checks each result again, as migrate_check.py does, against TAUCETI, a checkout of the library
 at the bundles' commit, and each check of CHECKS must agree with it, so that checks from an older checker, or of other
 results, never let a result through. The records are keyed in the dataset DIR, which is the bundles' (the same commit),
-and made by the migration (Tau Ceti review migration, claude-opus-5-5, through CBirkbeck's account, in the run PREFIX)
-at TIME, which is the time of the run unless given: make them just before they are pushed, so that the records that come
-between are few. They go to `<PREFIX>-<nn>.jsonl` in OUT-DIR (evidence/records), at most 2,000 to a file, numbered on
-from the files of that prefix there already, none changed; each comes from its own line of its file, which its origin
-links in evidence/records on main. The store is read as it stands, for a declaration's latest accept, an open no and a
-standard review there already: bring it up to date first. The results are the run, and a run is a wave, since the
-writing is spread over several: a bundle with no result is not in it, as a retry round's results hold only what it ran
-again, and nor is one whose result is `collect`'s `no result`, not written yet, which gets no record and no line in
-HELD. A result is:
+and made by the migration (Tau Ceti review migration, as MODEL, the model that wrote the results, claude-opus-5-5 unless
+given, through CBirkbeck's account, in the run PREFIX) at TIME, which is the time of the run unless given: make them
+just before they are pushed, so that the records that come between are few. They go to `<PREFIX>-<nn>.jsonl` in OUT-DIR
+(evidence/records), at most 2,000 to a file, numbered on from the files of that prefix there already, none changed; each
+comes from its own line of its file, which its origin links in evidence/records on main. The store is read as it stands,
+for a declaration's latest accept, an open no and a standard review there already: bring it up to date first. The
+results are the run, and a run is a wave, since the writing is spread over several: a bundle with no result is not in
+it, as a retry round's results hold only what it ran again, and nor is one whose result is `collect`'s `no result`, not
+written yet, which gets no record and no line in HELD. A run takes one model's results, so that each record names the
+model that wrote it. A result is:
 - passed by its check, approved, and no no on the declaration is open (the bundle says so, or the store does now): an
   accept holding the review as a first version, with its cells as `checked`. Writing the review approves it, as an AI's
   write does. As evidence-store's accepts do, it supersedes the migration's own latest earlier accept of the
@@ -99,6 +100,9 @@ SITE_URL = "https://cbirkbeck.github.io/tauceti-reviewed-by-test/"
 URI_SAFE = "!~*'()"
 #: The most records a file holds.
 PER_FILE = 2000
+#: The model that wrote the migration's first reviews: the records' model, unless a run names the one that wrote its
+#: results.
+MODEL = "claude-opus-5-5"
 #: The most problems a refused run prints: files that do not belong together make one for every result.
 SHOWN = 50
 #: The note of a review held for the owner (`standard.note`), and the reasons a declaration is listed that no result or
@@ -179,11 +183,11 @@ def voyager_refused(rows: list[tuple[int, str, str]], ds: Dataset, store: Store,
     return out, problems
 
 
-def migration(session: str) -> dict:
-    """The migration, as the records name it: Claude writing the standard reviews, through CBirkbeck's account, in the
-    run `session`."""
+def migration(session: str, model: str = MODEL) -> dict:
+    """The migration, as the records name it: Claude writing the standard reviews, as the model `model`, through
+    CBirkbeck's account, in the run `session`."""
     return {"kind": "agent", "identity": {"kind": "github", "id": "CBirkbeck"}, "involvement": "unknown",
-            "agent": {"tool": "Tau Ceti review migration", "model": "claude-opus-5-5", "session": session}}
+            "agent": {"tool": "Tau Ceti review migration", "model": model, "session": session}}
 
 
 def now() -> str:
@@ -250,13 +254,14 @@ class Plan:
 
 
 def standard_records(bundles: list[dict], results: list[dict], checks: list[dict], ds: Dataset, store: Store, at: str,
-                     session: str, source: Path | None) -> Plan:
+                     session: str, source: Path | None, model: str = MODEL) -> Plan:
     """The records and the held list the results make (see the module's docstring), keyed in `ds`, made at `at` by
-    the migration in the run `session`, against the records of `store` as the page reads them for `ds`
-    (evidence-core's `Evidence`: a declaration renamed keeps its records). Each result is checked again as
-    migrate_check.py checks it, against `source`, the library at the bundles' commit, and its check must agree."""
+    the migration in the run `session`, as the model `model` that wrote the results, against the records of `store` as
+    the page reads them for `ds` (evidence-core's `Evidence`: a declaration renamed keeps its records). Each result is
+    checked again as migrate_check.py checks it, against `source`, the library at the bundles' commit, and its check
+    must agree."""
     plan = Plan()
-    by, rubric = migration(session), store.rubric
+    by, rubric = migration(session, model), store.rubric
     bundle_of = keyed(bundles, "bundles", plan.problems)
     check_of = keyed(checks, "checks", plan.problems)
     result_of = keyed(results, "results", plan.problems)
@@ -435,7 +440,7 @@ def run_standard(args: argparse.Namespace) -> int:
         print(f"error: the checkout {source} is at {head[:12]}, the dataset at {ds.commit[:12]}: give the library at "
               "the bundles' commit", file=sys.stderr)
         return 2
-    plan = standard_records(bundles, results, checks, ds, store, at, args.prefix, source)
+    plan = standard_records(bundles, results, checks, ds, store, at, args.prefix, source, args.model)
     files, problems = [], plan.problems
     if not problems:
         files, problems = write_files(plan.records, Path(args.out_dir), args.prefix, store.rubric)
@@ -449,8 +454,8 @@ def run_standard(args: argparse.Namespace) -> int:
     approved = [r["subject"]["name"] for r in plan.records if r["kind"] == "review"]
     added, removed = write_held(Path(args.held), plan.held, approved, f"{args.prefix}, {at}")
     approved = sum(r["kind"] == "review" for r in plan.records)
-    print(f"wrote {count(len(plan.records), 'record')} to {count(len(files), 'file')} in {args.out_dir}: "
-          f"{approved} approved, {len(plan.records) - approved} held for the owner as comments")
+    print(f"wrote {count(len(plan.records), 'record')} to {count(len(files), 'file')} in {args.out_dir}, as written by "
+          f"{args.model}: {approved} approved, {len(plan.records) - approved} held for the owner as comments")
     print(f"{count(len(plan.held), 'declaration')} for the owner: {count(added, 'line')} added to {args.held}, and "
           f"{count(removed, 'line')} taken out, of declarations approved now or listed again")
     if plan.skipped:
@@ -481,6 +486,8 @@ def main(argv: list[str]) -> int:
     std.add_argument("--store", default=str(STORE), help="the evidence store (default: evidence/)")
     std.add_argument("--out-dir", default=str(STORE / "records"), help="where the files go (default: evidence/records)")
     std.add_argument("--prefix", required=True, help="the files' name and the run, e.g. standard-migration-2026-11-02")
+    std.add_argument("--model", default=MODEL, help=f"the model that wrote the results, which the records name "
+                     f"(default {MODEL}): a run takes one model's results")
     std.add_argument("--held", default=str(HELD),
                      help="the list for the owner (default: docs/standard-reviews-held.md)")
     std.add_argument("--at", help="the records' time, e.g. 2026-11-02T09:30:00Z (default: now)")
