@@ -243,6 +243,8 @@ class SplitTests(Temporary):
         # Ruling R53: a shortened citation keeps three of its words as the text writes them, a name among them.
         self.assertIn("keep at least three consecutive words of the citation as the text writes them, a name", prompt)
         self.assertNotIn("You may shorten it.", prompt)
+        # The final review's Minor 5: the reviews ran long (median 424 words), so the migration asks for 400 at most.
+        self.assertIn("at most about 400 words", prompt)
         # The migration's own example passes the check, against the bundle it says it was written from.
         example = prompt.split("## An example", 1)[1].split("~~~review\n", 1)[1].split("\n~~~", 1)[0]
         decl = "TauCeti.Foo.nilradical_eq_sInf"

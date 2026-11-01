@@ -120,7 +120,9 @@ bundle and the program checks the review against it:
 - the roadmap is cited only where its block states the declaration, and without a link, since the bundle gives no
   commit (3);
 - no Check is listed that `checks` does not give, not even as missing (4);
-- an error is not filed as a no: the declaration is held (2), and the review still describes it.
+- an error is not filed as a no: the declaration is held (2), and the review still describes it;
+- the review is at most about 400 words, its three parts together: the guide's 150 to 400 is the length to aim for,
+  and a review over 400 words says more than a reader needs.
 
 The guide's example lists a Check and names a book that a bundle may not give; the migration's own example follows 4.
 The guide's rules on edits do not concern you: you write first versions.
