@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Records the migration to standard reviews files in the evidence store, as files of records.
+"""Makes the records of the migration to standard reviews, as files for the evidence store.
 
   python3 scripts/migrate_records.py voyager-refused TSV --dataset DIR [--store DIR] --comment-url URL
                                      --at TIME --session S --out FILE

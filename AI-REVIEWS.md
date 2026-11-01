@@ -456,11 +456,12 @@ commit the site shows, and never for its own work:
   answered (`tool=Codex; model=GPT-6 Astra`), beside its own. Its lines come as comments on issue #1,
   marked `tool=Voyager`, and its noes as issues.
 - **The red team** (`/redteam`) audits files on Tau Ceti's `main`, declaration by declaration, trying
-  to break each one in Lean. It reviews a declaration only when its audit confirmed no finding that one
-  of the site's checks covers: `object`, `convention`, `edge-cases`, `junk`, `vacuous` and `choice` cover
-  its correctness findings, `generality` its generality findings, and `naming` its naming and docs
-  findings. For such a declaration it approves, edits or writes the standard review; what it finds wrong
-  it fixes in a Tau Ceti pull request instead of answering no, and that declaration waits for a later
-  audit to find it clean. Its lines for a file go up in one or more comments on issue #1, marked
-  `tool=Tau Ceti red team`, once the site shows the file exactly as audited; a file new or changed since
-  the site's commit waits for the site to catch up.
+  to break each one in Lean. It reviews a declaration only when its audit confirmed no CRITICAL finding
+  of any kind against it, and no finding that one of the site's checks covers: `object`, `convention`,
+  `edge-cases`, `junk`, `vacuous` and `choice` cover its correctness findings, `generality` its
+  generality findings, and `naming` its naming and docs findings. For such a declaration it approves,
+  edits or writes the standard review; what it finds wrong it fixes in a Tau Ceti pull request instead
+  of answering no, and that declaration waits for a later audit to find it clean. Its lines for a file
+  go up in one or more comments on issue #1, marked `tool=Tau Ceti red team`, once the site shows the
+  file exactly as audited; a file new or changed since the site's commit waits for the site to catch
+  up.
