@@ -31,7 +31,8 @@ result, the bundle, and Tau Ceti's files for the Checks a review lists, and asks
   corollary, definition, section, chapter, tag or `§` with its number (in English, abbreviated, French or German),
   and after a plural every number of its list, is looked for in What it says, the prose of References and tests, its
   tests' lines, and Lean subtleties alike; and **a link anywhere in the review is in no text of the bundle**, as
-  written (Ruling R53);
+  written (Ruling R53): a whole link of the text, not the start of one, and read without the backtick, asterisk or
+  quotation mark around it;
 - **a test is not one of the bundle's `tests`, or a Check is not one of its `checks`**, at the place the bundle gives
   for it, with its tag at that line of TAUCETI; or **References and tests names in backticks a Lean name** that is
   none of its tests, the declaration or what it rests on, unless a reference copies it from its text; or **it holds a
@@ -115,6 +116,9 @@ KEYWORD_AT = re.compile(rf"(?<![^\W\d_])(?i:{KEYWORD})(?![^\W\d_])")
 NUMERAL_ROMAN = re.compile(r"(?<![^\W_])(?:[IVXLC]{2,}(?:[.:-][^\W_]+)*|[IVXLC](?:[.:-][^\W_]+)+)(?![^\W_])")
 #: A link's address: up to a space, a bracket or an angle, with the parentheses of one like `…/Ring_(mathematics)`.
 URL = re.compile(r"https?://[^\s<>()\[\]]+(?:\([^\s<>()]*\)[^\s<>()\[\]]*)*")
+#: What a link's match takes in after the link: a stop, or the backtick, asterisk, quotation mark or angle that closes
+#: the code, italics or quotation the link is in.
+AFTER_LINK = ".,;:!?`*\"'>"
 #: Where a reference's citation ends and the writer's own words begin: its first `: `, ` — `, ` – ` or ` -- `.
 SPLIT = re.compile(r":\s| [—–] | -- ")
 #: A title in italics, `*…*` or `_…_`.
@@ -296,22 +300,39 @@ def plain(text: str) -> str:
     return unicodedata.normalize("NFKC", text).translate(DASHES).lower()
 
 
+def links_in(text: str) -> list[str]:
+    """The links of a text (`URL`), each without what its match took in after it (`AFTER_LINK`), nor a last `)` it does
+    not open: a link in backticks, italics or quotes, or at the end of a sentence, is the link itself."""
+    out = []
+    for link in URL.findall(text):
+        while True:
+            cut = link.rstrip(AFTER_LINK)
+            if cut.endswith(")") and cut.count(")") > cut.count("("):
+                cut = cut[:-1]
+            if cut == link:
+                break
+            link = cut
+        out.append(link)
+    return out
+
+
 @dataclass(frozen=True)
 class Source:
     """A text of a bundle that a reference may come from: what it is, as a problem names it, the text as written, the
-    text as citations are compared (`plain`), its words (`WORD`), and its plain text without links' addresses, where a
-    citation's first name is looked for."""
+    text as citations are compared (`plain`), its words (`WORD`), its plain text without links' addresses, where a
+    citation's first name is looked for, and its links (`links_in`), each of which a review may give, whole."""
     label: str
     text: str
     plain: str
     words: tuple[str, ...] = ()
     unlinked: str = ""
+    links: frozenset[str] = frozenset()
 
 
 def source(label: str, text: str) -> Source:
     """A text of a bundle, read once for every reference traced to it."""
     p = plain(text)
-    return Source(label, text, p, tuple(WORD.findall(p)), URL.sub(" ", p))
+    return Source(label, text, p, tuple(WORD.findall(p)), URL.sub(" ", p), frozenset(links_in(text)))
 
 
 def sources(bundle: dict) -> list[Source]:
@@ -470,11 +491,11 @@ def trace(ref: str, texts: list[Source]) -> tuple[Source | None, str | None]:
     # gives none.
     prose = cite + MATH.sub(" ", bare[len(cite):])
     numbers = list(dict.fromkeys(marks(prose) + [m.lower() for m in NUMERAL_ROMAN.findall(outside)]))
-    links = [u.rstrip(".,;:!?") for u in URL.findall(ref)]
+    links = links_in(ref)
     best: tuple[Source, list[str], list[str]] | None = None
     for t in whole:
         missing = [mark for mark in numbers if not gives(t.plain, mark)]
-        unlinked = [u for u in links if u not in t.text]
+        unlinked = [u for u in links if u not in t.links]
         if not missing and not unlinked:
             return t, None
         if best is None or len(missing) + len(unlinked) < len(best[1]) + len(best[2]):
@@ -675,11 +696,12 @@ def unsupported(review: str, texts: list[Source]) -> list[str]:
 
 def unlinked(review: str, texts: list[Source]) -> list[str]:
     """The links of a review outside its references (`parts_apart`) that no text of the bundle holds as written (Ruling
-    R53): in What it says, the prose of References and tests, a test's line or Lean subtleties, code included."""
+    R53), whole (`links_in`): in What it says, the prose of References and tests, a test's line or Lean subtleties, code
+    included."""
     problems = []
     for where, text in parts_apart(review):
-        for link in dict.fromkeys(u.rstrip(".,;:!?") for u in URL.findall(text)):
-            if not any(link in t.text for t in texts):
+        for link in dict.fromkeys(links_in(text)):
+            if not any(link in t.links for t in texts):
                 problems.append(f"{where} links {link}, which no text of the bundle holds: link only what the bundle "
                                 "gives, as it gives it")
     return problems

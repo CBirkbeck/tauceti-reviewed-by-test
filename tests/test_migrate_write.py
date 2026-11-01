@@ -622,6 +622,30 @@ class CheckTests(Temporary):
         self.assertNamed(refs("", "And:", "  - Bourbaki, *Algebra*, Chapter II."), "a bullet indented under prose",
                          "use `- ` bullets at the margin, which the site's edit check protects")
 
+    def test_check_reads_a_link_whole(self):
+        """A link is the link itself, without the closing mark of the code, italics or quotation it is in, and it must
+        be a whole link of a text of the bundle, not the start of one (`…/tag/032` is not `…/tag/032F`)."""
+        wiki = "https://en.wikipedia.org/wiki/Nilradical_of_a_ring"
+        ring = "https://en.wikipedia.org/wiki/Ring_(mathematics)"
+        stacks = "https://stacks.math.columbia.edu/tag/032F"
+        linked = bundle(docstring=bundle()["docstring"] + f" See also Stacks Project, Tag 032F, {stacks}.",
+                        reviews=[{**bundle()["reviews"][0], "text": f"Compare [the notes]({wiki}) and [rings]({ring})."}])
+        check = lambda review: self.problems(linked, result(linked, review))
+        # (a) In backticks, italics or quotes, or between angles, as a link of Markdown, with a stop after it.
+        for shown in (f"`{wiki}`", f"*{wiki}*", f'"{wiki}"', f"'{wiki}'", f"<{wiki}>", f"[it]({wiki})", f"`{wiki}`,"):
+            with self.subTest(shown=shown):
+                self.assertEqual(check(text(says=SAYS + f"\n\nSee {shown}.")), [])
+                self.assertEqual(check(text(refs=REFS.split("\n")[1] + f"\n- Stacks Project, Tag 032F: see {stacks}, "
+                                            f"and {shown.replace(wiki, stacks)}.")), [])
+        # A link with brackets of its own is whole, in brackets or not.
+        self.assertEqual(check(text(says=SAYS + f"\n\nSee [rings]({ring}), or {ring}.")), [])
+        # (b) The start of a link of the bundle is not that link.
+        tag = stacks[:-1]
+        self.assertNamed(check(text(says=SAYS + f"\n\nSee [the tag]({tag}).")), "What it says", f"links {tag}",
+                         "no text of the bundle holds")
+        self.assertNamed(check(text(refs=REFS.split("\n")[1] + f"\n- Stacks Project, Tag 032F: [the tag]({tag}).")),
+                         f"the docstring does not hold the link {tag}")
+
     def test_check_takes_no_number_from_the_mathematics_after_a_citation(self):
         """The final review's Minor 1: the words after a reference's citation give its numbers in prose only, as the
         rest of the review is read. `EGNO, antipode axiom 1.22.1` was refused for the `(1)` and `(2)` of its own TeX."""
