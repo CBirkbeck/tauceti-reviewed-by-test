@@ -622,6 +622,17 @@ class CheckTests(Temporary):
         self.assertNamed(refs("", "And:", "  - Bourbaki, *Algebra*, Chapter II."), "a bullet indented under prose",
                          "use `- ` bullets at the margin, which the site's edit check protects")
 
+    def test_check_an_initial_is_no_name(self):
+        """Ruling R55: a one-letter word is never a citation's first name. An initial stood for the author, so that
+        `S. Lang shows that …` traced to any text with a lone `s` in it."""
+        b = bundle()  # its texts name Atiyah and Macdonald, and not Bourbaki
+        refs = lambda ref: self.problems(b, result(b, text(refs=REFS.split("\n")[1] + "\n" + ref)))
+        self.assertNamed(refs("- N. Bourbaki, *Introduction to Commutative Algebra*, Proposition 1.7."),
+                         "does not name Bourbaki")
+        self.assertEqual(refs("- M. F. Atiyah and I. G. Macdonald, *Introduction to Commutative Algebra*, "
+                              "Proposition 1.7."), [])
+        self.assertEqual(migrate_check.first_name("S. Lang, *Algebra*, Chapter XIII"), "Lang")
+
     def test_check_tests_and_checks_come_from_the_bundle(self):
         source = self.tmp / "tauceti"
         (source / "TauCeti" / "Examples").mkdir(parents=True)

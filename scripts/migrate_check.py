@@ -23,8 +23,8 @@ result, the bundle, and Tau Ceti's files for the Checks a review lists, and asks
   with a backticked name or `Check`. One text of the bundle (its docstring, the comments in its value, an earlier
   review, Voyager's announcement, the roadmap block; not its Lean code, nor its tests' texts) must hold its citation,
   what comes before its first `:` or ` — `: three consecutive words of it (all, when fewer), a name or a number among
-  them; its first name, mostly its author; and the words of each title in italics it gives, outside mathematics and
-  code (Rulings R52, R53). The same text must give every number of it, a Roman numeral of its citation too, glued to
+  them; its first name, mostly its author, never an initial; and the words of each title in italics it gives, outside
+  mathematics and code (Rulings R52, R53, R55). The same text must give every number of it, a Roman numeral of its citation too, glued to
   no other digit (a range gives its ends), and hold every link of it;
 - **a citation anywhere in the review gives a number no text of the bundle gives.** A theorem, proposition, lemma,
   corollary, definition, section, chapter, tag or `§` with its number (in English, abbreviated, French or German),
@@ -401,16 +401,16 @@ def named_words(text: str) -> list[tuple[str, bool]]:
 
 
 def first_name(text: str) -> str | None:
-    """The first name a citation gives (Ruling R53): its first word that begins with a capital and is no word as common
-    as `The`, no citation word (`Proposition`, `Ch.`, `Stacks Project`), no Roman numeral, and all letters: no number
-    or tag, nor the letters within one (`02RV`). Mostly its author, else the first word of its title; None when it
-    gives none."""
+    """The first name a citation gives (Rulings R53, R55): its first word that begins with a capital and is no word as
+    common as `The`, no citation word (`Proposition`, `Ch.`, `Stacks Project`), no Roman numeral, all letters (no number
+    or tag, nor the letters within one, `02RV`), and longer than one letter, since an initial is not the name it stands
+    for (`N. Bourbaki` names Bourbaki). Mostly its author, else the first word of its title; None when it gives none."""
     norm = unicodedata.normalize("NFKC", text).translate(DASHES)
     spans = [m.span() for m in KEYWORD_AT.finditer(norm)]
     for m in re.finditer(r"[^\W_]+", norm):
         w = m[0]
-        if w.isalpha() and w[0].isupper() and w.lower() not in COMMON and not re.fullmatch(r"[IVXLC]+", w) \
-                and not any(a <= m.start() < b for a, b in spans):
+        if len(w) > 1 and w.isalpha() and w[0].isupper() and w.lower() not in COMMON \
+                and not re.fullmatch(r"[IVXLC]+", w) and not any(a <= m.start() < b for a, b in spans):
             return w
     return None
 
