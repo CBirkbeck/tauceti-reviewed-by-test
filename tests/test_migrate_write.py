@@ -88,7 +88,8 @@ def run(main, *argv: str, stdin: str | None = None) -> tuple[int, str, str]:
 
 
 def read(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    """The lines of a JSONL file, which end at `\\n` alone."""
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").split("\n") if line.strip()]
 
 
 def jsonl(path: Path, rows: list) -> Path:
@@ -318,6 +319,26 @@ class AddTests(Temporary):
         self.assertIn("1 of 2", out)
         self.assertNotIn(NILPOTENT, out)
         self.assertIn("line 2: `TauCeti.Foo.other`", out)
+
+    def test_a_review_with_a_unicode_line_break_stays_one_line(self):
+        """The final review's Minor 3: JSON lines end at `\\n` alone, and JSON writes U+2028, U+2029 and U+0085 as they
+        are. Read with `splitlines`, the result file was cut at them: `add`, which rewrites the whole file, cut another
+        result's line for good, and `collect` and the checker found no result in it."""
+        odd = text(subtle=SUBTLE + "\n- A line separator, a paragraph separator and a next\x85line, as written.")
+        code, out, err = self.add(odd, "--verdict", "approve")
+        self.assertEqual(code, 0, err)
+        code, out, err = self.add(text(), "--verdict", "approve", decl="TauCeti.Foo.other")
+        self.assertEqual(code, 0, err)
+        lines = [line for line in self.results.read_text(encoding="utf-8").split("\n") if line.strip()]
+        self.assertEqual(len(lines), 2, "a result's line was cut")
+        code, out, err = run(migrate_write.main, "todo", str(self.results))
+        self.assertIn("the batch is done", out)
+        code, out, err = run(migrate_write.main, "collect", "pilot", "--work", str(self.work))
+        self.assertEqual(code, 0, err)
+        self.assertIn("2 results", out)
+        collected = self.work / "pilot" / "results.jsonl"
+        self.assertEqual([r["review"] for r in read(collected)], [standard.normalize(odd), standard.normalize(text())])
+        self.assertEqual(migrate_check.read_jsonl(collected), read(collected))  # as the checker reads them
 
     def test_add_refuses_what_the_contract_does_not_allow(self):
         before = "unchanged\n"
@@ -628,8 +649,9 @@ class CheckTests(Temporary):
         wiki = "https://en.wikipedia.org/wiki/Nilradical_of_a_ring"
         ring = "https://en.wikipedia.org/wiki/Ring_(mathematics)"
         stacks = "https://stacks.math.columbia.edu/tag/032F"
+        compared = f"Compare [the notes]({wiki}) and [rings]({ring})."
         linked = bundle(docstring=bundle()["docstring"] + f" See also Stacks Project, Tag 032F, {stacks}.",
-                        reviews=[{**bundle()["reviews"][0], "text": f"Compare [the notes]({wiki}) and [rings]({ring})."}])
+                        reviews=[{**bundle()["reviews"][0], "text": compared}])
         check = lambda review: self.problems(linked, result(linked, review))
         # (a) In backticks, italics or quotes, or between angles, as a link of Markdown, with a stop after it.
         for shown in (f"`{wiki}`", f"*{wiki}*", f'"{wiki}"', f"'{wiki}'", f"<{wiki}>", f"[it]({wiki})", f"`{wiki}`,"):

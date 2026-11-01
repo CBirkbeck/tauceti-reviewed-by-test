@@ -769,9 +769,11 @@ def parse_cells(spec: str) -> tuple[dict[str, str] | None, str]:
 # --- the command ---------------------------------------------------------------------------------------------------
 
 def read_jsonl(path: Path) -> list:
-    """The JSON values of a file, one a line, blank lines skipped. A line that is not JSON is a ValueError naming it."""
+    """The JSON values of a file, one a line, blank lines skipped. A line that is not JSON is a ValueError naming it. The
+    lines are cut at `\\n` only, as JSON lines end: a review may hold a Unicode line separator, which `splitlines` would
+    cut at."""
     out = []
-    for n, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
+    for n, line in enumerate(Path(path).read_text(encoding="utf-8").split("\n"), 1):
         if line.strip():
             try:
                 out.append(json.loads(line))

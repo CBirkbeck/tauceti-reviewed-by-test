@@ -211,7 +211,7 @@ def read_results(path: Path, decls: set[str]) -> tuple[dict[str, list[dict]], Co
     given: dict[str, list[dict]] = {}
     broken: Counter = Counter()
     stray: list[str] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8").split("\n"):
         if not line.strip():
             continue
         got, decl = parsed(line)
@@ -282,7 +282,7 @@ def batch_of(result: Path) -> tuple[Path, Path, list[dict]]:
 
 def left(path: Path, bundles: list[dict]) -> list[tuple[int, str]]:
     """The bundles of a batch that have no line in its result file yet, each as (its line in the batch, its name)."""
-    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    lines = path.read_text(encoding="utf-8").split("\n") if path.exists() else []
     done = {named_in(line) for line in lines if line.strip()}
     return [(k, b.get("decl")) for k, b in enumerate(bundles, 1) if b.get("decl") not in done]
 
@@ -310,7 +310,7 @@ def add(a: argparse.Namespace) -> int:
     wrong = migrate_check.shape(result, bundle)
     if wrong:
         raise Refused("; ".join(wrong))
-    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    lines = path.read_text(encoding="utf-8").split("\n") if path.exists() else []
     kept = [line for line in lines if line.strip() and named_in(line) != a.decl]
     replaced = len(kept) < len([line for line in lines if line.strip()])
     kept.append(json.dumps(result, ensure_ascii=False))
