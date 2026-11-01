@@ -110,9 +110,9 @@ SHOWN = 50
 HELD_NOTE = "Written in the migration; held for the owner."
 NO_YES = "no yes to attach the review to"
 OPEN_NO = "a no on it is open"
-#: The held list's title, written when the file is made.
 #: A line of the held list (`held_line`), with the declaration it is of.
 HELD_LINE = re.compile(r"^- \[`(.+?)`\]\(<")
+#: The held list's title, written when the file is made.
 HELD_TITLE = (
     "# Standard reviews held for the owner\n\n"
     "Declarations the migration to standard reviews did not approve, a line each: why, and where the site shows the "
@@ -453,9 +453,8 @@ def run_standard(args: argparse.Namespace) -> int:
         return 1
     approved = [r["subject"]["name"] for r in plan.records if r["kind"] == "review"]
     added, removed = write_held(Path(args.held), plan.held, approved, f"{args.prefix}, {at}")
-    approved = sum(r["kind"] == "review" for r in plan.records)
     print(f"wrote {count(len(plan.records), 'record')} to {count(len(files), 'file')} in {args.out_dir}, as written by "
-          f"{args.model}: {approved} approved, {len(plan.records) - approved} held for the owner as comments")
+          f"{args.model}: {len(approved)} approved, {len(plan.records) - len(approved)} held for the owner as comments")
     print(f"{count(len(plan.held), 'declaration')} for the owner: {count(added, 'line')} added to {args.held}, and "
           f"{count(removed, 'line')} taken out, of declarations approved now or listed again")
     if plan.skipped:
@@ -478,8 +477,8 @@ def main(argv: list[str]) -> int:
     refused.add_argument("--out", required=True, help="the file of records to write")
     std = sub.add_parser("standard", help="the migration's checked standard reviews, and the list held for the owner")
     std.add_argument("bundles", help="the bundles (scripts/migrate_inputs.py)")
-    std.add_argument("results", help="the writers' results (scripts/migrate_write.py collect)")
-    std.add_argument("checks", help="the checks of the results (scripts/migrate_check.py), those of the last round")
+    std.add_argument("results", help="the writers' results (scripts/migrate_write.py collect, or merge)")
+    std.add_argument("checks", help="the checks of RESULTS (scripts/migrate_check.py), which this run checks again")
     std.add_argument("--dataset", required=True, help="the dataset of the bundles' commit")
     std.add_argument("--source", required=True, help="a checkout of the library at the bundles' commit, as "
                      "migrate_check.py takes it")
