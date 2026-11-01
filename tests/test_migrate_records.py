@@ -223,10 +223,10 @@ class StandardRecordsTests(unittest.TestCase):
     def test_failed_checks_write_nothing_but_the_list(self):
         for name in ("Fixture.triple_one", "Fixture.triple_two", "Fixture.IsSmall"):
             self.yes(name)
-        results = [self.failing("Fixture.triple_one"), {"decl": "Fixture.triple_two", "error": "no result"},
+        results = [self.failing("Fixture.triple_one"), {"decl": "Fixture.triple_two", "error": "unparseable line"},
                    self.failing("Fixture.IsSmall", "hold", "Twelve is small too, so the no stands.")]
         checks = [self.check("Fixture.triple_one", False, "an older checker's words"),
-                  self.check("Fixture.triple_two", False, "no result"),
+                  self.check("Fixture.triple_two", False, "its result line is not valid JSON"),
                   self.check("Fixture.IsSmall", False, "a reference cannot be traced")]
         code, said = self.run_main(results, None, checks)
         self.assertEqual(code, 0, said)
@@ -236,7 +236,7 @@ class StandardRecordsTests(unittest.TestCase):
         self.assertIn('failed checks: the reference "Bourbaki, *Algebra*, Chapter II." is not in the bundle', one)
         self.assertIn(link("Fixture.triple_one"), one)
         two = self.held_line("Fixture.triple_two")
-        self.assertIn("no result: no result", two)  # an error result: the error is the reason, not the check's line
+        self.assertIn("no result: unparseable line", two)  # an error: the error is the reason, not the check's line
         self.assertIn(link("Fixture.triple_two"), two)
         # A review held and then failed is a failure to record, but the writer's concern is not lost with it.
         held = self.held_line("Fixture.IsSmall")
@@ -249,6 +249,59 @@ class StandardRecordsTests(unittest.TestCase):
         self.assertEqual(code, 0, said)
         self.assertEqual([r["subject"]["name"] for r in self.written()], ["Fixture.double"])
         self.assertEqual(len(self.held_lines()), 3)  # the three lines were there already: not said twice
+
+    def test_a_run_takes_only_what_was_written(self):
+        """A run is a wave: the writing is spread over several runs, as usage limits allow, and `collect` gives each
+        bundle not written yet `no result`. Such a declaration is not in the run: it gets no record and no line, and its
+        check, if it has one, is not read."""
+        self.yes("Fixture.triple")
+        results = [self.result("Fixture.triple"), {"decl": "Fixture.double", "error": "no result"}]
+        checks = [self.check("Fixture.triple"), self.check("Fixture.double", False, "no result was written for it")]
+        code, said = self.run_main(results, None, checks)
+        self.assertEqual(code, 0, said)
+        self.assertEqual([r["subject"]["name"] for r in self.written()], ["Fixture.triple"])
+        self.assertFalse(self.held.exists())  # nothing for the owner
+        code, said = self.run_main([{"decl": "Fixture.IsSmall", "error": "no result"}], None, [])
+        self.assertEqual(code, 0, said)
+        self.assertFalse(self.held.exists())
+
+    def test_the_held_list_follows_the_runs(self):
+        """The final review's Important 2: the held list is reconciled with each run, not only added to. A later run,
+        a retry round or the next wave, takes out the line of a declaration it approves, and gives one it lists again
+        one line, the new one; a run's heading goes with its last line."""
+        for name in ("Fixture.IsSmall", "Fixture.double"):
+            self.yes(name)
+        first = [self.result("Fixture.one", "hold", "It is `1`, not one."),  # no yes to reply to: no record
+                 self.failing("Fixture.triple"), self.failing("Fixture.IsSmall"), self.failing("Fixture.double")]
+        checks = [self.check("Fixture.one"), *(self.check(r["decl"], False, "x") for r in first[1:])]
+        code, said = self.run_main(first, None, checks)
+        self.assertEqual(code, 0, said)
+        self.assertEqual(self.written(), [])
+        self.assertEqual(len(self.held_lines()), 4)
+        # The next run approves two of them and holds a third; the fourth is not in it.
+        second = [self.result("Fixture.one"), self.result("Fixture.triple"),
+                  self.result("Fixture.IsSmall", "hold", "Twelve is small too.")]
+        later = "2026-11-03T09:30:00Z"
+        code, said = self.run_main(second, at=later)
+        self.assertEqual(code, 0, said)
+        self.assertEqual({r["subject"]["name"]: r["kind"] for r in self.written()},
+                         {"Fixture.one": "review", "Fixture.triple": "review", "Fixture.IsSmall": "comment"})
+        self.assertEqual([x.split("`")[1] for x in self.held_lines()], ["Fixture.double", "Fixture.IsSmall"])
+        self.assertIn("Twelve is small too.", self.held_line("Fixture.IsSmall"))
+        self.assertNotIn("failed checks", self.held_line("Fixture.IsSmall"))
+        text = self.held.read_text(encoding="utf-8")
+        self.assertEqual([x for x in text.split("\n") if x.startswith("#")],
+                         ["# Standard reviews held for the owner", f"## {PREFIX}, {AT}", f"## {PREFIX}, {later}"])
+        self.assertNotIn("\n\n\n", text)
+        # A run that approves the last line of a heading takes the heading too; the title stays.
+        code, said = self.run_main([self.result("Fixture.double")], at="2026-11-04T09:30:00Z")
+        self.assertEqual(code, 0, said)
+        text = self.held.read_text(encoding="utf-8")
+        self.assertEqual([x for x in text.split("\n") if x.startswith("#")],
+                         ["# Standard reviews held for the owner", f"## {PREFIX}, {later}"])
+        self.assertTrue(text.startswith(migrate_records.HELD_TITLE))
+        self.assertEqual([x.split("`")[1] for x in self.held_lines()], ["Fixture.IsSmall"])
+        self.assertNotIn("\n\n\n", text)
 
     def test_files_cap_at_2000(self):
         self.assertEqual(migrate_records.PER_FILE, 2000)

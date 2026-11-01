@@ -22,18 +22,20 @@ reasons, when the dataset lacks its declaration, when the store has the line rec
 yes to the declaration again at or after TIME: that yes counts already, and this one would count beside it.
 
 `standard`: the standard reviews the migration's writers made, as records. BUNDLES are scripts/migrate_inputs.py's;
-RESULTS the writers' (scripts/migrate_write.py collect), `{"decl", "cells", "verdict", "hold", "review"}` or
-`{"decl", "error"}`; CHECKS scripts/migrate_check.py's of RESULTS, a `{"decl", "ok", "problems"}` to each result. The
-run checks each result again, as migrate_check.py does, against TAUCETI, a checkout of the library at the bundles'
-commit, and each check of CHECKS must agree with it, so that checks from an older checker, or of other results, never
-let a result through. The records are keyed in the dataset DIR, which is the bundles' (the same commit), and made by the
-migration (Tau Ceti review migration, claude-opus-5-5, through CBirkbeck's account, in the run PREFIX) at TIME, which
-is the time of the run unless given: make them just before they are pushed, so that the records that come between are
-few. They go to `<PREFIX>-<nn>.jsonl` in OUT-DIR (evidence/records), at most 2,000 to a file, numbered on from the files
-of that prefix there already, none changed; each comes from its own line of its file, which its origin links in
-evidence/records on main. The store is read as it stands, for a declaration's latest accept, an open no and a standard
-review there already: bring it up to date first. The results are the run: a bundle with no result is not in it, as a
-retry round's results hold only what it ran again. A result is:
+RESULTS the writers' (scripts/migrate_write.py collect, or merge for several rounds), `{"decl", "cells", "verdict",
+"hold", "review"}` or `{"decl", "error"}`; CHECKS scripts/migrate_check.py's of RESULTS, a `{"decl", "ok", "problems"}`
+to each result. The run checks each result again, as migrate_check.py does, against TAUCETI, a checkout of the library
+at the bundles' commit, and each check of CHECKS must agree with it, so that checks from an older checker, or of other
+results, never let a result through. The records are keyed in the dataset DIR, which is the bundles' (the same commit),
+and made by the migration (Tau Ceti review migration, claude-opus-5-5, through CBirkbeck's account, in the run PREFIX)
+at TIME, which is the time of the run unless given: make them just before they are pushed, so that the records that come
+between are few. They go to `<PREFIX>-<nn>.jsonl` in OUT-DIR (evidence/records), at most 2,000 to a file, numbered on
+from the files of that prefix there already, none changed; each comes from its own line of its file, which its origin
+links in evidence/records on main. The store is read as it stands, for a declaration's latest accept, an open no and a
+standard review there already: bring it up to date first. The results are the run, and a run is a wave, since the
+writing is spread over several: a bundle with no result is not in it, as a retry round's results hold only what it ran
+again, and nor is one whose result is `collect`'s `no result`, not written yet, which gets no record and no line in
+HELD. A result is:
 - passed by its check, approved, and no no on the declaration is open (the bundle says so, or the store does now): an
   accept holding the review as a first version, with its cells as `checked`. Writing the review approves it, as an AI's
   write does. As evidence-store's accepts do, it supersedes the migration's own latest earlier accept of the
@@ -43,12 +45,14 @@ retry round's results hold only what it ran again. A result is:
   reviewer's, never to a no or a question, which would then be taken for answered (Ruling R14). A declaration with no
   accept has no record, since there is none to reply to;
 - an error, or failed by its check: no record.
-HELD (docs/standard-reviews-held.md) takes a line for each declaration that is held or has no record, with the reason
-(`no result: …`; `failed checks: …`, what this run's check finds, with the writer's own reason added when it held the
-review; `no yes to attach the review to`; or the writer's own) and its address on the site. It is added to when it is
-there, and a line already in it is not added again. A declaration that has a standard review already (a version not
-withdrawn) gets no record, since the migration's would replace that review: the report names it, and HELD lists it if
-it was held.
+HELD (docs/standard-reviews-held.md), the owner's list, is reconciled with the run, not only added to. A declaration
+the run holds or records nothing for has one line: the reason (`no result: …` for another error of `collect`;
+`failed checks: …`, what this run's check finds, with the writer's own reason added when it held the review; `no yes
+to attach the review to`; or the writer's own) and its address on the site. It takes the place of any line of the
+declaration there: a line there already as it is stays where it is, and new ones go under a heading for the run. A
+declaration the run approves loses its line, and a heading left with no line goes; the rest is kept as it is. A
+declaration that has a standard review already (a version not withdrawn) gets no record, since the migration's would
+replace that review: the report names it, and HELD lists it if the run held it, and else keeps any line it had.
 
 Nothing is written, and the exit is 1, when a result has no bundle or no check, a check no result, a check passes a
 result that this run's check fails or fails one it passes, a declaration is given twice, a bundle is at another commit
@@ -103,6 +107,8 @@ HELD_NOTE = "Written in the migration; held for the owner."
 NO_YES = "no yes to attach the review to"
 OPEN_NO = "a no on it is open"
 #: The held list's title, written when the file is made.
+#: A line of the held list (`held_line`), with the declaration it is of.
+HELD_LINE = re.compile(r"^- \[`(.+?)`\]\(<")
 HELD_TITLE = (
     "# Standard reviews held for the owner\n\n"
     "Declarations the migration to standard reviews did not approve, a line each: why, and where the site shows the "
@@ -254,6 +260,9 @@ def standard_records(bundles: list[dict], results: list[dict], checks: list[dict
     bundle_of = keyed(bundles, "bundles", plan.problems)
     check_of = keyed(checks, "checks", plan.problems)
     result_of = keyed(results, "results", plan.problems)
+    for name in [name for name, result in result_of.items() if migrate_check.unwritten(result)]:
+        del result_of[name]  # not written yet: not in this wave, and its check says nothing
+        check_of.pop(name, None)
     for name in result_of:
         plan.problems += [f"`{name}`: it has a result but no {what}" for what, rows in
                           (("bundle", bundle_of), ("check", check_of)) if name not in rows]
@@ -366,20 +375,44 @@ def write_files(records: list[dict], out_dir: Path, prefix: str, rubric: Rubric)
     return paths, []
 
 
-def write_held(path: Path, held: list[tuple[str, str]], heading: str) -> int:
-    """Adds a line to the held list for each (declaration, reason) of `held` that is not in the file already, under a
-    heading `heading` when there is any; makes the file, with its title, when there is none. How many lines it added."""
+def held_line(name: str, why: str) -> str:
+    """A declaration's line in the held list: its name, linked to the site, and why it is there."""
+    return f"- [`{name}`](<{site_link(name)}>) — {one_line(why)}"
+
+
+def write_held(path: Path, held: list[tuple[str, str]], approved: list[str], heading: str) -> tuple[int, int]:
+    """Reconciles the held list with a run (Important 2 of the final review): the lines of each declaration it approved
+    (`approved`) go, and each (declaration, reason) of `held` has one line, the run's, in place of any other of that
+    declaration: a line there already as it is stays where it is, and the others go under a heading `heading`, for the
+    run. A heading left with no line goes too; the rest of the file is kept as it is. The file is made, with its title,
+    when there is none and the run has a line for it. How many lines it added, and how many it took out."""
     path = Path(path)
-    before = path.read_text(encoding="utf-8") if path.exists() else ""
-    have = set(before.split("\n"))
-    lines = [f"- [`{name}`](<{site_link(name)}>) — {one_line(why)}" for name, why in held]
-    new = [line for line in dict.fromkeys(lines) if line not in have]
+    lines = path.read_text(encoding="utf-8").split("\n") if path.exists() else HELD_TITLE.split("\n")
+    wanted = {name: held_line(name, why) for name, why in held}
+    gone, kept, placed = set(approved), [], set()
+    for line in lines:
+        name = m[1] if (m := HELD_LINE.match(line)) else None
+        if name in gone or name in wanted and (line != wanted[name] or name in placed):
+            continue
+        if name in wanted:
+            placed.add(name)
+        kept.append(line)
+    new = [line for name, line in wanted.items() if name not in placed]
+    removed = len(lines) - len(kept)
+    if not new and not removed:
+        return 0, 0
+    # The title and each heading's part, and a heading's part only while it has a line that is not blank.
+    parts: list[list[str]] = [[]]
+    for line in kept:
+        if line.startswith("## "):
+            parts.append([])
+        parts[-1].append(line)
+    blocks = ["\n".join(part).strip("\n") for k, part in enumerate(parts) if k == 0 or any(x.strip() for x in part[1:])]
     if new:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        text = before or HELD_TITLE
-        text += ("" if text.endswith("\n") else "\n") + f"\n## {heading}\n\n" + "\n".join(new) + "\n"
-        path.write_text(text, encoding="utf-8")
-    return len(new)
+        blocks.append(f"## {heading}\n\n" + "\n".join(new))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n\n".join(block for block in blocks if block) + "\n", encoding="utf-8")
+    return len(new), removed
 
 
 def run_standard(args: argparse.Namespace) -> int:
@@ -413,11 +446,13 @@ def run_standard(args: argparse.Namespace) -> int:
         if len(problems) > SHOWN:
             print(f"  … and {len(problems) - SHOWN} more", file=sys.stderr)
         return 1
-    added = write_held(Path(args.held), plan.held, f"{args.prefix}, {at}")
+    approved = [r["subject"]["name"] for r in plan.records if r["kind"] == "review"]
+    added, removed = write_held(Path(args.held), plan.held, approved, f"{args.prefix}, {at}")
     approved = sum(r["kind"] == "review" for r in plan.records)
     print(f"wrote {count(len(plan.records), 'record')} to {count(len(files), 'file')} in {args.out_dir}: "
           f"{approved} approved, {len(plan.records) - approved} held for the owner as comments")
-    print(f"{count(len(plan.held), 'declaration')} for the owner, {count(added, 'line')} added to {args.held}")
+    print(f"{count(len(plan.held), 'declaration')} for the owner: {count(added, 'line')} added to {args.held}, and "
+          f"{count(removed, 'line')} taken out, of declarations approved now or listed again")
     if plan.skipped:
         print(f"{len(plan.skipped)} left alone, since they have a standard review already: "
               + ", ".join(plan.skipped[:10]) + (" …" if len(plan.skipped) > 10 else ""))

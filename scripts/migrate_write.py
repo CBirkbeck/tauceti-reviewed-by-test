@@ -278,12 +278,6 @@ def collect(a: argparse.Namespace) -> int:
     return 0
 
 
-def unwritten(row: dict) -> bool:
-    """Whether a row of results is `collect`'s `no result`: the declaration was not written yet, which says nothing of
-    it."""
-    return migrate_check.errored(row) and row.get("error") == "no result"
-
-
 def merge(a: argparse.Namespace) -> int:
     rows: dict[str, dict] = {}  # each declaration's row, in the order they first come
     origin: dict[str, Path] = {}  # the file it came from
@@ -298,7 +292,7 @@ def merge(a: argparse.Namespace) -> int:
             if decl in seen:
                 raise Refused(f"{path}: `{decl}` is in it twice; a file of results holds one row per declaration")
             seen.add(decl)
-            if decl in rows and unwritten(row):
+            if decl in rows and migrate_check.unwritten(row):
                 continue  # `no result` replaces nothing
             rows[decl] = row
             origin[decl] = path

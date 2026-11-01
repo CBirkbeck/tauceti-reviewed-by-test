@@ -147,6 +147,12 @@ def errored(result: dict) -> bool:
     return "error" in result and set(result) <= {"decl", "error"}
 
 
+def unwritten(result: dict) -> bool:
+    """Whether a line of RESULTS is `collect`'s `no result`: its declaration was not written yet, which says nothing of
+    it."""
+    return errored(result) and result.get("error") == "no result"
+
+
 def shape(result, bundle: dict) -> list[str]:
     """What is wrong with a result's form, its cells and its verdict, for its declaration's bundle."""
     if not isinstance(result, dict):
