@@ -622,6 +622,20 @@ class CheckTests(Temporary):
         self.assertNamed(refs("", "And:", "  - Bourbaki, *Algebra*, Chapter II."), "a bullet indented under prose",
                          "use `- ` bullets at the margin, which the site's edit check protects")
 
+    def test_check_takes_no_number_from_the_mathematics_after_a_citation(self):
+        """The final review's Minor 1: the words after a reference's citation give its numbers in prose only, as the
+        rest of the review is read. `EGNO, antipode axiom 1.22.1` was refused for the `(1)` and `(2)` of its own TeX."""
+        egno = "[EGNO, antipode axiom 1.22.1](https://math.mit.edu/~etingof/tenscat1.pdf#page=44)"
+        b = bundle(reviews=[{**bundle()["reviews"][0], "text": f"The coproduct expansion turns this into {egno}."}])
+        refs = lambda ref: self.problems(b, result(b, text(refs=REFS.split("\n")[1] + "\n" + ref)))
+        cited = ("- EGNO, antipode axiom 1.22.1 — the axiom $\\sum c_{(1)} S(c_{(2)}) = \\varepsilon(c) 1$, which "
+                 "becomes this identity at $c = a_{pq}$.")
+        self.assertEqual(refs(cited), [])
+        self.assertEqual(refs(cited.replace(" — ", ": ")), [])
+        # A number in the words after it, outside mathematics, is still one its text must give.
+        self.assertNamed(refs(cited.replace("at $c", "as in its Example 7.7, at $c")),
+                         "no text of the bundle gives 7.7")
+
     def test_check_an_initial_is_no_name(self):
         """Ruling R55: a one-letter word is never a citation's first name. An initial stood for the author, so that
         `S. Lang shows that …` traced to any text with a lone `s` in it."""

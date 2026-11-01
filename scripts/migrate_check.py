@@ -24,8 +24,9 @@ result, the bundle, and Tau Ceti's files for the Checks a review lists, and asks
   review, Voyager's announcement, the roadmap block; not its Lean code, nor its tests' texts) must hold its citation,
   what comes before its first `:` or ` — `: three consecutive words of it (all, when fewer), a name or a number among
   them; its first name, mostly its author, never an initial; and the words of each title in italics it gives, outside
-  mathematics and code (Rulings R52, R53, R55). The same text must give every number of it, a Roman numeral of its citation too, glued to
-  no other digit (a range gives its ends), and hold every link of it;
+  mathematics and code (Rulings R52, R53, R55). The same text must give every number of it, a Roman numeral of its
+  citation too, glued to no other digit (a range gives its ends), but none from the mathematics of the words after its
+  citation (`$c_{(1)}$`); and hold every link of it;
 - **a citation anywhere in the review gives a number no text of the bundle gives.** A theorem, proposition, lemma,
   corollary, definition, section, chapter, tag or `§` with its number (in English, abbreviated, French or German),
   and after a plural every number of its list, is looked for in What it says, the prose of References and tests, its
@@ -127,8 +128,10 @@ COMMENT = re.compile(r"/-.*?-/|--[^\n]*", re.S)
 #: A Lean name of two parts or more, `TauCeti.Foo.bar`, as a backticked span may be; and the endings of a file's name.
 DOTTED = re.compile(rf"{IDENT}(?:\.[\w'!?✝]+)+")
 FILES = frozenset({"md", "lean", "pdf", "html", "toml", "txt", "json", "yml", "yaml", "py"})
+#: Mathematics, `$…$` or `$$…$$`, whose digits are no numbers a citation gives.
+MATH = re.compile(r"\$\$.*?\$\$|\$[^$\n]*\$", re.S)
 #: Code and mathematics, which no citation is looked for in.
-CODE = re.compile(r"`[^`\n]*`|\$\$.*?\$\$|\$[^$\n]*\$", re.S)
+CODE = re.compile(r"`[^`\n]*`|" + MATH.pattern, re.S)
 #: A Check's place, after its tag: `path:line`, in backticks.
 PLACE = re.compile(r"^Check\s+\*[^*]+\*[\s,;:]*`([^`\s]+):(\d+)`")
 
@@ -422,7 +425,8 @@ def trace(ref: str, texts: list[Source]) -> tuple[Source | None, str | None]:
     invented source; its first name (`first_name`), so that an author the text does not name is not taken from a
     phrase it shares; and the words of each title in italics the citation gives, outside mathematics and code (Rulings
     R52, R53). It must give every number of the reference (`marks`, `gives`), the Roman numerals of its citation too,
-    and hold every link of it. The writer's own words, after the citation, do not trace it."""
+    but none from the mathematics of the writer's words after the citation, and hold every link of it. The writer's own
+    words, after the citation, do not trace it."""
     bare = URL.sub(" ", ref)
     hint = "; a reference does not open with a backticked name" if ref.lstrip().startswith("`") else ""
     cite = SPLIT.split(bare, 1)[0]
@@ -462,7 +466,10 @@ def trace(ref: str, texts: list[Source]) -> tuple[Source | None, str | None]:
         return None, (f'the reference "{ref}" takes its citation from {t.label}, which ' + " and ".join(lacks(t))
                       + ". A reference comes whole from one text, its author and its title too; its citation is what "
                       "comes before its first `:` or ` — `, and words of your own come after" + hint)
-    numbers = list(dict.fromkeys(marks(bare) + [m.lower() for m in NUMERAL_ROMAN.findall(outside)]))
+    # The words after the citation give numbers in their prose only, as the rest of the review is read: `$c_{(1)}$`
+    # gives none.
+    prose = cite + MATH.sub(" ", bare[len(cite):])
+    numbers = list(dict.fromkeys(marks(prose) + [m.lower() for m in NUMERAL_ROMAN.findall(outside)]))
     links = [u.rstrip(".,;:!?") for u in URL.findall(ref)]
     best: tuple[Source, list[str], list[str]] | None = None
     for t in whole:
