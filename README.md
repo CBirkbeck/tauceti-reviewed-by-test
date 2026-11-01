@@ -291,6 +291,17 @@ without the facet, and the Reviewed page has no roadmap filter until the next on
 - `tests/`: unit tests, the suite's fixture (`tests/fixtures`, see its NOTICE), `fixture_site.py`, and
   the browser check `validate_site.py`.
 
+The migration to standard reviews, which moves the AI agents' earlier yeses onto one standard review a
+declaration, has files of its own in `scripts/`, run by hand from a checkout, never by a workflow:
+`migrate_inputs.py` gathers each declaration's bundle, what is recorded about it at the site's commit,
+with `migrate_ranges.lean`, which asks Lean where Mathlib's declarations are written;
+`migrate_write.py` cuts the bundles into batches for the Claude Code agents that write the reviews, by
+`migrate_prompt.md`, and adds, collects and merges their results; `migrate_check.py` is the bar each
+result must pass against its bundle, asking no model; and `migrate_records.py` makes the records of
+those that pass, checking each again first, as it made those of Voyager's yeses refused on 2026-10-30.
+`docs/standard-reviews-held.md` is the owner's list of what the migration held or could not record:
+each declaration, why, and a link to its page.
+
 ## Working on it
 
 ```bash
