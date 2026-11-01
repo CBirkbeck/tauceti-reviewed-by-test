@@ -239,6 +239,9 @@ class SplitTests(Temporary):
         self.assertIn(" add RESULT_FILE", prompt)
         self.assertIn(" todo RESULT_FILE", prompt)
         self.assertIn("deriving instance", prompt)
+        # Ruling R53: a shortened citation keeps three of its words as the text writes them, a name among them.
+        self.assertIn("keep at least three consecutive words of the citation as the text writes them, a name", prompt)
+        self.assertNotIn("You may shorten it.", prompt)
         # The migration's own example passes the check, against the bundle it says it was written from.
         example = prompt.split("## An example", 1)[1].split("~~~review\n", 1)[1].split("\n~~~", 1)[0]
         decl = "TauCeti.Foo.nilradical_eq_sInf"
@@ -452,7 +455,7 @@ class CheckTests(Temporary):
                          "not in the docstring")
         # A number counts glued to a word, as the text writes it, but not inside a longer number; words of the
         # writer's own, without a number, may follow.
-        self.assertEqual(check("- [Proposition 7.3, pp. 40–41](https://example.org/notes.pdf), on Eisenstein series."),
+        self.assertEqual(check("- [Proposition 7.3, pp. 40–41](https://example.org/notes.pdf): on Eisenstein series."),
                          [])
         self.assertNamed(check("- Hartshorne, *Algebraic Geometry*, Theorem 7.3."),
                          "7.3 is in the review by Claude Code (claude-fable-5-1)", "not in the review by Claude Code "
@@ -548,6 +551,76 @@ class CheckTests(Temporary):
         self.assertNamed(check("- `STATUS.md`: the roadmap's status."), "`STATUS.md`",
                          "a reference does not open with a backticked name")
         self.assertNamed(check("- `Bourbaki/Algebra`, Chapter II."), "a reference does not open with a backticked name")
+
+    def test_check_names_links_lists_titles_and_indented_items(self):
+        """Ruling R53, by the re-review's probes: a citation's first name is in the text it traces to; every link of
+        a review is in some text of the bundle; a plural's list gives every number; a title is read only from the
+        citation, outside mathematics and code; and Part 2 takes no item the site's edit check would not protect."""
+        b = bundle()
+        check = lambda review: self.problems(b, result(b, review))
+        refs = lambda *more: check(text(refs="\n".join([REFS, *more])))
+        # (1) The first name. With no `:` or ` — `, a paraphrase of the docstring that shares a run with a name in it
+        # traced an invented author.
+        self.assertTrue(refs("- Bourbaki shows that a nilpotent element is in the nilradical."))
+        self.assertNamed(refs("- Bourbaki shows, as Atiyah and Macdonald do, that a nilpotent element is in the "
+                              "nilradical."), "does not name Bourbaki")
+        hodge = bundle(docstring="The Hodge star of smooth real `k`-forms on an oriented manifold of dimension "
+                       "`m = k + l` with a smooth Riemannian metric (Warner, *Foundations of Differentiable Manifolds "
+                       "and Lie Groups*, §6.1).", reviews=[])
+        traced = lambda ref: self.problems(hodge, result(hodge, text(refs=REFS.split("\n")[1] + "\n" + ref)))
+        self.assertNamed(traced("- Jost shows that the Hodge star is defined on an oriented Riemannian manifold."),
+                         "does not name Jost")
+        self.assertEqual(traced("- Warner, *Foundations of Differentiable Manifolds and Lie Groups*, §6.1: the star."),
+                         [])
+        # A wrong author with the right title and number, and a partial citation, name an author the text does not.
+        self.assertNamed(refs("- Bourbaki, *Introduction to Commutative Algebra*, Proposition 1.7."),
+                         "does not name Bourbaki")
+        self.assertNamed(refs("- Bourbaki, *Algebra*, Proposition 1.7."), "Bourbaki")
+        # The letters within a tag are no name: `Stacks Project, Tag 02RV` names no `RV`.
+        stacks = bundle(docstring="Rational equivalence (Stacks Project, Tag 02RV).", reviews=[])
+        self.assertEqual(self.problems(stacks, result(stacks, text(refs=REFS.split("\n")[1] + "\n- Stacks Project, Tag "
+                                                                   "02RV: rational equivalence."))), [])
+        # A name inside a link's address is no name of the text.
+        linked = bundle(docstring="", reviews=[{**bundle()["reviews"][0], "text": "As Atiyah and Macdonald show in "
+                                                "[the notes](https://example.org/bourbaki83.pdf)."}])
+        self.assertNamed(self.problems(linked, result(linked, text(refs="- Bourbaki shows, as Atiyah and Macdonald "
+                                                                   "do, that it is so."))), "does not name Bourbaki")
+        # (2) Every link anywhere: What it says, a test's line, the prose of Part 2, Lean subtleties.
+        wiki = "https://en.wikipedia.org/wiki/Nilradical_of_a_ring"
+        for review, where in ((text(says=SAYS + f"\n\nSee [the nilradical]({wiki})."), "What it says"),
+                              (text(refs=REFS + f" See [Wikipedia]({wiki})."), "References and tests"),
+                              (text(refs=REFS + f"\n\nSee also [the nilradical]({wiki})."), "References and tests"),
+                              (text(subtle=SUBTLE + f"\n- As [Wikipedia]({wiki}) notes."), "Lean subtleties")):
+            self.assertNamed(check(review), where, f"links {wiki}", "no text of the bundle holds")
+        cited = bundle(reviews=[{**bundle()["reviews"][0], "text": f"Compare [the notes]({wiki})."}])
+        self.assertEqual(self.problems(cited, result(cited, text(says=SAYS + f"\n\nSee [the notes]({wiki})."))), [])
+        # (3) Every number of a plural's list, and each end of a range.
+        for listed in ("Propositions 1.7 and 4.12", "§§1.7, 4.12", "Propositions 1.7, 4.12 and 5.1",
+                       "Propositions 1.7–4.12"):
+            self.assertNamed(check(text(says=SAYS + f"\n\nCompare {listed} of Atiyah and Macdonald.")),
+                             "no text of the bundle gives 4.12")
+        both = bundle(docstring="A nilpotent element is in the nilradical (Atiyah and Macdonald, Propositions 1.7 and "
+                      "1.8).")
+        self.assertEqual(self.problems(both, result(both, text(says=SAYS + "\n\nCompare Propositions 1.7 and 1.8.",
+                                                              refs=REFS.split("\n")[1]))), [])
+        # A sentence that ends after a citation word, and a variable after a word in lower case, cite nothing.
+        self.assertEqual(check(text(subtle=SUBTLE + "\n- This is the theorem. I is no hypothesis; the def C is "
+                                    "unused.")), [])
+        # (4) A title is read from the citation only, outside mathematics and code; a missing one is named.
+        emphasis = REFS.replace("Proposition 1.7.", "Proposition 1.7: the statement *itself*, as for $H^*(X)$.")
+        self.assertEqual(check(text(refs=emphasis)), [])
+        self.assertNamed(refs("- Atiyah and Macdonald, *Commutative Rings*, Proposition 1.7."),
+                         "does not hold its title *Commutative Rings*")
+        # A Roman numeral of the citation is a number the text gives.
+        serre = bundle(docstring="A modular form (Serre, *A Course in Arithmetic*, VII §4).", reviews=[])
+        roman = lambda ref: self.problems(serre, result(serre, text(refs=REFS.split("\n")[1] + "\n" + ref)))
+        self.assertEqual(roman("- Serre, *A Course in Arithmetic*, VII §4."), [])
+        self.assertNamed(roman("- Serre, *A Course in Arithmetic*, VIII §4."), "viii")
+        # (5) A numbered item indented after prose, and a bullet indented under prose, are refused as at the margin.
+        self.assertNamed(refs("", "Two more:", " 1. Atiyah and Macdonald, *Introduction to Commutative Algebra*, "
+                              "Proposition 1.7."), "a numbered item", "use `- ` bullets, which the site's edit check")
+        self.assertNamed(refs("", "And:", "  - Bourbaki, *Algebra*, Chapter II."), "a bullet indented under prose",
+                         "use `- ` bullets at the margin, which the site's edit check protects")
 
     def test_check_tests_and_checks_come_from_the_bundle(self):
         source = self.tmp / "tauceti"

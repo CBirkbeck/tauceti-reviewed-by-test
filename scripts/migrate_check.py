@@ -21,17 +21,21 @@ result, the bundle, and Tau Ceti's files for the Checks a review lists, and asks
   `(R : Type u_1)`, needs nothing, nor does an implicit one;
 - **a reference cannot be traced** (Ruling R48). A reference is a bullet of References and tests that does not open
   with a backticked name or `Check`. One text of the bundle (its docstring, the comments in its value, an earlier
-  review, Voyager's announcement, the roadmap block; not its Lean code, nor its tests' texts) must hold its citation:
-  three consecutive words (all, when fewer) of what comes before its first `:` or ` — `, a name or a number among them,
-  and the words of each title it gives in italics (Ruling R52). The same text must give every number of it, glued to
+  review, Voyager's announcement, the roadmap block; not its Lean code, nor its tests' texts) must hold its citation,
+  what comes before its first `:` or ` — `: three consecutive words of it (all, when fewer), a name or a number among
+  them; its first name, mostly its author; and the words of each title in italics it gives, outside mathematics and
+  code (Rulings R52, R53). The same text must give every number of it, a Roman numeral of its citation too, glued to
   no other digit (a range gives its ends), and hold every link of it;
 - **a citation anywhere in the review gives a number no text of the bundle gives.** A theorem, proposition, lemma,
-  corollary, definition, section, chapter, tag or `§` with its number (in English, abbreviated, French or German) is
-  looked for in What it says, the prose of References and tests, its tests' lines, and Lean subtleties alike;
+  corollary, definition, section, chapter, tag or `§` with its number (in English, abbreviated, French or German),
+  and after a plural every number of its list, is looked for in What it says, the prose of References and tests, its
+  tests' lines, and Lean subtleties alike; and **a link anywhere in the review is in no text of the bundle**, as
+  written (Ruling R53);
 - **a test is not one of the bundle's `tests`, or a Check is not one of its `checks`**, at the place the bundle gives
   for it, with its tag at that line of TAUCETI; or **References and tests names in backticks a Lean name** that is
   none of its tests, the declaration or what it rests on, unless a reference copies it from its text; or **it holds a
-  numbered item**, which the site's edit check, reading bullets only, would not protect (Ruling R51).
+  numbered item, or a bullet indented under prose**, which the site's edit check, reading bullets at the margin only,
+  would not protect (Rulings R51, R53).
 
 `problems` gives all of them; `shape` and `review_problems` each half, for `migrate_write.py add`, which refuses a
 result the shape rules forbid and shows an agent what the rest find while it can still fix it.
@@ -99,8 +103,15 @@ KEYWORD = ("theorems?|thms?|th(?=\\.)|propositions?|props?|lemmas?|lemmata|lems?
            "satz|sätze|korollare?|kapitel|abschnitte?|stacks(?:\\s+project)?(?:,?\\s+tags?)?")
 #: What a citation names: a number (a Stacks tag is one), or a Roman numeral, `VII`, `II.5.3`.
 MARK = rf"{NUMERAL}|[IVXLC]+(?![^\W_])(?:[.:-][^\W_]+)*"
-#: A citation: one of those words and its number (`Theorem 4.12`, `Prop. 1.3`, `Stacks 02IO`), or `§` and its number.
-CITATION = re.compile(rf"(?<![^\W\d_])(?i:{KEYWORD})(?:\.\s*|\s+)({MARK})|(§+)\s*({MARK})")
+#: A citation: one of those words and its number (`Theorem 4.12`, `Prop. 1.3`, `Stacks 02IO`), or `§` and its number;
+#: the word (or the `§`s) and the number are its groups.
+CITATION = re.compile(rf"(?<![^\W\d_])((?i:{KEYWORD}))(?:\.\s*|\s+)({MARK})|(§+)\s*({MARK})")
+#: The next number of a citation's list, after a plural: `, 4.12`, ` and 5.1`, `, and II`.
+LIST = re.compile(rf"[ \t]*(?:,[ \t]*(?:and|or)?|;|&|and|or|et|und)[ \t]*({MARK})")
+#: A citation word where a citation names its place, with the phrase it may stand in (`Stacks Project, Tag`).
+KEYWORD_AT = re.compile(rf"(?<![^\W\d_])(?i:{KEYWORD})(?![^\W\d_])")
+#: A Roman numeral a citation gives on its own: `VII`, `II.5.3`, `V.2`; a lone `I`, `V` or `X` is too likely a word.
+NUMERAL_ROMAN = re.compile(r"(?<![^\W_])(?:[IVXLC]{2,}(?:[.:-][^\W_]+)*|[IVXLC](?:[.:-][^\W_]+)+)(?![^\W_])")
 #: A link's address: up to a space, a bracket or an angle, with the parentheses of one like `…/Ring_(mathematics)`.
 URL = re.compile(r"https?://[^\s<>()\[\]]+(?:\([^\s<>()]*\)[^\s<>()\[\]]*)*")
 #: Where a reference's citation ends and the writer's own words begin: its first `: `, ` — `, ` – ` or ` -- `.
@@ -284,11 +295,20 @@ def plain(text: str) -> str:
 
 @dataclass(frozen=True)
 class Source:
-    """A text of a bundle that a reference may come from: what it is, as a problem names it, the text as written, and
-    the text as citations are compared (`plain`)."""
+    """A text of a bundle that a reference may come from: what it is, as a problem names it, the text as written, the
+    text as citations are compared (`plain`), its words (`WORD`), and its plain text without links' addresses, where a
+    citation's first name is looked for."""
     label: str
     text: str
     plain: str
+    words: tuple[str, ...] = ()
+    unlinked: str = ""
+
+
+def source(label: str, text: str) -> Source:
+    """A text of a bundle, read once for every reference traced to it."""
+    p = plain(text)
+    return Source(label, text, p, tuple(WORD.findall(p)), URL.sub(" ", p))
 
 
 def sources(bundle: dict) -> list[Source]:
@@ -305,7 +325,7 @@ def sources(bundle: dict) -> list[Source]:
         found.append(("Voyager's announcement", f"{named.get('name') or ''}\n{named.get('text') or ''}"))
     if roadmap:
         found.append(("the roadmap block", "\n".join(roadmap.get(k) or "" for k in ("name", "path", "block"))))
-    return [Source(label, text, plain(text)) for label, text in found if isinstance(text, str) and text.strip()]
+    return [source(label, text) for label, text in found if isinstance(text, str) and text.strip()]
 
 
 def grams(words: list[str], n: int) -> set[tuple[str, ...]]:
@@ -320,12 +340,56 @@ def gives(text: str, mark: str) -> bool:
     return re.search(rf"{before}{re.escape(mark)}(?![^\W_])(?![.:][^\W_])", text) is not None
 
 
+def ends(mark: str) -> list[str]:
+    """A number, or the ends of a range each apart: `6.3-6.5` is `6.3` and `6.5`."""
+    parts = [p for p in mark.split("-") if p[:1].isdigit()] if mark[:1].isdigit() else []
+    return parts or [mark]
+
+
+def plural(word: str) -> bool:
+    """Whether a citation word names several places, so that a list may follow it: `Propositions`, `Thms`, `§§`."""
+    w = word.lower()
+    return (word[:1] == "§" and len(word) > 1) or (w.endswith("s") and not w.startswith("stacks")) \
+        or w in ("lemmata", "sätze", "korollare", "abschnitte")
+
+
+#: The citation words that are abbreviations, which a dot may follow: after a whole word a dot ends a sentence.
+ABBREVIATIONS = frozenset("th thm thms prop props lem lems cor cors def defs defn defns sec secs sect sects ch chap "
+                          "chaps".split())
+
+
+def citations(text: str) -> list[re.Match]:
+    """The citations of a text (`CITATION`), but what only looks like one: a whole word and a dot, which end a
+    sentence (`the theorem. I`), and a lone Roman letter after a word in lower case, which is a variable
+    (`the def C`)."""
+    out = []
+    for c in CITATION.finditer(text):
+        if c[1]:
+            word = c[1].split()[0].rstrip(",").lower()
+            if text[c.end(1):c.end(1) + 1] == "." and word not in ABBREVIATIONS:
+                continue
+            if c[1][0].islower() and re.fullmatch(r"[IVXLC]", c[2]):
+                continue
+        out.append(c)
+    return out
+
+
+def cited_marks(c: re.Match, text: str) -> tuple[list[str], int]:
+    """The numbers one citation (`CITATION`, a match in `text`) names, and where it ends: its number, and after a plural
+    every one of its list (`Propositions 1.7, 4.12 and 5.1`, `§§1.7, 4.12`; Ruling R53), each end of a range apart."""
+    word, found, at = (c[1] or c[3]), [c[2] or c[4]], c.end()
+    while plural(word) and (m := LIST.match(text, at)):
+        found.append(m[1])
+        at = m.end()
+    return [e for mark in found for e in ends(mark)], at
+
+
 def marks(text: str) -> list[str]:
-    """What of a text the bundle must give too, in lowercase: every number in it, and each Roman numeral one of its
-    citations names (`Chapter VII`)."""
+    """What of a text the bundle must give too, in lowercase: every number in it, each end of a range apart, and each
+    Roman numeral one of its citations names (`Chapter VII`, `Chapters II and III`)."""
     norm = unicodedata.normalize("NFKC", text).translate(DASHES)
-    found = NUMBER.findall(norm.lower())
-    found += [m.lower() for c in CITATION.finditer(norm) if not (m := c[1] or c[3])[:1].isdigit()]
+    found = [e for token in NUMBER.findall(norm.lower()) for e in ends(token)]
+    found += [m.lower() for c in citations(norm) for m in cited_marks(c, norm)[0] if not m[:1].isdigit()]
     return list(dict.fromkeys(found))
 
 
@@ -336,16 +400,35 @@ def named_words(text: str) -> list[tuple[str, bool]]:
     return [(w.lower(), any(c.isdigit() for c in w) or (w[0].isupper() and w.lower() not in COMMON)) for w in found]
 
 
+def first_name(text: str) -> str | None:
+    """The first name a citation gives (Ruling R53): its first word that begins with a capital and is no word as common
+    as `The`, no citation word (`Proposition`, `Ch.`, `Stacks Project`), no Roman numeral, and all letters: no number
+    or tag, nor the letters within one (`02RV`). Mostly its author, else the first word of its title; None when it
+    gives none."""
+    norm = unicodedata.normalize("NFKC", text).translate(DASHES)
+    spans = [m.span() for m in KEYWORD_AT.finditer(norm)]
+    for m in re.finditer(r"[^\W_]+", norm):
+        w = m[0]
+        if w.isalpha() and w[0].isupper() and w.lower() not in COMMON and not re.fullmatch(r"[IVXLC]+", w) \
+                and not any(a <= m.start() < b for a, b in spans):
+            return w
+    return None
+
+
 def trace(ref: str, texts: list[Source]) -> tuple[Source | None, str | None]:
-    """The text of the bundle reference `ref` comes from, and None; or None, and why it cannot be traced. The text
-    must hold its citation, the words before its first `:` or ` — `: `RUN` consecutive ones (all, when fewer) among
-    which is a name or a number (`named_words`), so that a run of common words does not trace an invented source. It
-    must hold the words of each title the reference gives in italics, give every number of it (`marks`, `gives`), and
-    hold every link of it. The writer's own words, after the citation, do not trace it."""
+    """The text of the bundle reference `ref` comes from, and None; or None, and why it cannot be traced. Its
+    citation is what comes before its first `:` or ` — `. The text must hold `RUN` consecutive words of it (all, when
+    fewer), among which is a name or a number (`named_words`), so that a run of common words does not trace an
+    invented source; its first name (`first_name`), so that an author the text does not name is not taken from a
+    phrase it shares; and the words of each title in italics the citation gives, outside mathematics and code (Rulings
+    R52, R53). It must give every number of the reference (`marks`, `gives`), the Roman numerals of its citation too,
+    and hold every link of it. The writer's own words, after the citation, do not trace it."""
     bare = URL.sub(" ", ref)
     hint = "; a reference does not open with a backticked name" if ref.lstrip().startswith("`") else ""
-    cited = named_words(SPLIT.split(bare, 1)[0]) or named_words(bare)
-    titles = [w for w in (WORD.findall(plain(a or b)) for a, b in ITALIC.findall(bare)) if w]
+    cite = SPLIT.split(bare, 1)[0]
+    if not named_words(cite):
+        cite = bare
+    cited = named_words(cite)
     if not cited:
         return None, f'the reference "{ref}" says nothing that could be looked for: a reference names a source{hint}'
     size = min(RUN, len(cited))
@@ -354,19 +437,35 @@ def trace(ref: str, texts: list[Source]) -> tuple[Source | None, str | None]:
     if not wanted:
         return None, (f'the reference "{ref}" names no source: its citation, the words before its first `:` or ` — `, '
                       f"holds no name and no number{hint}")
+    outside = CODE.sub(" ", cite)
+    titles = [t for t in (a or b for a, b in ITALIC.findall(outside)) if WORD.findall(plain(t))]
+    name = first_name(cite)
 
-    def holds(t: Source) -> bool:
-        words = WORD.findall(t.plain)
-        return bool(wanted & grams(words, size)) and all(grams(w, len(w)) & grams(words, len(w)) for w in titles)
+    named_at = re.compile(rf"(?<![^\W_]){re.escape(name.lower())}(?![^\W_])") if name else None
+    title_words = [(title, WORD.findall(plain(title))) for title in titles]
 
-    holding = [t for t in texts if holds(t)]
+    def lacks(t: Source) -> list[str]:
+        """What text `t`, which holds a run of the citation, lacks of its first name and its titles."""
+        out = [] if named_at is None or named_at.search(t.unlinked) else [f"does not name {name}"]
+        out += [f"does not hold its title *{title}*" for title, w in title_words
+                if not grams(w, len(w)) & grams(t.words, len(w))]
+        return out
+
+    holding = [t for t in texts if wanted & grams(t.words, size)]
     if not holding:
         return None, (f'the reference "{ref}" is not in the bundle: no text of it (the docstring, an earlier review, '
                       "Voyager's announcement, the roadmap block) holds its citation, the words before its first `:` "
-                      f"or ` — `, and its title. Cite only what the bundle gives, in its words{hint}")
-    numbers, links = marks(bare), [u.rstrip(".,;:!?") for u in URL.findall(ref)]
+                      f"or ` — `. Cite only what the bundle gives, in its words{hint}")
+    whole = [t for t in holding if not lacks(t)]
+    if not whole:
+        t = min(holding, key=lambda t: len(lacks(t)))
+        return None, (f'the reference "{ref}" takes its citation from {t.label}, which ' + " and ".join(lacks(t))
+                      + ". A reference comes whole from one text, its author and its title too; its citation is what "
+                      "comes before its first `:` or ` — `, and words of your own come after" + hint)
+    numbers = list(dict.fromkeys(marks(bare) + [m.lower() for m in NUMERAL_ROMAN.findall(outside)]))
+    links = [u.rstrip(".,;:!?") for u in URL.findall(ref)]
     best: tuple[Source, list[str], list[str]] | None = None
-    for t in holding:
+    for t in whole:
         missing = [mark for mark in numbers if not gives(t.plain, mark)]
         unlinked = [u for u in links if u not in t.text]
         if not missing and not unlinked:
@@ -485,8 +584,8 @@ def placed(item: Item, places: dict[str, list[tuple[str, int]]], source: Path | 
 def listed(review: str, bundle: dict, texts: list[Source], source: Path | None) -> list[str]:
     """What is wrong with the items of References and tests (`items_of`): a test that is not one of the bundle's
     `tests`; a Check that is not one of its `checks` (`placed`); a reference that cannot be traced (`trace`); a Lean
-    name in backticks it may not name (`strangers`), in an item or in its prose; and a numbered item, which the site's
-    edit check, reading bullets only, would not protect (Ruling R51)."""
+    name in backticks it may not name (`strangers`), in an item or in its prose; and a line the site's edit check would
+    not read as an item, though it looks like one (`unprotected`)."""
     body = part(review, standard.HEADINGS[1]) or ""
     items = items_of(body)
     tests = {t.get("test"): t for t in bundle.get("tests") or []}
@@ -507,16 +606,35 @@ def listed(review: str, bundle: dict, texts: list[Source], source: Path | None) 
         else:
             found, why = trace(item.text, texts)
             problems += [why] if why else strangers(item.text, allowed, heads, found.text)
-    problems += [f'a numbered item, "{m[1]}": use `- ` bullets, which the site\'s edit check protects'
-                 for m in map(NUMBERED.match, body.split("\n")) if m]
+    problems += unprotected(body)
     taken = {i for item in items for i in item.lines}
     return problems + strangers("\n".join(line for i, line in enumerate(body.split("\n")) if i not in taken),
                                 allowed, heads)
 
 
-def scanned(review: str) -> list[tuple[str, str]]:
-    """The review as its citations are looked for, part by part, (part, text): all of it but the references of
-    References and tests, which are traced whole (`trace`); without code, mathematics or the addresses of links."""
+def unprotected(body: str) -> list[str]:
+    """The lines of References and tests that look like items but that the site's edit check, which reads bullets at the
+    margin as `standard.bullets` does, would not protect (Rulings R51, R53): a numbered item, at the margin or indented,
+    and a bullet indented under prose. A line indented under a bullet goes on from that bullet, and is protected."""
+    out, going = [], False
+    for line in body.split("\n"):
+        if ITEM.match(line):
+            going = True
+            continue
+        if going and line[:1] in (" ", "\t") and line.strip():
+            continue
+        going = False
+        if m := NUMBERED.match(line.strip()):
+            out.append(f'a numbered item, "{m[1]}": use `- ` bullets, which the site\'s edit check protects')
+        elif line[:1] in (" ", "\t") and (m := ITEM.match(line.strip())):
+            out.append(f'a bullet indented under prose, "{m[1]}": use `- ` bullets at the margin, which the site\'s '
+                       "edit check protects")
+    return out
+
+
+def parts_apart(review: str) -> list[tuple[str, str]]:
+    """The review part by part, (part, text): all of it but the references of References and tests, which are checked
+    whole against the text they come from (`trace`)."""
     before, found = standard.sections(review)
     out = [("The text before What it says", before)] if before.strip() else []
     for heading, body in found:
@@ -524,26 +642,46 @@ def scanned(review: str) -> list[tuple[str, str]]:
             refs = {i for item in items_of(body) if item.kind == "reference" for i in item.lines}
             body = "\n".join(line for i, line in enumerate(body.split("\n")) if i not in refs)
         out.append((heading[3:], body))
-    return [(where, CODE.sub(" ", URL.sub(" ", text))) for where, text in out]
+    return out
+
+
+def scanned(review: str) -> list[tuple[str, str]]:
+    """The review as its citations are looked for (`parts_apart`): without code, mathematics or links' addresses."""
+    return [(where, CODE.sub(" ", URL.sub(" ", text))) for where, text in parts_apart(review)]
 
 
 def unsupported(review: str, texts: list[Source]) -> list[str]:
     """The citations of a review outside its references (`scanned`) whose number no text of the bundle gives: a
-    theorem, a section, a tag and their kin (`CITATION`), in What it says, the prose of References and tests, a
-    test's line or Lean subtleties alike."""
+    theorem, a section, a tag and their kin (`CITATION`), every number of the list after a plural (`cited_marks`), in
+    What it says, the prose of References and tests, a test's line or Lean subtleties alike."""
     problems = []
     for where, text in scanned(review):
-        for m in CITATION.finditer(unicodedata.normalize("NFKC", text).translate(DASHES)):
-            mark = m[1] or m[3]
-            if not any(gives(t.plain, mark.lower()) for t in texts):
-                problems.append(f'{where} cites "{" ".join(m[0].split())}", but no text of the bundle gives {mark}: '
-                                "cite only what the bundle gives, with its numbers as given")
+        norm = unicodedata.normalize("NFKC", text).translate(DASHES)
+        for c in citations(norm):
+            found, end = cited_marks(c, norm)
+            said = " ".join(norm[c.start():end].split())
+            problems += [f'{where} cites "{said}", but no text of the bundle gives {mark}: cite only what the bundle '
+                         "gives, with its numbers as given" for mark in found
+                         if not any(gives(t.plain, mark.lower()) for t in texts)]
+    return problems
+
+
+def unlinked(review: str, texts: list[Source]) -> list[str]:
+    """The links of a review outside its references (`parts_apart`) that no text of the bundle holds as written (Ruling
+    R53): in What it says, the prose of References and tests, a test's line or Lean subtleties, code included."""
+    problems = []
+    for where, text in parts_apart(review):
+        for link in dict.fromkeys(u.rstrip(".,;:!?") for u in URL.findall(text)):
+            if not any(link in t.text for t in texts):
+                problems.append(f"{where} links {link}, which no text of the bundle holds: link only what the bundle "
+                                "gives, as it gives it")
     return problems
 
 
 def review_problems(review: str, bundle: dict, source: Path | None = None) -> list[str]:
     """What is wrong with a review, written from `bundle`: `standard.check`, a control character, What it says against
-    the signature, the items of References and tests (`listed`), and the citations of the rest (`unsupported`)."""
+    the signature, the items of References and tests (`listed`), and the citations and links of the rest
+    (`unsupported`, `unlinked`)."""
     problems = []
     if CONTROL.search(review):
         problems.append("the review holds a control character (a tab, a form feed, …): JSON reads a TeX backslash "
@@ -553,6 +691,7 @@ def review_problems(review: str, bundle: dict, source: Path | None = None) -> li
     problems += standard.check(review, exists=lambda name: name not in gone)
     texts = sources(bundle)
     problems += follows(review, bundle) + listed(review, bundle, texts, source) + unsupported(review, texts)
+    problems += unlinked(review, texts)
     return list(dict.fromkeys(problems))
 
 

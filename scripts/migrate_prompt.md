@@ -152,20 +152,24 @@ A reference says where the definition or the result appears in this form: in a b
 Stacks Project, or the roadmap. Take each one from a single text of the bundle: the docstring, a comment in `value`, an
 earlier review, Voyager's announcement (`named`) or the roadmap block. Open its bullet with the citation as that text
 gives it, in its words: its author, its title, and its theorem, definition, section or page number, its tag, year or
-arXiv number. You may shorten it. Words of your own, on what it shows, come after a colon or a dash (` — `), and add no
-number and no link that this one text does not give.
+arXiv number. If you shorten it, keep at least three consecutive words of the citation as the text writes them, a name
+among them: not `Prop.` for `Proposition`, nor `Atiyah–Macdonald` for `Atiyah and Macdonald`. Words of your own, on
+what it shows, come after a colon or a dash (` — `), and add no number and no link that this one text does not give.
 
-The program looks for the citation, the words before the first `:` or ` — ` (and any title in italics), in one text
-of the bundle, which must also give every number and hold every link of the bullet. The Lean code and the tests' texts
-are no such text: a citation that only shares a phrase with them, or with your own description, is not traced.
+The program looks for the citation, the words before the first `:` or ` — `, in one text of the bundle: three of its
+words in a row, a name among them; its first name, mostly its author, else its title's first word; and any title in
+italics it gives. That text must also give every number and hold every link of the bullet. The Lean code and the
+tests' texts are no such text: a citation that only shares a phrase with them, with another text, or with your own
+description, is not traced.
 
 - Nothing else is a reference, however standard or well known to you: no source the bundle does not name, no number it
   does not give, and no link it does not hold. Nor is a link to Lean source, Tau Ceti's or Mathlib's, which shows the
   Lean, not where the mathematics is stated.
 - The same holds for the whole review: wherever it names a theorem, proposition, lemma, corollary, definition, section,
   chapter or tag with its number, in What it says, in the prose of References and tests, in a test's line or in Lean
-  subtleties, the program looks for that number in the bundle's texts. You may say without a source that a notion or a
-  result is the standard one.
+  subtleties, the program looks for that number in the bundle's texts, and for every number of a list after a plural
+  (`Propositions 1.7 and 4.12`). Every link anywhere in the review is one a text of the bundle holds, written as it is
+  there. You may say without a source that a notion or a result is the standard one.
 - The roadmap block is a reference when it states the definition or the result, as a target or a milestone does. A
   block that only reports progress, such as a dated entry of a `PROGRESS.md` or a note of a `STATUS.md`, is context
   for you, not a reference. Cite it by its roadmap, its file and its heading, without a link, since the bundle gives no
@@ -175,10 +179,10 @@ are no such text: a citation that only shares a phrase with them, or with your o
 - In References and tests, a Lean name in backticks is one of `tests`, the declaration, or one of `rests_on`; or a name
   a reference copies from its text.
 - When the bundle gives no reference, list none, and say so in a line of prose: `No reference is recorded for it.`
-- Every bullet under References and tests is a reference, a test or a Check, and each is a bullet, `- `, never an item
-  of a numbered list: the site's edit check protects bullets only, so the program refuses a numbered item. Anything
-  else, such as `No test is recorded.`, is a line of prose, not a bullet: the program reads every other bullet as a
-  reference, and looks for it in the bundle.
+- Every bullet under References and tests is a reference, a test or a Check, and each is a bullet, `- `, at the margin:
+  never an item of a numbered list, and never a bullet indented under a line of prose. The site's edit check protects
+  only bullets at the margin, so the program refuses the others. Anything else, such as `No test is recorded.`, is a
+  line of prose, not a bullet: the program reads every other bullet as a reference, and looks for it in the bundle.
 
 ## 4. Tests only from `tests`, Checks only from `checks`
 
