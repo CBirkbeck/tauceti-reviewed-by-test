@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -49,6 +50,10 @@ def link(name: str) -> str:
     return f"{SITE}#/d/{name}"
 
 
+#: A reference no text of a bundle gives: the checker fails a review that holds it.
+UNTRACED = "- Bourbaki, *Algebra*, Chapter II."
+
+
 class StandardRecordsTests(unittest.TestCase):
     """The records and the held list the `standard` subcommand makes of bundles, results and checks."""
 
@@ -60,6 +65,8 @@ class StandardRecordsTests(unittest.TestCase):
         shutil.copy(HERE.parent / "evidence" / "store.json", self.dir / "evidence" / "store.json")
         self.ds = Dataset.load(DATASET)
         self.held = self.dir / "docs" / "standard-reviews-held.md"
+        self.source = self.dir / "tauceti"  # Tau Ceti at the bundles' commit: a directory, with no Check to look for
+        self.source.mkdir()
         self.n = 0
 
     # --- what the store holds ----------------------------------------------------------------------
@@ -91,19 +98,27 @@ class StandardRecordsTests(unittest.TestCase):
 
     @staticmethod
     def bundle(name: str, **more) -> dict:
-        return {"decl": name, "kind": "theorem", "package": "Fixture", "commit": "B", "reviews": [], "tests": [],
-                "checks": [], "named": None, "roadmap": None, "open_no": False, **more}
+        """A bundle whose docstring gives the reference of `review`."""
+        return {"decl": name, "kind": "theorem", "package": "Fixture", "commit": "B",
+                "docstring": "As the Fixture documentation, §1, has it.", "reviews": [], "tests": [], "checks": [],
+                "named": None, "roadmap": None, "open_no": False, **more}
 
     @staticmethod
     def result(name: str, verdict: str = "approve", hold: str = "", **more) -> dict:
         return {"decl": name, "cells": dict(CELLS), "verdict": verdict, "hold": hold, "review": review(name), **more}
 
     @staticmethod
+    def failing(name: str, verdict: str = "approve", hold: str = "") -> dict:
+        """A result the checker fails: its reference is in no text of its bundle."""
+        result = StandardRecordsTests.result(name, verdict, hold)
+        return {**result, "review": result["review"].replace("- Fixture documentation, §1.", UNTRACED)}
+
+    @staticmethod
     def check(name: str, ok: bool = True, *problems: str) -> dict:
         return {"decl": name, "ok": ok, "problems": list(problems)}
 
     def run_main(self, results: list[dict], bundles: list[dict] | None = None, checks: list[dict] | None = None,
-                 *more: str, at: str | None = AT) -> tuple[int, str]:
+                 *more: str, at: str | None = AT, source: Path | None = None) -> tuple[int, str]:
         """The subcommand on these results, each with a bundle and a passing check unless given."""
         bundles = [self.bundle(r["decl"]) for r in results] if bundles is None else bundles
         checks = [self.check(r["decl"]) for r in results] if checks is None else checks
@@ -115,6 +130,7 @@ class StandardRecordsTests(unittest.TestCase):
         said = io.StringIO()
         with contextlib.redirect_stdout(said), contextlib.redirect_stderr(said):
             code = migrate_records.main(["standard", *paths, "--dataset", str(DATASET),
+                                         "--source", str(source or self.source),
                                          "--store", str(self.dir / "evidence"), "--out-dir", str(self.records_dir),
                                          "--prefix", PREFIX, "--held", str(self.held),
                                          *(["--at", at] if at else []), *more])
@@ -207,25 +223,24 @@ class StandardRecordsTests(unittest.TestCase):
     def test_failed_checks_write_nothing_but_the_list(self):
         for name in ("Fixture.triple_one", "Fixture.triple_two", "Fixture.IsSmall"):
             self.yes(name)
-        failed = ["the part `## Lean subtleties` is missing",
-                  "the test `Fixture.nope` is not a declaration that exists"]
-        results = [self.result("Fixture.triple_one"), {"decl": "Fixture.triple_two", "error": "no result"},
-                   self.result("Fixture.IsSmall", "hold", "Twelve is small too, so the no stands.")]
-        checks = [self.check("Fixture.triple_one", False, *failed),
+        results = [self.failing("Fixture.triple_one"), {"decl": "Fixture.triple_two", "error": "no result"},
+                   self.failing("Fixture.IsSmall", "hold", "Twelve is small too, so the no stands.")]
+        checks = [self.check("Fixture.triple_one", False, "an older checker's words"),
                   self.check("Fixture.triple_two", False, "no result"),
                   self.check("Fixture.IsSmall", False, "a reference cannot be traced")]
         code, said = self.run_main(results, None, checks)
         self.assertEqual(code, 0, said)
         self.assertEqual(list(self.records_dir.glob(f"{PREFIX}-*")), [])  # no file, let alone a record
         one = self.held_line("Fixture.triple_one")
-        self.assertIn("failed checks: " + "; ".join(failed), one)
+        # What the check finds now, as this run checked it.
+        self.assertIn('failed checks: the reference "Bourbaki, *Algebra*, Chapter II." is not in the bundle', one)
         self.assertIn(link("Fixture.triple_one"), one)
         two = self.held_line("Fixture.triple_two")
         self.assertIn("no result: no result", two)  # an error result: the error is the reason, not the check's line
         self.assertIn(link("Fixture.triple_two"), two)
         # A review held and then failed is a failure to record, but the writer's concern is not lost with it.
         held = self.held_line("Fixture.IsSmall")
-        self.assertIn("failed checks: a reference cannot be traced", held)
+        self.assertIn("failed checks: the reference", held)
         self.assertIn("Twelve is small too, so the no stands.", held)
         # Beside a result that passes, only that one is recorded.
         self.yes("Fixture.double")
@@ -277,7 +292,7 @@ class StandardRecordsTests(unittest.TestCase):
         self.assertIn(link(name), line)
 
     def test_an_open_no_holds_an_approval(self):
-        # The bundle says so.
+        # The bundle says so: the check fails an approval, and the writer is told to hold it.
         self.yes("Fixture.IsSmall")
         # The store says so now, though the bundle was made before the no.
         yes_three = self.yes("Fixture.isSmall_three")
@@ -292,15 +307,16 @@ class StandardRecordsTests(unittest.TestCase):
         names = ["Fixture.IsSmall", "Fixture.isSmall_three", "Fixture.double_two"]
         bundles = [self.bundle("Fixture.IsSmall", open_no=True), self.bundle("Fixture.isSmall_three"),
                    self.bundle("Fixture.double_two")]
-        code, said = self.run_main([self.result(each) for each in names], bundles)
+        checks = [self.check("Fixture.IsSmall", False, "open"), self.check("Fixture.isSmall_three"),
+                  self.check("Fixture.double_two")]
+        code, said = self.run_main([self.result(each) for each in names], bundles, checks)
         self.assertEqual(code, 0, said)
         by_name = {r["subject"]["name"]: r for r in self.written()}
         self.assertEqual({k: v["kind"] for k, v in by_name.items()},
-                         {"Fixture.IsSmall": "comment", "Fixture.isSmall_three": "comment",
-                          "Fixture.double_two": "review"})
-        for each in ("Fixture.IsSmall", "Fixture.isSmall_three"):
-            self.assertEqual(by_name[each]["standard"], {"spec": standard.SPEC, "note": HELD_NOTE})
-            self.assertIn("a no on it is open", self.held_line(each))
+                         {"Fixture.isSmall_three": "comment", "Fixture.double_two": "review"})
+        self.assertIn("failed checks: the declaration has an open no", self.held_line("Fixture.IsSmall"))
+        self.assertEqual(by_name["Fixture.isSmall_three"]["standard"], {"spec": standard.SPEC, "note": HELD_NOTE})
+        self.assertIn("a no on it is open", self.held_line("Fixture.isSmall_three"))
         self.assertEqual(by_name["Fixture.isSmall_three"]["links"]["replies_to"], yes_three["id"], no)  # to the yes
         self.assertEqual(len(self.held_lines()), 2)
 
@@ -389,6 +405,55 @@ class StandardRecordsTests(unittest.TestCase):
                 self.assertEqual(code, 2, said)
                 self.assertEqual(list(self.records_dir.glob(f"{PREFIX}-*")), [])
 
+    def test_each_result_is_checked_again(self):
+        """The final review's Minor 2: the run checks each result again, as migrate_check.py does, against Tau Ceti at
+        the bundles' commit. A check of CHECKS that passes a result this check fails, or fails one it passes, stops the
+        run: checks from an older checker, or of other results, never let a result through."""
+        for name in ("Fixture.triple", "Fixture.double"):
+            self.yes(name)
+        results = [self.result("Fixture.triple"), self.failing("Fixture.double")]
+        for what, checks, name in (
+                ("a pass of a result it fails", [self.check("Fixture.triple"), self.check("Fixture.double")],
+                 "Fixture.double"),
+                ("a failure of a result it passes",
+                 [self.check("Fixture.triple", False, "an older rule"), self.check("Fixture.double", False, "x")],
+                 "Fixture.triple")):
+            with self.subTest(what):
+                code, said = self.run_main(results, None, checks)
+                self.assertEqual(code, 1, said)
+                self.assertIn(f"`{name}`", said)
+                self.assertEqual(list(self.records_dir.glob(f"{PREFIX}-*")), [])  # not even the other one
+                self.assertFalse(self.held.exists())
+        # Checks that agree: the result it passes is recorded, and the other listed with what this check finds.
+        code, said = self.run_main(results, None, [self.check("Fixture.triple"),
+                                                   self.check("Fixture.double", False, "an older checker's words")])
+        self.assertEqual(code, 0, said)
+        self.assertEqual([r["subject"]["name"] for r in self.written()], ["Fixture.triple"])
+        self.assertIn("is not in the bundle", self.held_line("Fixture.double"))
+        self.assertNotIn("an older checker's words", self.held_line("Fixture.double"))
+
+    def test_tau_ceti_is_given_at_the_bundles_commit(self):
+        self.yes("Fixture.triple")
+        results = [self.result("Fixture.triple")]
+        # It is required: the check looks for a Check's tag there.
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            migrate_records.main(["standard", "b", "r", "c", "--dataset", str(DATASET), "--prefix", PREFIX])
+        # A checkout at another commit than the bundles', and a path that is no directory, are refused.
+        checkout = self.dir / "checkout"
+        checkout.mkdir()
+        (checkout / "README.md").write_text("Tau Ceti\n", encoding="utf-8")
+        for args in (["init", "-q"], ["add", "."], ["commit", "-q", "-m", "Tau Ceti"]):
+            subprocess.run(["git", "-C", str(checkout), "-c", "user.name=t", "-c", "user.email=t@e.org", *args],
+                           check=True, capture_output=True)
+        for source in (checkout, self.dir / "nowhere"):
+            with self.subTest(source=source.name):
+                code, said = self.run_main(results, source=source)
+                self.assertEqual(code, 2, said)
+                self.assertIn(str(source), said)
+                self.assertEqual(list(self.records_dir.glob(f"{PREFIX}-*")), [])
+        code, said = self.run_main(results)  # a directory that is no checkout is taken as it is
+        self.assertEqual(code, 0, said)
+
     def test_a_refusal_prints_no_more_than_it_can_read(self):
         names = [d.name for d in self.ds.decls][:60]
         code, said = self.run_main([self.result(name) for name in names], None, [])  # not one has its check
@@ -420,37 +485,37 @@ class StandardRecordsTests(unittest.TestCase):
                 with contextlib.redirect_stdout(said), contextlib.redirect_stderr(said):
                     code = migrate_records.main(
                         ["standard", *(str(self.dir / f"{x}.jsonl") for x in ("bundles", "results", "checks")),
-                         "--dataset", str(DATASET), "--store", str(self.dir / "evidence"), "--out-dir",
-                         str(self.dir / "elsewhere"), "--prefix", PREFIX, "--held", str(self.dir / "held.md"),
-                         "--at", AT])
+                         "--dataset", str(DATASET), "--source", str(self.source),
+                         "--store", str(self.dir / "evidence"), "--out-dir", str(self.dir / "elsewhere"),
+                         "--prefix", PREFIX, "--held", str(self.dir / "held.md"), "--at", AT])
                 self.assertEqual(code, 2, said.getvalue())
                 self.assertFalse((self.dir / "elsewhere").exists() or (self.dir / "held.md").exists())
                 path.write_text(kept, encoding="utf-8")
 
     def test_a_review_is_recorded_as_the_agent_s_version_of_it(self):
         # A Unicode line separator in a line is no line end (JSON lines end at `\n` alone), and a version is the hash of
-        # the text normalized: line ends as `\n`, no space at the end of a line.
+        # the text normalized: no space at the end of a line. (A `\r` is a control character, which the check refuses:
+        # `migrate_write.py add` writes none.)
         name = "Fixture.triple"
         self.yes(name)
         raw = review(name).replace("None.", "A line\u2028separator and a \x85 next line, here.   ")
-        raw = raw.replace("\n", "\r\n")
         code, said = self.run_main([{**self.result(name), "review": raw}])
         self.assertEqual(code, 0, said)
         [r] = self.written()
         self.assertEqual(r["text"], standard.normalize(raw))
         self.assertIn("A line\u2028separator and a \x85 next line, here.", r["text"])
-        self.assertNotIn("\r", r["text"])
+        self.assertNotIn("here. ", r["text"])
         self.assertEqual(standard.version_of(r["text"]), standard.version_of(raw))
 
     def test_the_held_list_is_appended_to(self):
         for name in ("Fixture.triple_one", "Fixture.triple_two", "Fixture.double"):
             self.yes(name)
-        code, said = self.run_main([self.result("Fixture.triple_one")], None,
+        code, said = self.run_main([self.failing("Fixture.triple_one")], None,
                                    [self.check("Fixture.triple_one", False, "x")])
         self.assertEqual(code, 0, said)
         first = self.held.read_text(encoding="utf-8")
         self.assertTrue(first.startswith("# "))  # a title, once
-        code, said = self.run_main([self.result("Fixture.triple_two"), self.result("Fixture.double", "hold", "Look.")],
+        code, said = self.run_main([self.failing("Fixture.triple_two"), self.result("Fixture.double", "hold", "Look.")],
                                    None, [self.check("Fixture.triple_two", False, "y"), self.check("Fixture.double")])
         self.assertEqual(code, 0, said)
         text = self.held.read_text(encoding="utf-8")

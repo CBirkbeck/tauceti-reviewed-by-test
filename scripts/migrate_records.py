@@ -3,8 +3,8 @@
 
   python3 scripts/migrate_records.py voyager-refused TSV --dataset DIR [--store DIR] --comment-url URL
                                      --at TIME --session S --out FILE
-  python3 scripts/migrate_records.py standard BUNDLES RESULTS CHECKS --dataset DIR [--store DIR] [--out-dir DIR]
-                                     --prefix PREFIX [--held FILE] [--at TIME]
+  python3 scripts/migrate_records.py standard BUNDLES RESULTS CHECKS --dataset DIR --source TAUCETI [--store DIR]
+                                     [--out-dir DIR] --prefix PREFIX [--held FILE] [--at TIME]
 
 `voyager-refused`: Voyager's yeses that the intake refused for want of their reasons, filed with the reasons
 transcribed from Voyager's run notes. On 2026-10-30 Voyager posted bare `Reviewed-by: <decl>` lines on the bulk
@@ -23,8 +23,10 @@ yes to the declaration again at or after TIME: that yes counts already, and this
 
 `standard`: the standard reviews the migration's writers made, as records. BUNDLES are scripts/migrate_inputs.py's;
 RESULTS the writers' (scripts/migrate_write.py collect), `{"decl", "cells", "verdict", "hold", "review"}` or
-`{"decl", "error"}`; CHECKS scripts/migrate_check.py's, a `{"decl", "ok", "problems"}` to each result, those of the
-last round. The records are keyed in the dataset DIR, which is the bundles' (the same commit), and made by the
+`{"decl", "error"}`; CHECKS scripts/migrate_check.py's of RESULTS, a `{"decl", "ok", "problems"}` to each result. The
+run checks each result again, as migrate_check.py does, against TAUCETI, a checkout of the library at the bundles'
+commit, and each check of CHECKS must agree with it, so that checks from an older checker, or of other results, never
+let a result through. The records are keyed in the dataset DIR, which is the bundles' (the same commit), and made by the
 migration (Tau Ceti review migration, claude-opus-5-5, through CBirkbeck's account, in the run PREFIX) at TIME, which
 is the time of the run unless given: make them just before they are pushed, so that the records that come between are
 few. They go to `<PREFIX>-<nn>.jsonl` in OUT-DIR (evidence/records), at most 2,000 to a file, numbered on from the files
@@ -42,15 +44,18 @@ retry round's results hold only what it ran again. A result is:
   accept has no record, since there is none to reply to;
 - an error, or failed by its check: no record.
 HELD (docs/standard-reviews-held.md) takes a line for each declaration that is held or has no record, with the reason
-(`no result: …`; `failed checks: …`, with the writer's own reason added when it held the review; `no yes to attach
-the review to`; or the writer's own) and its address on the site. It is added to when it is there, and a line already
-in it is not added again. A declaration that has a standard review already (a version not withdrawn) gets no record,
-since the migration's would replace that review: the report names it, and HELD lists it if it was held.
+(`no result: …`; `failed checks: …`, what this run's check finds, with the writer's own reason added when it held the
+review; `no yes to attach the review to`; or the writer's own) and its address on the site. It is added to when it is
+there, and a line already in it is not added again. A declaration that has a standard review already (a version not
+withdrawn) gets no record, since the migration's would replace that review: the report names it, and HELD lists it if
+it was held.
 
-Nothing is written, and the exit is 1, when a result has no bundle or no check, a check no result, a declaration is
-given twice, a bundle is at another commit than the dataset, the dataset lacks a declaration, or a result that its
-check passed is no review `standard.check` passes or has cells that are not each axis of the rubric once, checked or
-n/a. The exit is 2 on a time that is not like 2026-11-02T09:30:00Z or a file that cannot be read.
+Nothing is written, and the exit is 1, when a result has no bundle or no check, a check no result, a check passes a
+result that this run's check fails or fails one it passes, a declaration is given twice, a bundle is at another commit
+than the dataset, the dataset lacks a declaration, or a result that its check passed is no review `standard.check`
+passes or has cells that are not each axis of the rubric once, checked or n/a. The exit is 2 on a time that is not like
+2026-11-02T09:30:00Z, a file that cannot be read, or a TAUCETI that is no directory or a checkout at another commit than
+the dataset's.
 """
 from __future__ import annotations
 
@@ -65,6 +70,8 @@ from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import ROOT  # noqa: E402
+import migrate_check  # noqa: E402
+import migrate_inputs  # noqa: E402
 import standard  # noqa: E402
 
 from evidence_core import Dataset  # noqa: E402
@@ -237,10 +244,11 @@ class Plan:
 
 
 def standard_records(bundles: list[dict], results: list[dict], checks: list[dict], ds: Dataset, store: Store, at: str,
-                     session: str) -> Plan:
+                     session: str, source: Path | None) -> Plan:
     """The records and the held list the results make (see the module's docstring), keyed in `ds`, made at `at` by
     the migration in the run `session`, against the records of `store` as the page reads them for `ds`
-    (evidence-core's `Evidence`: a declaration renamed keeps its records)."""
+    (evidence-core's `Evidence`: a declaration renamed keeps its records). Each result is checked again as
+    migrate_check.py checks it, against `source`, the library at the bundles' commit, and its check must agree."""
     plan = Plan()
     by, rubric = migration(session), store.rubric
     bundle_of = keyed(bundles, "bundles", plan.problems)
@@ -263,13 +271,19 @@ def standard_records(bundles: list[dict], results: list[dict], checks: list[dict
         if decl is None:
             plan.problems.append(f"`{name}`: not a declaration of the dataset at `{ds.commit[:12]}`")
             continue
+        # Checked again here, so that a check of another checker, or of other results, decides nothing.
+        found = migrate_check.problems(bundle, result, source)
+        if (check.get("ok") is True) == bool(found):
+            plan.problems.append(f"`{name}`: CHECKS " + (
+                "passes it, but checked again here it fails: " + "; ".join(one_line(p) for p in found) if found
+                else "fails it, but checked again here it passes") + ". CHECKS is not migrate_check.py's check of "
+                "RESULTS as they are: check them again")
+            continue
         if "error" in result:
             plan.held.append((name, f"no result: {one_line(result['error'])}"))
             continue
-        if check.get("ok") is not True:
-            found = check.get("problems")
-            why = "failed checks: " + ("; ".join(one_line(p) for p in found) if isinstance(found, list) and found
-                                       else "none given")
+        if found:
+            why = "failed checks: " + "; ".join(one_line(p) for p in found)
             if result.get("verdict") == "hold" and one_line(result.get("hold") or ""):
                 why += f"; the writer held it: {one_line(result['hold'])}"  # the review is lost, the concern is not
             plan.held.append((name, why))
@@ -373,13 +387,22 @@ def run_standard(args: argparse.Namespace) -> int:
     if not TIME.fullmatch(at):
         print(f"error: --at {at!r} is not a time like 2026-11-02T09:30:00Z", file=sys.stderr)
         return 2
+    source = Path(args.source)
+    if not source.is_dir():
+        print(f"error: no checkout of the library at {source}", file=sys.stderr)
+        return 2
     try:
         bundles, results, checks = (read_jsonl(Path(p)) for p in (args.bundles, args.results, args.checks))
         ds, store = Dataset.load(args.dataset), Store.load(args.store)
     except (OSError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    plan = standard_records(bundles, results, checks, ds, store, at, args.prefix)
+    head = migrate_inputs.checkout_commit(source)
+    if head is not None and head != ds.commit:
+        print(f"error: the checkout {source} is at {head[:12]}, the dataset at {ds.commit[:12]}: give the library at "
+              "the bundles' commit", file=sys.stderr)
+        return 2
+    plan = standard_records(bundles, results, checks, ds, store, at, args.prefix, source)
     files, problems = [], plan.problems
     if not problems:
         files, problems = write_files(plan.records, Path(args.out_dir), args.prefix, store.rubric)
@@ -418,6 +441,8 @@ def main(argv: list[str]) -> int:
     std.add_argument("results", help="the writers' results (scripts/migrate_write.py collect)")
     std.add_argument("checks", help="the checks of the results (scripts/migrate_check.py), those of the last round")
     std.add_argument("--dataset", required=True, help="the dataset of the bundles' commit")
+    std.add_argument("--source", required=True, help="a checkout of the library at the bundles' commit, as "
+                     "migrate_check.py takes it")
     std.add_argument("--store", default=str(STORE), help="the evidence store (default: evidence/)")
     std.add_argument("--out-dir", default=str(STORE / "records"), help="where the files go (default: evidence/records)")
     std.add_argument("--prefix", required=True, help="the files' name and the run, e.g. standard-migration-2026-11-02")
