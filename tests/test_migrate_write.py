@@ -402,6 +402,57 @@ class CollectTests(Temporary):
         self.assertEqual(code, 2)
 
 
+class MergeTests(Temporary):
+    """Rounds and waves made one (the final review's Important 2): one row per declaration, the latest file's, but a
+    `no result`, which says only that the declaration was not written yet."""
+
+    def merge(self, *files: Path) -> tuple[int, str, str]:
+        return run(migrate_write.main, "merge", str(self.tmp / "merged.jsonl"), *map(str, files))
+
+    def test_merge_keeps_each_declaration_s_latest_row(self):
+        n = [f"TauCeti.Foo.n{k}" for k in range(7)]
+        b = [bundle(name) for name in n]
+        first = jsonl(self.tmp / "first.jsonl", [
+            result(b[0], review="R0"), result(b[1], review="R1"), {"decl": n[2], "error": "no result"},
+            {"decl": n[3], "error": "unparseable line"}, result(b[4], review="R4"),
+            {"decl": n[5], "error": "no result"}])
+        second = jsonl(self.tmp / "second.jsonl", [
+            result(b[1], review="R1 again"), {"decl": n[0], "error": "no result"}, result(b[2], review="R2"),
+            {"decl": n[3], "error": "no result"}, {"decl": n[4], "error": "two results"}, result(b[6], review="R6")])
+        code, out, err = self.merge(first, second)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(read(self.tmp / "merged.jsonl"), [
+            result(b[0], review="R0"),  # a later `no result` replaces nothing
+            result(b[1], review="R1 again"),  # the later file's row
+            result(b[2], review="R2"),
+            {"decl": n[3], "error": "unparseable line"},  # nor does it replace an error
+            {"decl": n[4], "error": "two results"},  # any other row of a later file wins
+            {"decl": n[5], "error": "no result"},  # nothing more of it anywhere
+            result(b[6], review="R6")])  # in the order the declarations first come
+        for words in ("7 declarations", "4 results", "1 no result", "1 unparseable line", "1 two results",
+                      f"{first}: 6 rows, 3 of them kept", f"{second}: 6 rows, 4 of them kept"):
+            self.assertIn(words, out)
+        # In the other order, the first file's rows are the later ones.
+        code, out, err = self.merge(second, first)
+        self.assertEqual(code, 0, err)
+        self.assertEqual([r.get("review") or r.get("error") for r in read(self.tmp / "merged.jsonl")],
+                         ["R1", "R0", "R2", "unparseable line", "R4", "R6", "no result"])
+
+    def test_merge_refuses_a_file_that_is_not_one_row_per_declaration(self):
+        good = jsonl(self.tmp / "good.jsonl", [result(bundle(), review="R")])
+        for rows in ([result(bundle(), review="A"), result(bundle(), review="B")], [["a", "list"]], [{"error": "x"}]):
+            with self.subTest(rows=rows):
+                bad = jsonl(self.tmp / "bad.jsonl", rows)
+                code, out, err = self.merge(good, bad)
+                self.assertEqual(code, 2, (out, err))
+                self.assertIn(str(bad), err)
+                self.assertFalse((self.tmp / "merged.jsonl").exists())
+        (self.tmp / "broken.jsonl").write_text("{not json\n", encoding="utf-8")
+        code, out, err = self.merge(good, self.tmp / "broken.jsonl")
+        self.assertEqual(code, 2)
+        self.assertFalse((self.tmp / "merged.jsonl").exists())
+
+
 class CheckTests(Temporary):
     """The quality bar: a result, its review and the bundle it was written from."""
 

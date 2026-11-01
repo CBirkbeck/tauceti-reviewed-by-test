@@ -8,6 +8,7 @@ those results collected. Agents in a session write the reviews, not the Message 
                                    [--review FILE]
   python3 scripts/migrate_write.py todo RESULT
   python3 scripts/migrate_write.py collect NAME [--work .cache/migration]
+  python3 scripts/migrate_write.py merge OUT RESULTS...
 
 **split** cuts BUNDLES (scripts/migrate_inputs.py) into `<work>/<NAME>/batch-<nnn>.jsonl`, `nnn` from 001: at most
 `--size` bundles each, in their order, each given `index`, its line in BUNDLES from 0. It writes
@@ -36,6 +37,13 @@ line in the batch: an agent sent to a batch another began resumes from the first
 order, its result, or `{"decl", "error"}`, the error `no result`, `unparseable line` or `two results`. A line that is
 not JSON counts as its declaration's when it names one of the batch; a line that repeats another exactly counts once.
 It prints how many of each, the lines that name no bundle of their batch, and the batches without a result file yet.
+
+**merge** makes the results of several rounds or waves one (OUT): `collect`'s RESULTS of each, the earliest first.
+Each declaration gets the row of the last file that has one, a later round's result in place of an earlier one; but
+`no result`, which says only that the declaration was not written yet, replaces nothing, and stands only for a
+declaration no file has more of. OUT has one line per declaration, in the order they first come. It prints how many
+declarations there are, by result and by error, and how many rows of each file were kept. A file that has a
+declaration twice, or a line that is no row of a declaration, is refused, and nothing is written.
 
 Exit 0 when done, 1 when `add` refuses a result, 2 on bad input.
 """
@@ -270,6 +278,42 @@ def collect(a: argparse.Namespace) -> int:
     return 0
 
 
+def unwritten(row: dict) -> bool:
+    """Whether a row of results is `collect`'s `no result`: the declaration was not written yet, which says nothing of
+    it."""
+    return migrate_check.errored(row) and row.get("error") == "no result"
+
+
+def merge(a: argparse.Namespace) -> int:
+    rows: dict[str, dict] = {}  # each declaration's row, in the order they first come
+    origin: dict[str, Path] = {}  # the file it came from
+    sizes: list[tuple[Path, int]] = []
+    for path in a.results:
+        given = migrate_check.read_jsonl(path)
+        seen: set[str] = set()
+        for n, row in enumerate(given, 1):
+            if not isinstance(row, dict) or not isinstance(row.get("decl"), str) or not row["decl"]:
+                raise Refused(f"{path}: line {n} is no row of a declaration, a result or `{{\"decl\", \"error\"}}`")
+            decl = row["decl"]
+            if decl in seen:
+                raise Refused(f"{path}: `{decl}` is in it twice; a file of results holds one row per declaration")
+            seen.add(decl)
+            if decl in rows and unwritten(row):
+                continue  # `no result` replaces nothing
+            rows[decl] = row
+            origin[decl] = path
+        sizes.append((path, len(given)))
+    a.out.parent.mkdir(parents=True, exist_ok=True)
+    write_jsonl(a.out, list(rows.values()))
+    kinds = Counter("result" if not migrate_check.errored(r) else str(r["error"]) for r in rows.values())
+    print(f"merged {len(a.results)} files into {a.out}: {len(rows)} declarations, {kinds.pop('result', 0)} results"
+          + "".join(f", {n} {error}" for error, n in sorted(kinds.items())))
+    kept = Counter(origin.values())
+    for path, size in sizes:
+        print(f"  {path}: {size} rows, {kept[path]} of them kept")
+    return 0
+
+
 def batch_of(result: Path) -> tuple[Path, Path, list[dict]]:
     """A result file, the batch file beside it of its number, and that batch's bundles."""
     path = result.resolve()
@@ -352,9 +396,12 @@ def main(argv: list[str]) -> int:
     c = sub.add_parser("collect", help="merge a round's result files into results.jsonl")
     c.add_argument("name", help="the round's name")
     c.add_argument("--work", type=Path, default=WORK, help="where rounds go (default .cache/migration)")
+    m = sub.add_parser("merge", help="make the results of several rounds or waves one, the latest of each declaration")
+    m.add_argument("out", type=Path, help="the results to write")
+    m.add_argument("results", type=Path, nargs="+", help="collect's results of each round or wave, the earliest first")
     a = p.parse_args(argv)
     try:
-        return {"split": split, "add": add, "todo": todo, "collect": collect}[a.command](a)
+        return {"split": split, "add": add, "todo": todo, "collect": collect, "merge": merge}[a.command](a)
     except Refused as e:
         print(f"{'refused' if a.command == 'add' else 'error'}: {e}", file=sys.stderr)
         return 1 if a.command == "add" else 2
