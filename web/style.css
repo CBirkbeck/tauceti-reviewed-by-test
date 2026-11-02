@@ -191,8 +191,9 @@ a.stat span { color: var(--accent); }
 .coverage { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 14px; color: var(--muted); }
 
 /* The review box, as the site had it in September, asking one question: is it correctly stated? Then
-   Reviews and Tests under small capitals, each answer a mark (a tick or a cross in a pill), people's
-   filled, AI agents' ringed, one that no longer stands grey; each no in full. */
+   Reviews, the AI review, What could be better and Tests under small capitals, each answer a mark (a tick
+   or a cross in a pill), people's filled, AI agents' ringed, one that no longer stands grey, on a line
+   that opens to what was said; the AI review a twisty of its own. */
 .review { margin: 1.6rem 0; padding: 14px 18px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
   --person: var(--result); --agent: var(--ai); --tested: var(--concept); --no: var(--st-problem); }
 .review .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -234,17 +235,20 @@ a.stat span { color: var(--accent); }
 .review .ai-prompt { margin: 6px 0 0; padding: 8px 12px; border: 1px dashed var(--edge); border-radius: 8px; background: var(--code);
   font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
 .review .sub { margin: 16px 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
-/* The standard review: the one text of a declaration (its three parts are headings of the text), then who wrote it and
-   which AI agents approved it, each a pill with an AI agent's blue tick. */
+/* The AI review (the store's standard review): a twisty whose line is its heading and how many AI agents approved
+   it; open, the one text of a declaration (its three parts are headings of the text), then its version and who wrote
+   it. Who approved it is among the reviews, each a pill with an AI agent's blue tick. */
+.review details.standard-box { margin: 16px 0 6px; }
+.review details.standard-box > summary .sub { margin: 0; }
+.review details.standard-box > summary:hover .sub { color: var(--ink-soft); }
+.review .std-state { font-size: 12.5px; color: var(--muted); }
+.review .std-state.stale { color: var(--st-uncounted); }
 .review .standard { margin: 2px 0 8px; font-size: 14.5px; overflow-wrap: anywhere; }
 .review .standard h2 { margin: 14px 0 3px; font-size: 1.02rem; }
 .review .standard h2:first-child { margin-top: 2px; }
 .review .standard ul, .review .standard ol { margin: 4px 0 .6em; padding-left: 22px; }
 .review .standard pre { margin: 6px 0; padding: 8px 12px; border-radius: 8px; background: var(--code); font-size: 12.5px; overflow-x: auto; }
-.review .std-version, .review .approvers { margin: 4px 0; font-size: 12.5px; color: var(--faint); }
-.review .approvers { line-height: 2.1; }
-.review .approvers .mark { line-height: 1.5; }
-.review .status-note { margin: 4px 0 6px; }
+.review .std-version { margin: 4px 0; font-size: 12.5px; color: var(--faint); }
 .review .empty { margin: 4px 0; font-size: 14px; }
 .review details { margin: 2px 0 8px; }
 .review details > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
@@ -267,9 +271,13 @@ a.mark:hover { border-color: var(--accent); text-decoration: none; }
 .mark.stale { color: var(--faint); }
 .mark.stale .tick { background: none; box-shadow: inset 0 0 0 1.5px var(--faint); color: var(--faint); }
 .mark.stale .ai { color: var(--faint); }
-/* A twisty: a line that opens to show more, an answer's reasons or what a test checks and states. */
-.answers-list, .tests-list { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 6px 0 8px; }
-.answers-list > details, .tests-list > details { align-self: stretch; }
+/* A twisty: a line that opens to show more, what a review said or what a test checks and states. A review with
+   nothing more to say is its line alone, its mark where a twisty's would be; then when it was given. */
+.reviews-list, .tests-list { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 6px 0 8px; }
+.reviews-list > details, .tests-list > details { align-self: stretch; }
+.reviews-list > .said { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding-left: 18px; font-size: 13px; }
+.reviews-list > .empty { margin: 0; padding-left: 18px; font-size: 13px; }
+.review .when { font-size: 12.5px; color: var(--faint); white-space: nowrap; }
 details.twisty { margin: 0; }
 details.twisty > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; list-style: none;
   cursor: pointer; font-size: 13px; color: var(--ink); }

@@ -661,10 +661,10 @@
   };
 
   /* The review box, as the site had it in September (scripts/build_site.py before the rebuild), asking one
-     question: is it correctly stated? Yes, or no and why. Below it the standard review, the one text of the
-     declaration, with the AI agents that approved it; then the answers, people's yeses and every no, each answerer
-     a click away, each no in full; then what could be better, people's suggestions for it when it is correct; and
-     what tests it, with a test to suggest. */
+     question: is it correctly stated? Yes, or no and why. Below it the reviews, people's first and then the AI
+     agents', the latest first in each, each answer a twisty under its answerer's name that opens to what they said;
+     then the AI review, the one text of the declaration, in a twisty; then what could be better, people's
+     suggestions for it when it is correct; and what tests it, with a test to suggest (laid out so on 2026-11-02). */
   function reviewCard(meta, name, read, records, tests, word, std) {
     const card = el('section', 'review'), open = !!read;
     card.id = 'review';
@@ -690,15 +690,19 @@
       if (v.url) line.append(' · ', ext(v.url, issueText(v.url)));
       card.append(line);
     });
-    // An AI agent's yes is not an answer here: it shows as an approver of the standard review, or, while there is
-    // none, as a number (its yeses of the earlier form: those that did nothing to a standard review, with no `std`),
-    // and its reasons are not on the page. The answers are people's yeses and every no. The standard review belongs to
-    // the question the box asks: a declaration the site does not ask about has no section, whatever yeses are on
-    // record for it (an imported store's, say).
+    // The answers are people's yeses and every no. An AI agent's yes is not an answer of its own, and its reasons are
+    // not on the page: it is among the reviews as an approver of the AI review (the store's standard review), or as a
+    // number, last: those that approved an earlier version of it, or, while there is none, its yeses of the earlier
+    // form (those that did nothing to a standard review, with no `std`). The AI review belongs to the question the box
+    // asks: a declaration the site does not ask about has no section and no such number, whatever yeses are on record
+    // for it (an imported store's, say).
     const yes = reviews('accept'), people = yes.filter(v => v.by.kind !== 'agent');
     const earlierYes = yes.filter(v => v.by.kind === 'agent' && !v.std).length;
-    if (open) card.append(el('p', 'sub', 'Standard review'), standardReview(std, earlierYes));
-    card.append(el('p', 'sub', 'Answers'), answers(people, reviews('problem'), byId));
+    const earlier = !open ? 0 : std ? std.earlier : earlierYes;
+    const more = !earlier ? '' : std ? `${plural(earlier, 'AI agent')} approved ${earlier === 1 ? 'an earlier version' : 'earlier versions'}.`
+      : `${plural(earlier, 'AI agent')} said yes in the earlier form of review.`;
+    card.append(el('p', 'sub', 'Reviews'), reviewList([...people, ...reviews('problem')], open && std ? std.approvers : [], more, byId));
+    if (open) card.append(aiReview(std));
     // A line offering a form: what it is for, and its button.
     const offer = (text, spec) => {
       const f = formFor(meta, name, spec), line = el('div', 'offer'), frag = document.createDocumentFragment();
@@ -723,31 +727,26 @@
     }
     return card;
   }
-  /* The standard review: the one text a declaration has, as the build kept it (the current version only; the store
-     keeps the history), rendered as Markdown and never as HTML. Under it, who wrote it and when, and the AI agents
-     that approved this text, each with what it checked on hover, and how many approved an earlier one. Written for
-     an earlier version of the declaration, it says so above. Without one: that, and how many AI agents said yes in the
-     earlier form of review, a number and no more. */
-  function standardReview(std, earlierYes) {
-    const box = el('div', 'standard-box');
+  /* The AI review: the one text a declaration has, which AI agents write, edit and approve (the store's standard
+     review; the page calls it the AI review, so that a reader knows it is AI's), as the build kept it (the current
+     version only; the store keeps the history). One twisty, closed: its line says how many AI agents approved this
+     text, and when it was written for an earlier version of the declaration; open, the text, rendered as Markdown and
+     never as HTML, then its version, when and by whom it was written. Who approved it is among the reviews. Without
+     one: that. */
+  function aiReview(std) {
     if (!std) {
-      box.append(el('p', 'empty', 'No standard review yet.'));
-      if (earlierYes) box.append(el('p', 'empty', `${plural(earlierYes, 'AI agent')} said yes in the earlier form of review.`));
-      return box;
+      const frag = document.createDocumentFragment();
+      frag.append(el('p', 'sub', 'AI review'), el('p', 'empty', 'No AI review yet.'));
+      return frag;
     }
-    if (!std.current) box.append(el('p', 'status-note', 'Written for an earlier version of this declaration, which has changed since.'));
-    const version = el('p', 'std-version'), approvers = el('p', 'approvers');
+    const n = std.approvers.length, version = el('p', 'std-version');
     version.append(`Version ${std.version.slice(0, 8)} · `, std.url ? ext(std.url, date(std.at)) : date(std.at), ' · ', markWho(std.by));
-    if (std.approvers.length) {
-      approvers.append('Approved by');
-      std.approvers.forEach(a => approvers.append(' ', approverMark(a)));
-    } else approvers.append('Not yet approved by an AI agent.');
-    if (std.earlier) approvers.append(` · ${std.earlier} approved ${std.earlier === 1 ? 'an earlier version' : 'earlier versions'}`);
-    box.append(md(std.text, 'standard'), version, approvers);
-    return box;
+    const line = [el('span', 'sub', 'AI review'), ' · ', el('span', 'std-state', n ? `approved by ${plural(n, 'AI agent')}` : 'not yet approved')];
+    if (!std.current) line.push(' · ', el('span', 'std-state stale', 'written for an earlier version of this declaration'));
+    return twisty('standard-box', line, md(std.text, 'standard'), version);
   }
-  /* An AI agent that approved the text, as a mark (the tick of an AI agent's yes: blue), linking to the comment that
-     approved it; on hover, the checks it made, those that did not apply to this declaration, and when. */
+  /* An AI agent that approved the AI review, as a mark (the tick of an AI agent's yes: blue), linking to the comment
+     that approved it; on hover, the checks it made, those that did not apply to this declaration, and when. */
   function approverMark(a) {
     const cls = 'mark yes ' + (a.by.kind === 'agent' ? 'agent' : 'person'), m = a.url ? ext(a.url, null, cls) : el('span', cls);
     const axes = state => Object.entries(a.checked || {}).filter(([, s]) => s === state).map(([axis]) => axis);
@@ -1002,6 +1001,8 @@
   const resolved = v => v.verdict === 'problem' && RESOLVED.has(v.state);
   const sign = answer => { const t = el('span', 'tick', answer === 'no' ? '✗' : '✓'); t.setAttribute('aria-hidden', 'true'); return t; };
   const issueText = url => { const m = /\/issues\/(\d+)$/.exec(url || ''); return m ? 'Issue #' + m[1] : 'issue'; };
+  /* When a review was given, as its line says it. */
+  const when = at => { const t = el('time', 'when', date(at)); t.dateTime = at || ''; return t; };
   /* Who made a record, as a mark says it: @login, or the agent, AI, and the account it acted through. */
   function markWho(by) {
     const span = el('span', 'who');
@@ -1046,46 +1047,68 @@
     d.append(s, b);
     return d;
   }
-  /* One yes in the list of answers: its mark, which opens, when it gives reasons (an agent gives them only when
-     they add to the answers already there), to
-     show why: what it was compared with, what was checked, the Checks run; then its issue. A bare yes is just
-     its mark, and a no is shown in full below. */
-  function answerRow(v) {
+  /* One answer among the reviews, under its answerer's name: a twisty whose line is its mark (whose, yes or no, where
+     it stands) and when, and which opens to what they said: a yes's reasons (an agent gives them only when they add to
+     the answers already there), what it was compared with, what was checked, the Checks run, then its issue; a no in
+     full, open while the no is. A yes with nothing more to say is just its line, its mark a link to its issue. */
+  function answerRow(v, byId) {
+    if (v.verdict === 'problem') {
+      const d = twisty('no', [mark(v, true), when(v.at)], report(v, byId, true));
+      d.open = v.state === 'open';
+      return d;
+    }
     const ref = v.reference && (v.reference.text || v.reference.url);
     const checked = Object.entries(v.checked || {}).filter(([, s]) => s === 'checked').map(([axis]) => axis);
     const caveats = (v.caveats || []).map(c => typeof c === 'string' ? c : [c.category, c.note || c.text].filter(Boolean).join(': '));
-    if (v.verdict === 'problem' || !(v.text || ref || checked.length || caveats.length)) return mark(v);
+    if (!(v.text || ref || checked.length || caveats.length)) { const line = el('div', 'said'); line.append(mark(v), when(v.at)); return line; }
     const line = el('p', 'line');
-    if (v.url) line.append(ext(v.url, issueText(v.url)), ' · ');
-    line.append(date(v.at) + (v.hash ? ' · version ' + v.hash.slice(0, 8) : ''));
-    return twisty('why', [mark(v, true), el('span', 'gist', 'why')],
+    if (v.url) line.append(ext(v.url, issueText(v.url)));
+    if (v.hash) line.append((v.url ? ' · ' : '') + 'version ' + v.hash.slice(0, 8));
+    return twisty('why', [mark(v, true), when(v.at)],
                   ref ? el('p', 'line', `Compared with ${ref}.`) : null, checked.length ? el('p', 'line', `Checked: ${checked.join(', ')}.`) : null,
-                  v.text ? md(v.text) : null, caveats.length ? el('p', 'line', 'What could be better: ' + caveats.join('; ')) : null, line);
+                  v.text ? md(v.text) : null, caveats.length ? el('p', 'line', 'What could be better: ' + caveats.join('; ')) : null,
+                  line.childNodes.length ? line : null);
   }
-  /* A mark that counts the answers that stand, people apart from AI agents, and says how many no longer do. */
-  function tally(answer, words, vs, gone) {
-    const now = vs.filter(stands), people = now.filter(v => v.by.kind !== 'agent').length, agents = now.length - people;
+  /* An AI agent that approved the AI review, among the reviews: its mark, what it checked on hover, and when. */
+  function approvalRow(a) {
+    const line = el('div', 'said');
+    line.append(approverMark(a), when(a.at));
+    return line;
+  }
+  /* A mark that counts the answers that stand (`now`, who gave each), people apart from AI agents, and says how many
+     no longer do (`gone`, in words). */
+  function tally(answer, words, now, gone) {
+    const people = now.filter(by => by.kind !== 'agent').length, agents = now.length - people;
     const counts = [people ? plural(people, 'person', 'people') : '', agents ? `${agents} AI` : ''].filter(Boolean).join(' · ');
     const t = el('span', `mark tally ${answer} ` + (people ? 'person' : agents ? 'agent' : 'stale'));
     t.title = answer === 'no' ? 'Answered no: it is not correctly stated' : 'Answered yes: it is correctly stated';
     t.append(sign(answer), el('span', 'trailer', words));
     if (counts) t.append(' ', el('span', 'who', counts));
-    const k = vs.length - now.length;
-    if (k) t.append(counts ? ' · ' : ' ', el('span', 'note', gone(k)));
+    if (gone) t.append(counts ? ' · ' : ' ', el('span', 'note', gone));
     return t;
   }
-  /* The answers: a mark for the yeses of this version and one for the noes still open, then each answer's own
-     mark, a twisty when it gives reasons, then each no in full, with why. */
-  function answers(yes, no, byId) {
+  /* The reviews: a mark for the yeses that stand (people's of this version, and the AI agents' that approved the AI
+     review) and one for the noes still open; then each review on a line of its own, people's answers first, then the
+     AI agents' approvals of the AI review (`approvals`) and their noes, the latest first in each; and last, how many
+     more AI agents said yes (`more`, in words). With none of these, that. */
+  function reviewList(answers, approvals, more, byId) {
     const box = el('div');
-    if (!yes.length && !no.length) { box.append(el('p', 'empty', 'No answers yet.')); return box; }
-    const row = el('div', 'marks');
-    if (yes.length) row.append(tally('yes', 'Correctly stated', yes, k => k === 1 ? '1 on an earlier version' : `${k} on earlier versions`));
+    if (!answers.length && !approvals.length && !more) { box.append(el('p', 'empty', 'No reviews yet.')); return box; }
+    const yes = answers.filter(v => v.verdict === 'accept'), no = answers.filter(v => v.verdict === 'problem');
+    const row = el('div', 'marks'), old = yes.filter(v => !stands(v)).length, done = no.filter(v => !stands(v)).length;
+    if (yes.length || approvals.length) {
+      row.append(tally('yes', 'Correctly stated', [...yes.filter(stands), ...approvals].map(x => x.by),
+                       old ? (old === 1 ? '1 on an earlier version' : `${old} on earlier versions`) : ''));
+    }
     // The cross only while a no is open: one fixed (or found to be no problem) is a green tick below.
-    if (no.some(stands)) row.append(tally('no', 'Not correctly stated', no, k => `${k} resolved`));
-    const list = el('div', 'answers-list');
-    [...yes, ...no].sort((a, b) => stands(b) - stands(a) || (b.at || '').localeCompare(a.at || '')).forEach(v => list.append(answerRow(v)));
-    box.append(row, list, ...no.map(v => report(v, byId)));
+    if (no.some(stands)) row.append(tally('no', 'Not correctly stated', no.filter(stands).map(v => v.by), done ? `${done} resolved` : ''));
+    const list = el('div', 'reviews-list'), newest = (a, b) => (b.at || '').localeCompare(a.at || ''), ai = x => x.by.kind === 'agent';
+    list.append(...answers.filter(v => !ai(v)).sort(newest).map(v => answerRow(v, byId)),
+                // An approval is not an answer of the box's: it has no verdict, and no reasons to open.
+                ...[...answers.filter(ai), ...approvals].sort(newest).map(x => x.verdict ? answerRow(x, byId) : approvalRow(x)));
+    if (more) list.append(el('p', 'empty', more));
+    if (row.childNodes.length) box.append(row);
+    box.append(list);
     return box;
   }
   const TEST_RESULT = {passes: 'passes', sorry: 'has sorry', missing: 'missing at this commit'};
@@ -1145,8 +1168,9 @@
   }
   /* A no or a suggestion (a question record): where it stands, who said it and when, what they said, the
      replies, and its issue with what was decided on it. Once answered (a reply, or a decision), it folds into a
-     twisty: where it stands, who said it, and its first line, opening to the rest. */
-  function report(v, byId) {
+     twisty: where it stands, who said it, and its first line, opening to the rest; unless it is in a twisty already
+     (`whole`), as a no is among the reviews. */
+  function report(v, byId, whole) {
     const open = v.state === 'open', question = v.verdict === 'question';
     const cls = 'report' + (question ? ' question' : '') + (open ? '' : ' closed') + (resolved(v) ? ' resolved' : '');
     const head = [el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? 'Closed' : STATE_WORDS[v.state] || 'Closed'), ' · ',
@@ -1161,7 +1185,7 @@
     replies(body, v, byId);
     resolutions(body, v, markWho);
     if (v.url) { const foot = el('p', 'line'); foot.append(ext(v.url, issueText(v.url))); body.append(foot); }
-    if (answered(v)) {
+    if (answered(v) && !whole) {
       const n = (v.replies || []).length;
       return twisty(cls, [...head, n ? ' · ' + plural(n, 'reply', 'replies') : '', el('span', 'gist', gist(v.text))], ...body.childNodes);
     }
