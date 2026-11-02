@@ -146,11 +146,11 @@
   const STATE_WORDS = {fixed: 'Fixed', intended: 'Behaves as intended', invalid: 'Not a problem', answered: 'Answered',
                        met: 'Met', failed: 'Failed', declined: 'Declined', withdrawn: 'Withdrawn', open: 'Open'};
   /* A record of the standard review (`std`: wrote, edited, restored or approved it) as one line, who did what and when,
-     with a link to its comment; the declaration's link goes before it, as before any record. No text: the review is
-     the review box's, and the page keeps one version of it. */
+     with a link to its comment; the declaration's link goes before it, as before any record. A reader sees it called
+     the AI review, as in the review box. No text: the review is the review box's, and the page keeps one version of it. */
   function standardLine(v) {
     const box = el('article', 'thread std' + (applies(v) ? '' : ' old')), head = el('div', 'thread-head'), did = el('span');
-    did.append(who(v.by), ` ${v.std} the standard review`);
+    did.append(who(v.by), ` ${v.std} the AI review`);
     head.append(did, el('span', 'faint', date(v.at)));
     if (v.url) head.append(ext(v.url, 'comment', 'faint'));
     box.append(head);
@@ -1416,15 +1416,16 @@
         p('The forms are for people. An AI agent reviews from the command line, following ',
           ext(`https://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md`, 'AI-REVIEWS.md'),
           `: it reads the declaration's Lean in depth and looks for errors first, along the rubric's eight checks and the Checks its roadmap `,
-          `gives it (the examples in ${lib} that carry their tags). If it finds one, it answers no. If not, it reads the standard review, `,
-          'the one text a declaration\'s page shows, and approves it when it is right and complete, edits it when something is missing or ',
-          'unclear, or writes one when there is none. Its approval carries the checks it made, which show on hover, and its approvals ',
-          "and edits are marked AI and counted apart from people's. To ask an agent for one, give it this:"),
+          `gives it (the examples in ${lib} that carry their tags). If it finds one, it answers no. If not, it reads the AI review, `,
+          'the one text a declaration\'s page shows (the standard review, in AI-REVIEWS.md), and approves it when it is right and ',
+          'complete, edits it when something is missing or unclear, or writes one when there is none. Its approval carries the checks ',
+          "it made, which show on hover, and its approvals and edits are marked AI and counted apart from people's. To ask an agent ",
+          'for one, give it this:'),
         code(`Review TauCeti.Foo.bar for the Tau Ceti review site, following\nhttps://github.com/${meta.store.repo}/blob/main/AI-REVIEWS.md\n` +
              'Read its Lean in depth and look for errors first; then approve, edit or write its standard review.\n' +
              'Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.'),
         p('Each declaration\'s review box has a button, ', el('b', null, 'Copy instructions for your AI'), ', that copies these, filled in ',
-          'with the declaration, the version of its standard review and where its text is, and the commit the site shows.'),
+          'with the declaration, the version of its AI review and where its text is, and the commit the site shows.'),
         p('Many approvals at once: comment lines like this on ', ext(URLS.bulk(meta), `issue #${meta.store.bulk}`), ', one each, after a ',
           'line naming the agent. The version is the one on the declaration\'s page, and the last field lists the eight checks, ',
           'a check that does not apply marked n/a:'),

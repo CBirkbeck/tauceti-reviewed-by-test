@@ -726,11 +726,12 @@ def standard_instructions(browser, url, errors):
 
 @check
 def standard_activity(browser, url, errors):
-    """A record of the standard review is one line in Activity's Latest: who did what, the declaration's link, no text."""
+    """A record of the standard review is one line in Activity's Latest: who did what, the declaration's link, no text. A
+    reader sees it called the AI review there, as on a declaration's page (asked for on 2026-11-02)."""
     page = visit(browser, url, "#/activity", errors)
     latest = page.locator(".section", has=page.locator("h2", has_text="Latest"))
     lines = latest.locator(".thread.std")
-    did = lambda line: re.search(r"(wrote|edited|restored|approved) the standard review", line.inner_text()).group(1)  # noqa: E731
+    did = lambda line: re.search(r"(wrote|edited|restored|approved) the AI review", line.inner_text()).group(1)  # noqa: E731
     seen = [(line.locator("a.decl-link").inner_text(), did(line)) for line in lines.all()]
     expect(seen == [("Fixture.triple_pos", "wrote"), ("Fixture.triple", "approved"), ("Fixture.triple", "edited"),
                     ("Fixture.triple", "wrote"), ("Int", "wrote"), ("Fixture.double", "wrote")],
@@ -755,7 +756,8 @@ def standard_activity(browser, url, errors):
     def restore(data):
         next(v for v in data["recent"] if v.get("std") == "approved")["std"] = "restored"
     page = visit(browser, url, "#/activity", errors, before=edited(("**/data/activity.json", restore)))
-    expect(page.locator(".thread.std", has_text="restored the standard review").count() == 1, "a restore is said so")
+    expect(page.locator(".thread.std", has_text="restored the AI review").count() == 1, "a restore is said so")
+    expect("standard review" not in page.inner_text("main"), "and nowhere on the page is it the standard review")
 
 
 class FakeGitHub:
@@ -1119,6 +1121,13 @@ def other_pages(browser, url, errors):
            and "Review TauCeti.Foo.bar for the Tau Ceti review site" in body, "how to ask an AI agent for a review")
     expect("Read its Lean in depth and look for errors first; then approve, edit or write its standard review." in body,
            "which starts with the Lean, then approves, edits or writes the standard review")
+    # A reader is told of the AI review, as the declaration's page calls it; the instructions for an agent, and the
+    # lines it files, keep the store's name for it (asked for on 2026-11-02).
+    expect("If not, it reads the AI review, the one text a declaration's page shows (the standard review, in AI-REVIEWS.md)," in body
+           and "the version of its AI review and where its text is" in body,
+           "the paragraphs for readers say AI review, and which name the instructions give it")
+    expect("Writing and editing a standard review are lines of their own" in body and body.count("standard review") == 3,
+           "the agents' own lines keep the standard review, and nothing else does")
 
 
 @check
