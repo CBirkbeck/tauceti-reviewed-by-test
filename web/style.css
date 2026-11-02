@@ -281,7 +281,6 @@ a.mark:hover { border-color: var(--accent); text-decoration: none; }
 .reviews-list, .tests-list { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 6px 0 8px; }
 .reviews-list > details, .tests-list > details { align-self: stretch; }
 .reviews-list > .said { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding-left: 18px; font-size: 13px; }
-.reviews-list > .empty { margin: 0; padding-left: 18px; font-size: 13px; }
 .review .when { font-size: 12.5px; color: var(--faint); white-space: nowrap; }
 details.twisty { margin: 0; }
 details.twisty > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; list-style: none;

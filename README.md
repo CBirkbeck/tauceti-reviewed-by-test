@@ -178,8 +178,10 @@ and `python -m answerer run --dry-run` to see what it would do.
   that opens to what they said: a yes's reasons and its issue, a no in full, the replies and what was
   decided (a no still open is open already, and a yes with nothing more to say is just its line); then the
   AI agents', the latest first: each that approved the AI review, a blue tick with the checks it made on
-  hover, and each no, as a person's; and last, how many more "said yes earlier", to an earlier version or
-  in the earlier form of review ("No reviews yet." when there is nothing). Then the **AI
+  hover, and each no, as a person's; then, greyed, the latest first, each AI agent that said yes earlier,
+  who, when and a link to where, saying how: "on an earlier version of the AI review" (or of the
+  declaration), with its checks on hover, or for a yes of the earlier form of review "before the AI review"
+  ("earlier form" while there is none) ("No reviews yet." when there is nothing). Then the **AI
   review**, the declaration's standard review, so named for a reader to know AI agents wrote it: one
   twisty, closed, whose line says how many AI agents approved it ("not yet approved" while none has) and
   when it was written for an earlier version of the declaration; open, its text in three parts (what it

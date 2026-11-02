@@ -264,19 +264,21 @@ def review(browser, url, errors):
     tally = box.locator(".mark.tally.yes")
     expect(tally.locator(".trailer").inner_text() == "Correctly stated" and tally.locator(".who").inner_text() == "1 person · 2 AI",
            "the yeses counted: the person's, and the AI agents' that approved the AI review")
-    expect(box.locator(".reviews-list .mark.person").count() == 1 and box.locator(".reviews-list .mark.agent").count() == 2,
+    expect(box.locator(".reviews-list .mark.person").count() == 1 and box.locator(".reviews-list .mark.agent:not(.stale)").count() == 2,
            "each review's mark, the person's and the two approving AI agents'")
     colours = page.evaluate("""() => { const probe = document.createElement('span'); document.body.append(probe);
       const of = v => { probe.style.color = `var(${v})`; return getComputedStyle(probe).color; };
       const person = of('--result'), ai = of('--ai'); probe.remove();
       const q = s => getComputedStyle(document.querySelector(s));
-      return [q('.reviews-list .mark.person .tick').backgroundColor === person, q('.reviews-list .mark.agent .tick').color === ai,
-              q('.reviews-list .mark.agent .ai').color === ai, person !== ai]; }""")
+      return [q('.reviews-list .mark.person .tick').backgroundColor === person, q('.reviews-list .mark.agent:not(.stale) .tick').color === ai,
+              q('.reviews-list .mark.agent:not(.stale) .ai').color === ai, person !== ai]; }""")
     expect(all(colours), f"a person's yes is a green tick, an approving AI agent's a blue one, its AI mark blue too ({colours})")
     why = box.locator(".reviews-list details.why")
     expect(why.count() == 1 and not why.evaluate("d => d.open"), "the person's reasons, a closed twisty")
-    expect(box.locator(".reviews-list .mark.stale").count() == 0 and "withdrawn" not in box.locator(".reviews-list").inner_text()
-           and "earlier version" not in tally.inner_text(), "an answer withdrawn under an old name, left out")
+    listed = box.locator(".reviews-list").inner_text()
+    expect(box.locator(".reviews-list .mark.stale .who").all_inner_texts() == ["Codex, GPT-6 Astra AI via @example"]
+           and "Opus 5" not in listed and "withdrawn" not in listed and "earlier version" not in tally.inner_text(),
+           "an answer withdrawn under an old name, and one superseded, left out: greyed, only the AI agent that said yes earlier")
     why.locator("summary").click()
     expect(why.evaluate("d => d.open") and "Compared with Fixture documentation" in why.inner_text(), "which opens to why")
     expect("Compared with its definition" not in box.inner_text(), "no AI agent's reasons on a declaration's page")
@@ -337,7 +339,7 @@ def review(browser, url, errors):
     expect("what it rests on has changed" in page.locator(".review .reviews-list").inner_text(), "stale underneath, said")
     page = visit(browser, url, "#/d/Fixture.double", errors)
     box = page.locator(".review")
-    expect(box.locator(".reviews-list .mark.stale").count() == 1
+    expect(box.locator(".reviews-list .mark.person.stale").count() == 1
            and "earlier version" in box.locator(".reviews-list details.why > summary").inner_text()
            and "1 on an earlier version" in box.inner_text(), "a yes about an earlier version, greyed, its line saying so")
     suggested = box.locator(".tests-list details.test.suggested")
@@ -396,7 +398,7 @@ def in_module(name: str, change):
 def standard_review(browser, url, errors):
     """The standard review of `Fixture.triple`, which the page calls its AI review: the one current text in its three
     parts, who wrote it; and among the reviews, after the person's, the AI agents that approved it, what each checked
-    (on hover), and how many more said yes earlier (one approved an earlier text)."""
+    (on hover), and greyed after them each AI agent that said yes earlier: here ASTRA, who wrote the first text."""
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     box = page.locator(".review")
     expect(box.locator(".sub").all_text_contents() == ["Reviews", "AI review", "What could be better", "Tests"],
@@ -415,9 +417,8 @@ def standard_review(browser, url, errors):
     expect(box.locator(".std-version").inner_text()
            == f"Version {version[:8]} · 26 Oct 2026 · Claude Code, claude-opus-5-5 AI via @example", "its version, when it was written and by whom")
     reviews = box.locator(".reviews-list")
-    marks = reviews.locator(".mark.agent")
-    expect(marks.count() == 2 and "1 AI agent said yes earlier." in reviews.inner_text(),
-           "among the reviews, who approved this text, and how many AI agents said yes earlier (to an earlier one)")
+    marks = reviews.locator(".mark.agent:not(.stale)")
+    expect(marks.count() == 2, "among the reviews, who approved this text")
     expect(marks.locator(".who").all_inner_texts() == ["Voyager, claude-fable-5-1 AI via @example",
                                                        "Claude Code, claude-opus-5-5 AI via @example"],
            "each AI agent, the latest first, with its exact model")
@@ -435,6 +436,20 @@ def standard_review(browser, url, errors):
            "each approval a link to its comment, and so the version to the comment that wrote it")
     expect(reviews.locator(".mark.person").count() == 1 and reviews.locator("details .mark.agent").count() == 0,
            "and the person's yes: no AI agent's reasons, an approval being a line")
+    # After them, greyed, the AI agent that said yes earlier, in place of a count of them (asked for on 2026-11-02):
+    # who, when, where it said so, which kind of yes, and on hover what it checked.
+    earlier = reviews.locator(".mark.agent.stale")
+    expect(earlier.count() == 1 and earlier.locator(".who").inner_text() == "Codex, GPT-6 Astra AI via @example"
+           and earlier.locator(".note").inner_text() == "on an earlier version of the AI review"
+           and earlier.get_attribute("href") == comment + "4101"
+           and reviews.locator(".said", has=page.locator(".mark.stale")).locator("time").get_attribute("datetime") == "2026-10-25T10:00:00Z"
+           and "said yes earlier" not in reviews.inner_text(),
+           "then, greyed, the AI agent that approved an earlier text: who, when, its comment, and which kind of yes, with no count")
+    astra = earlier.get_attribute("title").split(" · ")
+    expect(astra[0].startswith("Checked: ") and set(astra[0][9:].split(", ")) == axes and astra[1:] == ["25 Oct 2026"],
+           f"and on hover what it checked ({astra})")
+    rows = reviews.locator(".mark.agent").evaluate_all("ms => ms.map(m => m.classList.contains('stale'))")
+    expect(rows == [False, False, True], f"after the approvers ({rows})")
 
 
 @check
@@ -449,22 +464,44 @@ def standard_review_states(browser, url, errors):
            "a review written for an earlier version of the declaration says so, in its line")
     box.locator("details.standard-box > summary").click()
     expect(box.locator(".standard h2").count() == 3 and box.locator(".standard").is_visible(), "and opens to its text")
-    expect(box.locator(".reviews-list .mark.agent").count() == 0
-           and box.locator(".reviews-list").inner_text().endswith("1 AI agent said yes earlier."),
-           "and has no approver for the declaration as it is")
+    stale = box.locator(".reviews-list .mark.agent.stale")
+    expect(box.locator(".reviews-list .mark.agent:not(.stale)").count() == 0 and stale.count() == 1
+           and stale.locator(".note").inner_text() == "on an earlier version of the declaration"
+           and "Claude Code, claude-opus-5-5" in stale.locator(".who").inner_text(),
+           "and has no approver for the declaration as it is: its writer approved it on an earlier one, greyed")
     # Held for the owner: written, not approved.
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors)
     box = page.locator(".review")
-    expect(line(box) == "AI review · not yet approved" and box.locator(".reviews-list .mark.agent").count() == 0
-           and box.locator(".reviews-list").inner_text().endswith("1 AI agent said yes earlier."),
-           "a review nobody has approved says so, and counts the AI agent that said yes earlier (in the earlier form)")
+    stale = box.locator(".reviews-list .mark.agent.stale")
+    expect(line(box) == "AI review · not yet approved" and box.locator(".reviews-list .mark.agent:not(.stale)").count() == 0
+           and stale.count() == 1 and stale.locator(".note").inner_text() == "before the AI review"
+           and "Codex, GPT-6 Astra" in stale.locator(".who").inner_text() and "said yes earlier" not in box.inner_text(),
+           "a review nobody has approved says so, and lists, greyed, the AI agent that said yes before it, in the earlier form")
     box.locator("details.standard-box > summary").click()
     expect(box.locator(".std-version").inner_text().endswith("Tau Ceti review migration, claude-opus-5-5 AI via @example"),
            "and who wrote it")
-    # More than one said yes earlier: their number.
+    # More than one said yes earlier: each, the latest first, from the build (an approval of an earlier text) and from
+    # the records (yeses of the earlier form, one of them made after the review was written: of the earlier form only).
+    voyager = {"kind": "agent", "login": "example", "agent": {"tool": "Voyager", "model": "claude-fable-5-1"},
+               "label": "Voyager (claude-fable-5-1) via example", "involvement": "unknown"}
+
+    def approval(data):
+        if "Fixture.triple_pos" in data:
+            data["Fixture.triple_pos"]["earlierApprovals"] = [
+                {"by": voyager, "at": "2026-10-26T08:00:00Z", "checked": {"object": "checked"},
+                 "url": "https://github.com/example/fixture-store/issues/1#issuecomment-4110", "version": "0123456789abcdef"}]
+
+    def later(e):
+        astra = next(v for v in e["records"] if v["kind"] == "review" and v["by"]["kind"] == "agent")
+        e["records"].append({**astra, "id": astra["id"] + "-later", "at": "2026-10-28T08:00:00Z"})
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors,
-                 before=edited(("**/data/standard/*.json", lambda data: data.get("Fixture.triple_pos", {}).update(earlier=3))))
-    expect(page.locator(".review .reviews-list").inner_text().endswith("3 AI agents said yes earlier."), "and how many")
+                 before=edited(("**/data/standard/*.json", approval), ("**/data/m/*.json", in_module("Fixture.triple_pos", later))))
+    rows = page.locator(".review .reviews-list .mark.agent.stale").evaluate_all(
+        "ms => ms.map(m => [m.querySelector('.who').textContent, m.querySelector('.note').textContent, m.parentElement.querySelector('time').dateTime])")
+    expect(rows == [["Codex, GPT-6 Astra AI via @example", "earlier form", "2026-10-28T08:00:00Z"],
+                    ["Voyager, claude-fable-5-1 AI via @example", "on an earlier version of the AI review", "2026-10-26T08:00:00Z"],
+                    ["Codex, GPT-6 Astra AI via @example", "before the AI review", "2026-10-21T08:00:00Z"]],
+           f"each AI agent that said yes earlier, the latest first, saying how ({rows})")
     # Outside the library, as inside it.
     page = visit(browser, url, "#/d/Int", errors)
     box = page.locator(".review")
@@ -490,7 +527,7 @@ def standard_review_states(browser, url, errors):
             first["checked"] = {}
             second["checked"] = {axis: "na" for axis in second["checked"]}
     page = visit(browser, url, "#/d/Fixture.triple", errors, before=edited(("**/data/standard/*.json", bare)))
-    titles = page.locator(".reviews-list .mark.agent").evaluate_all("marks => marks.map(m => m.title)")
+    titles = page.locator(".reviews-list .mark.agent:not(.stale)").evaluate_all("marks => marks.map(m => m.title)")
     expect(len(titles) == 2 and titles[0] == "27 Oct 2026" and titles[1].startswith("Not applicable: ")
            and titles[1].endswith(" · 26 Oct 2026") and "Checked" not in titles[1], f"on hover, only what there is ({titles})")
 
@@ -512,8 +549,8 @@ def standard_review_where_the_site_asks(browser, url, errors):
     expect(box.locator(".actions").count() == 0, "the site does not ask about it")
     shown = box.text_content()
     expect(box.locator(".standard-box").count() == 0 and box.locator(".standard").count() == 0 and "AI review" not in shown
-           and "No AI review yet." not in shown and "said yes earlier" not in shown,
-           "so its page has no AI review section, empty or counting that yes")
+           and "No AI review yet." not in shown and box.locator(".mark.agent").count() == 0 and "earlier form" not in shown,
+           "so its page has no AI review section, empty or listing that yes")
     page = visit(browser, url, "#/d/Int", errors)
     box = page.locator(".review")
     expect(box.locator("details.standard-box .standard").count() == 1 and "No AI review yet." not in box.text_content(),
@@ -568,21 +605,22 @@ def without_standard(name: str, extra_yeses: int = 0):
 @check
 def standard_review_earlier_form(browser, url, errors):
     """Without a standard review (an AI review, on the page), the AI agents that said yes in the earlier form are
-    counted, last among the reviews, as having said yes earlier, and what they wrote is not shown."""
+    listed, last among the reviews and greyed: who, when, where they said so; what they wrote is not shown."""
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors, before=without_standard("Fixture.triple_pos"))
     box = page.locator(".review")
-    expect("No AI review yet." in box.inner_text()
-           and box.locator(".reviews-list > :last-child").inner_text() == "1 AI agent said yes earlier.",
-           "no AI review yet, and last among the reviews, the one AI agent that said yes before")
-    expect("3 * n" not in box.inner_text() and box.locator(".reviews-list .mark.agent").count() == 0
-           and box.locator(".reviews-list .mark.person").count() == 1, "counted, not shown: the answers are people's")
+    last = box.locator(".reviews-list > :last-child")
+    expect("No AI review yet." in box.inner_text() and last.locator(".mark.agent.stale .note").inner_text() == "earlier form"
+           and "Codex, GPT-6 Astra" in last.locator(".who").inner_text() and last.locator("time").get_attribute("datetime") == "2026-10-21T08:00:00Z"
+           and last.locator("a.mark[href='https://github.com/example/fixture-store/issues/17']").count() == 1,
+           "no AI review yet, and last among the reviews, greyed, the AI agent that said yes in the earlier form: who, when, where")
+    expect("3 * n" not in box.inner_text() and box.locator(".reviews-list .mark.agent:not(.stale)").count() == 0
+           and box.locator(".reviews-list .mark.person").count() == 1, "listed, its reasons not shown: the answers are people's")
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors, before=without_standard("Fixture.triple_pos", extra_yeses=1))
-    expect("2 AI agents said yes earlier." in page.locator(".review .reviews-list").inner_text(), "and the number of them")
+    expect(page.locator(".review .reviews-list .mark.agent.stale").count() == 2, "and each of them")
     # An AI agent's yes of the new form (a write, an edit, an approval) is not one of the earlier form.
     page = visit(browser, url, "#/d/Fixture.triple", errors, before=without_standard("Fixture.triple"))
-    text = page.locator(".review").inner_text()
-    expect("No AI review yet." in text and "said yes earlier" not in text,
-           "the new form's yeses are not counted as the earlier's")
+    expect("No AI review yet." in page.locator(".review").inner_text() and page.locator(".review .reviews-list .mark.agent").count() == 0,
+           "the new form's yeses are not listed as the earlier's")
 
 
 def words(text: str) -> str:
@@ -607,8 +645,9 @@ def with_answers(name: str, *answers: dict):
 @check
 def review_layout(browser, url, errors):
     """The review box as the owner asked for it on 2026-11-02: after the question, Reviews, people's first and then the
-    AI agents' (their approvals of the AI review and their noes), the latest first in each; then the AI review, one
-    twisty, closed; then What could be better and Tests. Each person's answer is a twisty under their name that opens to
+    AI agents' (their approvals of the AI review and their noes), the latest first in each, and after those, greyed,
+    the AI agents that said yes earlier; then the AI review, one twisty, closed; then What could be better and Tests.
+    Each person's answer is a twisty under their name that opens to
     what they said, a no still open open already; a yes with nothing more to say is just its line. Here `Fixture.triple`
     has four answers more, given out of order: two people's yeses, a person's no and an AI agent's no, both open."""
     astra = {"kind": "agent", "login": "example", "agent": {"tool": "Codex", "model": "GPT-6 Astra"},
@@ -627,18 +666,19 @@ def review_layout(browser, url, errors):
            "after the question: Reviews, the AI review, What could be better, Tests")
     # Each line of the list: whose (a person's mark, or an AI agent's), who, when, and whether it opens.
     rows = box.locator(".reviews-list > *").evaluate_all("""rows => rows.map(r => {
-      const m = r.querySelector('.mark'), t = r.querySelector('time');
-      return m ? [m.classList.contains('agent') ? 'agent' : 'person', m.querySelector('.who').textContent, t && t.dateTime, r.tagName === 'DETAILS']
+      const m = r.querySelector('.mark'), t = r.querySelector('time'), note = m && m.querySelector(':scope > .note');
+      return m ? [m.classList.contains('agent') ? 'agent' : 'person', m.querySelector('.who').textContent, t && t.dateTime, r.tagName === 'DETAILS',
+                  note ? note.textContent : '']
                : ['line', r.textContent]; })""")
-    expect(rows == [["person", "@critic", "2026-10-29T09:00:00Z", True],
-                    ["person", "@reader", "2026-10-28T09:00:00Z", True],
-                    ["person", "@quiet", "2026-10-27T12:00:00Z", False],
-                    ["person", "@example", "2026-09-25T10:00:00Z", True],
-                    ["agent", "Voyager, claude-fable-5-1 AI via @example", "2026-10-27T10:00:00Z", False],
-                    ["agent", "Claude Code, claude-opus-5-5 AI via @example", "2026-10-26T10:00:00Z", False],
-                    ["agent", "Codex, GPT-6 Astra AI via @example", "2026-10-20T09:00:00Z", True],
-                    ["line", "1 AI agent said yes earlier."]],
-           f"people first, then the AI agents, the latest first in each; then how many more said yes earlier ({rows})")
+    expect(rows == [["person", "@critic", "2026-10-29T09:00:00Z", True, ""],
+                    ["person", "@reader", "2026-10-28T09:00:00Z", True, ""],
+                    ["person", "@quiet", "2026-10-27T12:00:00Z", False, ""],
+                    ["person", "@example", "2026-09-25T10:00:00Z", True, ""],
+                    ["agent", "Voyager, claude-fable-5-1 AI via @example", "2026-10-27T10:00:00Z", False, ""],
+                    ["agent", "Claude Code, claude-opus-5-5 AI via @example", "2026-10-26T10:00:00Z", False, ""],
+                    ["agent", "Codex, GPT-6 Astra AI via @example", "2026-10-20T09:00:00Z", True, ""],
+                    ["agent", "Codex, GPT-6 Astra AI via @example", "2026-10-25T10:00:00Z", False, "on an earlier version of the AI review"]],
+           f"people first, then the AI agents, the latest first in each; then those that said yes earlier ({rows})")
     yes, no = box.locator(".mark.tally.yes"), box.locator(".mark.tally.no")
     expect(yes.locator(".who").inner_text() == "3 people · 2 AI" and no.locator(".who").inner_text() == "1 person · 1 AI",
            "over them, the yeses and the noes still open, counted")

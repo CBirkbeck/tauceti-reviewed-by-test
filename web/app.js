@@ -691,16 +691,13 @@
       card.append(line);
     });
     // The answers are people's yeses and every no. An AI agent's yes is not an answer of its own, and its reasons are
-    // not on the page: it is among the reviews as an approver of the AI review (the store's standard review), or as a
-    // number, last, of the AI agents that said yes earlier: to an earlier version of the AI review or of the
-    // declaration, or in the earlier form of review (a yes that did nothing to a standard review, with no `std`), the
-    // only kind while there is no AI review. The AI review belongs to the question the box asks: a declaration the site
-    // does not ask about has no section and no such number, whatever yeses are on record for it (an imported store's,
-    // say).
+    // not on the page: it is among the reviews as an approver of the AI review (the store's standard review), or, greyed
+    // after the approvers, as one that said yes earlier (`earlierYeses`; listed, not counted, since 2026-11-02). The AI
+    // review belongs to the question the box asks: a declaration the site does not ask about has no section and lists no
+    // AI agent's yes, whatever is on record for it (an imported store's, say).
     const yes = reviews('accept'), people = yes.filter(v => v.by.kind !== 'agent');
-    const earlier = !open ? 0 : std ? std.earlier : yes.filter(v => v.by.kind === 'agent' && !v.std).length;
-    const more = earlier ? `${plural(earlier, 'AI agent')} said yes earlier.` : '';
-    card.append(el('p', 'sub', 'Reviews'), reviewList([...people, ...reviews('problem')], open && std ? std.approvers : [], more, byId));
+    const earlier = open ? earlierYeses(std, yes.filter(v => v.by.kind === 'agent' && !v.std)) : [];
+    card.append(el('p', 'sub', 'Reviews'), reviewList([...people, ...reviews('problem')], open && std ? std.approvers : [], earlier, byId));
     if (open) card.append(aiReview(std));
     // A line offering a form: what it is for, and its button.
     const offer = (text, spec) => {
@@ -747,13 +744,25 @@
     if (!std.current) line.push(dot(), el('span', 'std-state stale', 'written for an earlier version of this declaration'));
     return twisty('standard-box', line, md(std.text, 'standard'), version);
   }
+  /* The AI agents that said yes earlier, and not to the AI review as it is now, each with a note saying how: from the
+     build (`earlierApprovals`), an approval of an earlier version of the AI review, or of this one on an earlier version
+     of the declaration; from the records (`form`), a yes of the earlier form of review (one that did nothing to a
+     standard review, with no `std`), made before the AI review, or, with none yet or after it, of that form only. */
+  function earlierYeses(std, form) {
+    const approvals = ((std && std.earlierApprovals) || []).map(a =>
+      ({...a, note: a.version === std.version ? 'on an earlier version of the declaration' : 'on an earlier version of the AI review'}));
+    return [...approvals, ...form.map(v => ({...v, note: std && v.at <= std.at ? 'before the AI review' : 'earlier form'}))];
+  }
   /* An AI agent that approved the AI review, as a mark (the tick of an AI agent's yes: blue), linking to the comment
-     that approved it; on hover, the checks it made, those that did not apply to this declaration, and when. */
-  function approverMark(a) {
-    const cls = 'mark yes ' + (a.by.kind === 'agent' ? 'agent' : 'person'), m = a.url ? ext(a.url, null, cls) : el('span', cls);
+     that approved it; on hover, the checks it made, those that did not apply to this declaration, and when. One that
+     said yes earlier is greyed, as a yes of an earlier version is, and says how (`note`). */
+  function approverMark(a, note) {
+    const cls = 'mark yes ' + (a.by.kind === 'agent' ? 'agent' : 'person') + (note ? ' stale' : '');
+    const m = a.url ? ext(a.url, null, cls) : el('span', cls);
     const axes = state => Object.entries(a.checked || {}).filter(([, s]) => s === state).map(([axis]) => axis);
     const [made, na] = [axes('checked'), axes('na')];
     m.append(sign('yes'), markWho(a.by));
+    if (note) m.append(el('span', 'note', note));
     m.title = [made.length ? 'Checked: ' + made.join(', ') : '', na.length ? 'Not applicable: ' + na.join(', ') : '', date(a.at)]
       .filter(Boolean).join(' · ');
     return m;
@@ -1071,10 +1080,11 @@
                   v.text ? md(v.text) : null, caveats.length ? el('p', 'line', 'What could be better: ' + caveats.join('; ')) : null,
                   line.childNodes.length ? line : null);
   }
-  /* An AI agent that approved the AI review, among the reviews: its mark, what it checked on hover, and when. */
-  function approvalRow(a) {
+  /* An AI agent that approved the AI review, among the reviews: its mark, what it checked on hover, and when; greyed,
+     and saying how (`note`), one that said yes earlier. */
+  function approvalRow(a, note) {
     const line = el('div', 'said');
-    line.append(approverMark(a), when(a.at));
+    line.append(approverMark(a, note), when(a.at));
     return line;
   }
   /* A mark that counts the answers that stand (`now`, who gave each), people apart from AI agents, and says how many
@@ -1091,11 +1101,12 @@
   }
   /* The reviews: a mark for the yeses that stand (people's of this version, and the AI agents' that approved the AI
      review) and one for the noes still open; then each review on a line of its own, people's answers first, then the
-     AI agents' approvals of the AI review (`approvals`) and their noes, the latest first in each; and last, how many
-     more AI agents said yes earlier (`more`, in words). With none of these, that. */
-  function reviewList(answers, approvals, more, byId) {
+     AI agents' approvals of the AI review (`approvals`) and their noes, the latest first in each, and after those,
+     greyed, the AI agents that said yes earlier (`earlier`, each with its note), the latest first. With none of these,
+     that. A declaration has had four of them at most, so they are not folded. */
+  function reviewList(answers, approvals, earlier, byId) {
     const box = el('div');
-    if (!answers.length && !approvals.length && !more) { box.append(el('p', 'empty', 'No reviews yet.')); return box; }
+    if (!answers.length && !approvals.length && !earlier.length) { box.append(el('p', 'empty', 'No reviews yet.')); return box; }
     const yes = answers.filter(v => v.verdict === 'accept'), no = answers.filter(v => v.verdict === 'problem');
     const row = el('div', 'marks'), old = yes.filter(v => !stands(v)).length, done = no.filter(v => !stands(v)).length;
     if (yes.length || approvals.length) {
@@ -1107,8 +1118,8 @@
     const list = el('div', 'reviews-list'), newest = (a, b) => (b.at || '').localeCompare(a.at || ''), ai = x => x.by.kind === 'agent';
     list.append(...answers.filter(v => !ai(v)).sort(newest).map(v => answerRow(v, byId)),
                 // An approval is not an answer of the box's: it has no verdict, and no reasons to open.
-                ...[...answers.filter(ai), ...approvals].sort(newest).map(x => x.verdict ? answerRow(x, byId) : approvalRow(x)));
-    if (more) list.append(el('p', 'empty', more));
+                ...[...answers.filter(ai), ...approvals].sort(newest).map(x => x.verdict ? answerRow(x, byId) : approvalRow(x)),
+                ...[...earlier].sort(newest).map(x => approvalRow(x, x.note)));
     if (row.childNodes.length) box.append(row);
     box.append(list);
     return box;
