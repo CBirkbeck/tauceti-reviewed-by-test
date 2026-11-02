@@ -740,8 +740,11 @@
     }
     const n = std.approvers.length, version = el('p', 'std-version');
     version.append(`Version ${std.version.slice(0, 8)} · `, std.url ? ext(std.url, date(std.at)) : date(std.at), ' · ', markWho(std.by));
-    const line = [el('span', 'sub', 'AI review'), ' · ', el('span', 'std-state', n ? `approved by ${plural(n, 'AI agent')}` : 'not yet approved')];
-    if (!std.current) line.push(' · ', el('span', 'std-state stale', 'written for an earlier version of this declaration'));
+    // Its line flows as text, each "·" held to the words either side by no-break spaces: it wraps between words, and
+    // never leaves a "·" at the end of a line (asked for on 2026-11-02).
+    const dot = () => el('span', 'sep', ' · ');
+    const line = [el('span', 'sub', 'AI review'), dot(), el('span', 'std-state', n ? `approved by ${plural(n, 'AI agent')}` : 'not yet approved')];
+    if (!std.current) line.push(dot(), el('span', 'std-state stale', 'written for an earlier version of this declaration'));
     return twisty('standard-box', line, md(std.text, 'standard'), version);
   }
   /* An AI agent that approved the AI review, as a mark (the tick of an AI agent's yes: blue), linking to the comment

@@ -404,7 +404,7 @@ def standard_review(browser, url, errors):
     ai = box.locator("details.standard-box")
     expect(ai.count() == 1 and not ai.evaluate("d => d.open") and not box.locator(".standard").is_visible(),
            "the AI review, a twisty, closed")
-    expect(ai.locator("summary").text_content() == "AI review · approved by 2 AI agents",
+    expect(words(ai.locator("summary").text_content()) == "AI review · approved by 2 AI agents",
            "its line: the AI review, approved by two AI agents, and not marked out of date (the declaration has not changed)")
     ai.locator("summary").click()
     expect([h.inner_text() for h in box.locator(".standard h2").all()] == ["What it says", "References and tests", "Lean subtleties"],
@@ -441,7 +441,7 @@ def standard_review(browser, url, errors):
 def standard_review_states(browser, url, errors):
     """What the review box says of an AI review (the store's standard review) that is out of date, held, outside the
     library, or not there."""
-    line = lambda box: box.locator("details.standard-box > summary").text_content()  # noqa: E731
+    line = lambda box: words(box.locator("details.standard-box > summary").text_content())  # noqa: E731
     # Written for version A of the declaration, which has changed since: the text is still shown, and marked.
     page = visit(browser, url, "#/d/Fixture.double", errors)
     box = page.locator(".review")
@@ -583,6 +583,11 @@ def standard_review_earlier_form(browser, url, errors):
     text = page.locator(".review").inner_text()
     expect("No AI review yet." in text and "said yes earlier" not in text,
            "the new form's yeses are not counted as the earlier's")
+
+
+def words(text: str) -> str:
+    """A text as a reader reads it: its spaces, no-break ones too, one each."""
+    return " ".join(text.split())
 
 
 def person(login: str) -> dict:
@@ -1144,6 +1149,33 @@ def phone(browser, url, errors):
             expect(page.locator(".review .reviews-list .twisty-body").first.is_visible()
                    and page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"),
                    f"{route}: opened, still nothing wider than the screen")
+    # The AI review's line of `Fixture.double` (not yet approved, written for an earlier version) wraps on a phone, between
+    # words: no "·" is left at the end of a line, or starts one (asked for on 2026-11-02).
+    page = visit(browser, url, "#/d/Fixture.double", errors, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    lines, stray = page.evaluate(STRAY_SEPARATORS)
+    expect(lines > 1 and stray == 0, f"the AI review's line wraps with no '·' left at either end of a line ({lines} lines, {stray} stray)")
+
+
+#: The lines the AI review's line in the review box takes, and how many of its separators ("·") are not on the line of
+#: the words either side of them: each character's middle, a line apart from the one before it when 6px off.
+STRAY_SEPARATORS = r"""() => {
+  const line = document.querySelector('.review details.standard-box > summary'), chars = [];
+  const walk = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+  while (walk.nextNode()) {
+    const t = walk.currentNode;
+    for (let i = 0; i < t.length; i++) {
+      if (/\s/.test(t.data[i])) continue;
+      const r = document.createRange();
+      r.setStart(t, i); r.setEnd(t, i + 1);
+      const b = r.getBoundingClientRect();
+      chars.push([t.data[i], (b.top + b.bottom) / 2]);
+    }
+  }
+  const apart = (a, b) => Math.abs(a[1] - b[1]) > 6;
+  const lines = 1 + chars.filter((c, k) => k && apart(c, chars[k - 1])).length;
+  const stray = chars.filter((c, k) => c[0] === '·' && (!k || k === chars.length - 1 || apart(c, chars[k - 1]) || apart(c, chars[k + 1])));
+  return [lines, stray.length];
+}"""
 
 
 def map_drawn(page) -> None:

@@ -239,6 +239,11 @@ a.stat span { color: var(--accent); }
    it; open, the one text of a declaration (its three parts are headings of the text), then its version and who wrote
    it. Who approved it is among the reviews, each a pill with an AI agent's blue tick. */
 .review details.standard-box { margin: 16px 0 6px; }
+/* Its line flows as text, not as a twisty's row of parts: it wraps between words, never at a "·" (asked for on
+   2026-11-02), and a line it wraps to starts under its heading. */
+.review details.standard-box > summary { display: block; padding-left: 18px; text-indent: -18px; }
+.review details.standard-box > summary::before { margin-right: 8px; text-indent: 0; vertical-align: 1px; }
+.review details.standard-box > summary .sep { padding: 0 2px; }
 .review details.standard-box > summary .sub { margin: 0; }
 .review details.standard-box > summary:hover .sub { color: var(--ink-soft); }
 .review .std-state { font-size: 12.5px; color: var(--muted); }
