@@ -443,15 +443,21 @@ class Site:
     def standard_view(s: dict) -> dict:
         """A standard review (`standard.summary`) as its shard holds it: the current text and its version, who wrote it,
         when and where, whether it is current and whether writing it approved it, the AI agents that approved it
-        (latest first, each with what it checked) and how many approved an earlier text."""
+        (latest first, each with what it checked), how many AI agents said yes earlier, and of those, the ones that
+        approved a text (`earlierApprovals`: another version, or this one on an earlier version of the declaration),
+        each with the version it approved, so that the page can list them; the yeses of the earlier form are the page's
+        records already. A review with no such approval has no such key, for the shards to stay small."""
         r = s["record"]
         by = lambda x: views.by_view(x.get("by", {}))
-        return {"text": s["text"], "version": s["version"], "at": r.get("at", ""), "by": by(r),
+        approval = lambda a: {"by": by(a.record), "at": a.record.get("at", ""), "checked": a.record.get("checked") or {},
+                              "url": rec.origin_url(a.record.get("origin"))}
+        view = {"text": s["text"], "version": s["version"], "at": r.get("at", ""), "by": by(r),
                 "approving": s["approving"], "url": rec.origin_url(r.get("origin")), "current": s["current"],
-                "approvers": [{"by": by(a.record), "at": a.record.get("at", ""),
-                               "checked": a.record.get("checked") or {}, "url": rec.origin_url(a.record.get("origin"))}
-                              for a in s["approvers"]],
-                "earlier": s["earlier"]}
+                "approvers": [approval(a) for a in s["approvers"]], "earlier": s["earlier"]}
+        if s["earlier_approvals"]:
+            view["earlierApprovals"] = [{**approval(a), "version": standard.approved(a.record)}
+                                        for a in s["earlier_approvals"]]
+        return view
 
     def standard_shards(self) -> dict[int, dict[str, dict]]:
         """`standard/<k>.json` for every k: the standard review of each declaration the site asks about that has a

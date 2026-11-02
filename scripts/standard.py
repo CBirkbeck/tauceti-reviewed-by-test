@@ -381,15 +381,18 @@ def summary(seen: list[Seen]) -> dict | None:
     person's accept approve nothing. `approvers` are the AI accepts of this version that apply to the
     declaration as it is now, latest first, and `earlier` counts the other AI accepts: yeses of the earlier
     form, approvals of other texts, and approvals of this one made for an earlier version of the declaration.
-    An accept withdrawn or superseded counts in neither. The text is `current` when the version's record or
-    any approver applies; otherwise it was written for an earlier version of the declaration."""
+    `earlier_approvals` are those of them that approved a text, the last two kinds, latest first. An accept
+    withdrawn or superseded counts in none. The text is `current` when the version's record or any approver
+    applies; otherwise it was written for an earlier version of the declaration."""
     now = current_version(seen)
     if now is None:
         return None
     text = now.record["text"]
     version = version_of(text)
     live = [s for s in seen if ai_accept(s.record) and not (s.withdrawn or s.superseded)]
-    approvers = sorted((s for s in live if s.applies and approved(s.record) == version), key=lambda s: order(s.record),
-                       reverse=True)
+    latest = lambda rows: sorted(rows, key=lambda s: order(s.record), reverse=True)  # noqa: E731
+    approves = lambda s: s.applies and approved(s.record) == version  # noqa: E731
+    approvers = latest(s for s in live if approves(s))
     return {"text": text, "version": version, "record": now.record, "approving": ai_accept(now.record),
-            "current": bool(now.applies or approvers), "approvers": approvers, "earlier": len(live) - len(approvers)}
+            "current": bool(now.applies or approvers), "approvers": approvers, "earlier": len(live) - len(approvers),
+            "earlier_approvals": latest(s for s in live if approved(s.record) is not None and not approves(s))}

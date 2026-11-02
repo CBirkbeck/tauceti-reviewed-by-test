@@ -425,8 +425,29 @@ class StandardReviewTests(unittest.TestCase):
         for record in (s, *s["approvers"]):
             self.assertRegex(record["url"], r"^https://github\.com/example/fixture-store/issues/1#issuecomment-\d+$")
         # The page reads these keys, and the shard holds no others.
-        self.assertEqual(set(s), {"text", "version", "at", "by", "approving", "url", "current", "approvers", "earlier"})
+        self.assertEqual(set(s), {"text", "version", "at", "by", "approving", "url", "current", "approvers", "earlier",
+                                  "earlierApprovals"})
         self.assertEqual(set(s["approvers"][0]), {"by", "at", "checked", "url"})
+        self.assertEqual(set(s["earlierApprovals"][0]), {"by", "at", "checked", "url", "version"})
+
+    def test_the_ai_agents_that_approved_another_text_or_on_an_earlier_version(self):
+        # ASTRA wrote the first text of `triple`, which AGENT's edit replaced: who, when, where, what it checked, and
+        # the version it approved, so that the page can list it among the reviews.
+        s = std("Fixture.triple")
+        (a,) = s["earlierApprovals"]
+        self.assertEqual((a["by"]["agent"], a["at"], a["version"]),
+                         ({"tool": "Codex", "model": "GPT-6 Astra"}, "2026-10-25T10:00:00Z", standard.version_of(fixture_site.TRIPLE_V1)))
+        self.assertEqual(a["url"], "https://github.com/example/fixture-store/issues/1#issuecomment-4101")
+        self.assertEqual(a["checked"], fixture_site.CELLS)
+        # The writer of `double`'s text approved it for version A of the declaration: this version, on an earlier one.
+        s = std("Fixture.double")
+        (a,) = s["earlierApprovals"]
+        self.assertEqual((a["by"]["agent"]["model"], a["at"], a["version"]), ("claude-opus-5-5", "2026-10-24T09:00:00Z", s["version"]))
+        # ASTRA's yes of `triple_pos` is of the earlier form: it approved no text, and is among the page's records already.
+        # With none, the shard has no such key: it stays small.
+        for name in ("Fixture.triple_pos", "Int"):
+            self.assertNotIn("earlierApprovals", std(name), name)
+        self.assertEqual(std("Fixture.triple_pos")["earlier"], 1)
 
     def test_out_of_date_and_held(self):
         # Written for version A of `double`, which has changed: nothing that applies approves it.
@@ -548,6 +569,8 @@ class StandardEdgeTests(unittest.TestCase):
         # Voyager approved the edit, a text no longer current. AGENT's yes before the edit, which the edit superseded,
         # does not come back when the edit is withdrawn.
         self.assertEqual((s["earlier"], s["approving"], s["current"]), (1, True, True))
+        self.assertEqual([(a["by"]["agent"]["tool"], a["version"]) for a in s["earlierApprovals"]],
+                         [("Voyager", standard.version_of(fixture_site.TRIPLE_V2))])
 
 
 if __name__ == "__main__":

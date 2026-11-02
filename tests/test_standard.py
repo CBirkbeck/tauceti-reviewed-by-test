@@ -516,10 +516,10 @@ class SummaryTests(StandardTests):
     def test_what_a_summary_holds(self):
         v1, v2 = wrote(1, "A", V1), wrote(2, "A", V2, parent=VER1)
         s = standard.summary([seen(v1, superseded=True), seen(v2)])
-        self.assertEqual(set(s), {"text", "version", "record", "approving", "current", "approvers", "earlier"})
+        self.assertEqual(set(s), {"text", "version", "record", "approving", "current", "approvers", "earlier", "earlier_approvals"})
         self.assertEqual((s["text"], s["version"]), (V2, VER2))
         self.assertIs(s["record"], v2)
-        self.assertEqual((s["approving"], s["current"], s["earlier"]), (True, True, 0))
+        self.assertEqual((s["approving"], s["current"], s["earlier"], s["earlier_approvals"]), (True, True, 0, []))
         self.assertEqual(s["approvers"], [seen(v2)])
         # With no version there is no summary.
         self.assertIsNone(standard.summary([]))
@@ -554,6 +554,24 @@ class SummaryTests(StandardTests):
         self.assertEqual((s["version"], s["approving"], s["current"]), (VER2, True, True))
         # Whatever order the caller holds them in.
         self.assertEqual(standard.summary(rows[::-1]), s)
+
+    def test_earlier_approvals_are_of_another_text_or_of_this_one_on_an_earlier_version(self):
+        # Of the AI accepts `earlier` counts, those that approved a text, latest first: C's of v1, and E's of v2 made
+        # for an earlier version of the declaration; not D's yes of the earlier form, which approved none (its record is
+        # the page's already).
+        rows = [seen(wrote(1, "A", V1), superseded=True), seen(wrote(2, "A", V2, parent=VER1)), seen(ticked(3, "B", VER2)),
+                seen(ticked(4, "C", VER1)), seen(yes(5, "D")), seen(ticked(6, "E", VER2), applies=False)]
+        s = standard.summary(rows)
+        self.assertEqual(tools(s["earlier_approvals"]), ["E", "C"])
+        self.assertEqual([standard.approved(x.record) for x in s["earlier_approvals"]], [VER2, VER1])
+        self.assertEqual(standard.summary(rows[::-1])["earlier_approvals"], s["earlier_approvals"])
+        # A maintainer's edit strands the approvals of the text before it, the writer's among them.
+        a, b = seen(wrote(1, "A", V1)), seen(ticked(2, "B", VER1))
+        edit = seen(made(3, PERSON, "comment", text=V2, standard={"spec": standard.SPEC, "parent": VER1, "note": "n"}))
+        self.assertEqual(tools(standard.summary([a, b, edit])["earlier_approvals"]), ["B", "A"])
+        # One withdrawn or superseded is in neither list.
+        rows = [seen(wrote(1, "A", V2)), seen(ticked(4, "C", VER2), withdrawn=True), seen(ticked(5, "C", VER1), superseded=True)]
+        self.assertEqual(standard.summary(rows)["earlier_approvals"], [])
 
     def test_a_yes_withdrawn_or_superseded_counts_nowhere(self):
         rows = [seen(wrote(1, "A", V2)),
