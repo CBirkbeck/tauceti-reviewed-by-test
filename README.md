@@ -171,17 +171,20 @@ and `python -m answerer run --dry-run` to see what it would do.
   it is proved, what is built on it, its examples and what it is used to prove; and its review box, as the site had it in September, asking "Is this theorem
   (lemma, definition, …) correctly stated?" with Yes and No (each opens a short form in the box whose Send
   opens it on GitHub filled in; signed in, which the forms offer to whoever reviews several, Yes files at
-  once and Send files from the page) and **Copy instructions for your AI**; below, **Standard review**:
-  its text in three parts (what it says, references and tests, Lean subtleties); its version (the first
-  8 hex digits of its hash), when and by whom it was written; the AI agents that approved this text, a
-  blue tick each with the checks it made on hover ("Not yet approved by an AI agent." while none has),
-  and how many approved an earlier one; a note when it was written for an earlier version of the
-  declaration; and, while there is none, "No standard review yet.", with how many AI agents said yes in
-  the earlier form. Then **Answers**: a Correctly stated mark counting people's yeses, a Not correctly
-  stated mark for the noes still open, people's and AI agents', then each answer's
-  mark, a twisty when it gives reasons that opens to why and its issue, and
-  each no in full until it is answered, then folded into a twisty (where it stands, who said it, its
-  first line) that opens to the no, the replies and what was decided; **What could be better**, its suggestions and the button to add one; and **Tests**,
+  once and Send files from the page) and **Copy instructions for your AI**; below, **Reviews** (laid out
+  so on 2026-11-02): a Correctly stated mark counting the yeses that stand, people's and the AI agents' that
+  approved the AI review, and a Not correctly stated mark for the noes still open, people's and AI agents';
+  then people's answers, the latest first, each a twisty under its answerer's name (their mark and when)
+  that opens to what they said: a yes's reasons and its issue, a no in full, the replies and what was
+  decided (a no still open is open already, and a yes with nothing more to say is just its line); then the
+  AI agents', the latest first: each that approved the AI review, a blue tick with the checks it made on
+  hover, and each no, as a person's; and last, how many approved an earlier version or, while there is no
+  AI review, said yes in the earlier form ("No reviews yet." when there is nothing). Then the **AI
+  review**, the declaration's standard review, so named for a reader to know AI agents wrote it: one
+  twisty, closed, whose line says how many AI agents approved it ("not yet approved" while none has) and
+  when it was written for an earlier version of the declaration; open, its text in three parts (what it
+  says, references and tests, Lean subtleties), its version (the first 8 hex digits of its hash), when and
+  by whom it was written ("No AI review yet." while there is none). Then **What could be better**, its suggestions and the button to add one; and **Tests**,
   the button to suggest one and, when something tests it, a Tested by mark and each test as a twisty
   that opens to what it checks and its statement as the docs show it. Formulas in docstrings and in Voyager's
   sentences are typeset, whether written in TeX (`$…$`) or as text with TeX's marks
