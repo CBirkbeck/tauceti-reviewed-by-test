@@ -692,15 +692,14 @@
     });
     // The answers are people's yeses and every no. An AI agent's yes is not an answer of its own, and its reasons are
     // not on the page: it is among the reviews as an approver of the AI review (the store's standard review), or as a
-    // number, last: those that approved an earlier version of it, or, while there is none, its yeses of the earlier
-    // form (those that did nothing to a standard review, with no `std`). The AI review belongs to the question the box
-    // asks: a declaration the site does not ask about has no section and no such number, whatever yeses are on record
-    // for it (an imported store's, say).
+    // number, last, of the AI agents that said yes earlier: to an earlier version of the AI review or of the
+    // declaration, or in the earlier form of review (a yes that did nothing to a standard review, with no `std`), the
+    // only kind while there is no AI review. The AI review belongs to the question the box asks: a declaration the site
+    // does not ask about has no section and no such number, whatever yeses are on record for it (an imported store's,
+    // say).
     const yes = reviews('accept'), people = yes.filter(v => v.by.kind !== 'agent');
-    const earlierYes = yes.filter(v => v.by.kind === 'agent' && !v.std).length;
-    const earlier = !open ? 0 : std ? std.earlier : earlierYes;
-    const more = !earlier ? '' : std ? `${plural(earlier, 'AI agent')} approved ${earlier === 1 ? 'an earlier version' : 'earlier versions'}.`
-      : `${plural(earlier, 'AI agent')} said yes in the earlier form of review.`;
+    const earlier = !open ? 0 : std ? std.earlier : yes.filter(v => v.by.kind === 'agent' && !v.std).length;
+    const more = earlier ? `${plural(earlier, 'AI agent')} said yes earlier.` : '';
     card.append(el('p', 'sub', 'Reviews'), reviewList([...people, ...reviews('problem')], open && std ? std.approvers : [], more, byId));
     if (open) card.append(aiReview(std));
     // A line offering a form: what it is for, and its button.
@@ -1090,7 +1089,7 @@
   /* The reviews: a mark for the yeses that stand (people's of this version, and the AI agents' that approved the AI
      review) and one for the noes still open; then each review on a line of its own, people's answers first, then the
      AI agents' approvals of the AI review (`approvals`) and their noes, the latest first in each; and last, how many
-     more AI agents said yes (`more`, in words). With none of these, that. */
+     more AI agents said yes earlier (`more`, in words). With none of these, that. */
   function reviewList(answers, approvals, more, byId) {
     const box = el('div');
     if (!answers.length && !approvals.length && !more) { box.append(el('p', 'empty', 'No reviews yet.')); return box; }
