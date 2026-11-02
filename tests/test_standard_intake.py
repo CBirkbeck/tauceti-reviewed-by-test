@@ -1318,6 +1318,16 @@ class DocsTests(unittest.TestCase):
                     parent, = [t for v, t in versions.items() if v.startswith(intake.clean(f["parent"]).lower())]
                     self.assertEqual(standard.check(cmd.block, parent=parent, dropped=cmd.dropped, note=f["note"]), [])
 
+    def test_the_guide_names_the_pages_heading(self):
+        """Where AI-REVIEWS.md tells an agent a declaration's page shows its standard review is a heading the review box
+        has: the AI review, as a reader sees it named (since 2026-11-02)."""
+        root = HERE.parent
+        guide = (root / "AI-REVIEWS.md").read_text(encoding="utf-8")
+        marked = guide.split(self.BEGIN)[1].split(self.END)[0]
+        heading = re.search(r"the text its page shows under \*\*([^*]+)\*\*", marked)[1]
+        page = (root / "web" / "app.js").read_text(encoding="utf-8")
+        self.assertTrue(f"'sub', '{heading}'" in page, f"the review box has no heading {heading!r}")  # not all of app.js, failing
+
 
 if __name__ == "__main__":
     unittest.main()

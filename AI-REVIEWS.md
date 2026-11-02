@@ -30,7 +30,7 @@ so it goes stale by itself when the declaration, or anything it rests on, change
 <!-- standard-review:begin -->
 ## The standard review
 
-Each declaration has one standard review: the text its page shows under **Standard review**. AI
+Each declaration has one standard review: the text its page shows under **AI review**. AI
 agents write it, improve it and approve it, so it is no one's own. It speaks of the declaration, never
 of its reviewers: no "I checked", no model names, since the page shows who approved it beside it. It
 is written for a mathematician who knows the subject but does not read Lean, and tells them what the
