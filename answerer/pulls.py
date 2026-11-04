@@ -1,4 +1,5 @@
-"""Docstring fixes proposed to the library as pull requests, and whether they have merged.
+"""Docstring fixes proposed to the library as pull requests, and whether they have merged (also used for those
+proposed upstream: `upstream.py`).
 
 They are made in a second checkout of the library (`work`), kept on its `main`: the edits are checked
 against the declaration's file there (`docfix.apply_edits`), made on a branch `answerer/<record id>`,
@@ -79,27 +80,35 @@ class PullRequests:
                 f"🤖 Proposed by the Tau Ceti review answerer ({by['model']}).\n")
 
     def state(self, number: int) -> tuple[str, str | None]:
-        """("OPEN" | "CLOSED" | "MERGED", the merge commit if merged). The library merges through Bors, which
-        squashes a pull request into one commit on main, its subject ending `(#number)`, and closes it: a closed
-        one with such a commit has merged, there."""
-        out = json.loads(self.gh(["gh", "pr", "view", str(number), "--repo", self.repo, "--json", "state,mergeCommit,closedAt"]))
-        st, sha = out.get("state", ""), (out.get("mergeCommit") or {}).get("oid")
-        if st == "CLOSED" and out.get("closedAt"):
-            squashed = self.squashed(number, out["closedAt"])
-            if squashed:
-                return "MERGED", squashed
-        return st, sha
+        return pr_state(self.gh, self.repo, number)
 
-    def squashed(self, number: int, closed_at: str) -> str | None:
-        """The commit Bors made on main of pull request `number`, closed at `closed_at`, if there is one."""
-        since = dt.datetime.fromisoformat(closed_at.replace("Z", "+00:00")) - dt.timedelta(days=1)
-        out = self.gh(["gh", "api", "--paginate", f"repos/{self.repo}/commits?sha=main&per_page=100&since="
-                       + since.strftime("%Y-%m-%dT%H:%M:%SZ"), "--jq", r'.[] | .sha + "\t" + (.commit.message | split("\n")[0])'])
-        for line in out.splitlines():
-            sha, _, subject = line.partition("\t")
-            if subject.rstrip().endswith(f"(#{number})"):
-                return sha
-        return None
+
+def pr_state(gh: Callable[..., str], repo: str, number: int, branch: str = "main") -> tuple[str, str | None]:
+    """("OPEN" | "CLOSED" | "MERGED", the merge commit if merged). The library and Mathlib merge through Bors, which
+    squashes a pull request into one commit on `branch`, its subject ending `(#number)`, and closes it: a closed one
+    with such a commit has merged, there."""
+    out = json.loads(gh(["gh", "pr", "view", str(number), "--repo", repo, "--json", "state,mergeCommit,closedAt"]))
+    st, sha = out.get("state", ""), (out.get("mergeCommit") or {}).get("oid")
+    if st == "CLOSED" and out.get("closedAt"):
+        squashed = squashed_commit(gh, repo, number, out["closedAt"], branch)
+        if squashed:
+            return "MERGED", squashed
+    return st, sha
+
+
+def squashed_commit(gh: Callable[..., str], repo: str, number: int, closed_at: str, branch: str = "main") -> str | None:
+    """The commit Bors made on `branch` of pull request `number`, closed at `closed_at`, if there is one: made before
+    it closed the pull request, so only the commits of the day before are read (Mathlib's master has a hundred a day)."""
+    closed = dt.datetime.fromisoformat(closed_at.replace("Z", "+00:00"))
+    since, until = closed - dt.timedelta(days=1), closed + dt.timedelta(hours=1)
+    out = gh(["gh", "api", "--paginate", f"repos/{repo}/commits?sha={branch}&per_page=100"
+              f"&since={since:%Y-%m-%dT%H:%M:%SZ}&until={until:%Y-%m-%dT%H:%M:%SZ}",
+              "--jq", r'.[] | .sha + "\t" + (.commit.message | split("\n")[0])'])
+    for line in out.splitlines():
+        sha, _, subject = line.partition("\t")
+        if subject.rstrip().endswith(f"(#{number})"):
+            return sha
+    return None
 
 
 def title_of(title: str, name: str) -> str:

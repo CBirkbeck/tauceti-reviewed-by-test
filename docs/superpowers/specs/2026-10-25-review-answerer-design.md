@@ -41,6 +41,7 @@ Every hour, on the server (`ssh ovh`, a systemd user timer), `python -m answerer
    | `intended` (a no) | `/intended` with the reply | |
    | `not_a_problem` (a no) | `/invalid` with the reply | |
    | `docstring_fix` (a no) | the reply, saying a fix is proposed | a PR to Tau Ceti changing only that declaration's docstring; once it merges, `/fixed <commit>` with the reply |
+   | `docstring_fix` (a no on a dependency's declaration, Mathlib's say) | once a maintainer links the fix upstream in a comment on the no's issue, the reply, linking it | listed for a person until then: the answerer opens no PR outside Tau Ceti; once the PR has merged and the Mathlib that the commit the site shows pins includes it, `/fixed <that commit>` with the reply (added 2026-11-04, `answerer/upstream.py`) |
    | `lean_fix_needed` (a no) | the reply; it stays open | listed for a person |
    | `unclear` | nothing | listed for a person |
    | `not_mathematical` | nothing | logged |

@@ -105,7 +105,8 @@ class PullRequestTests(unittest.TestCase):
                      "d96e9ce" + "0" * 33 + "\tfeat: characterize Lagrangian graphs of diffeomorphisms (#21110)\n")
         self.assertEqual(self.prs.state(77), ("MERGED", "dedf03b" + "0" * 33))
         api = next(c[0] for c in self.gh_calls if c[0][:2] == ["gh", "api"])
-        self.assertIn("repos/TauCetiProject/TauCeti/commits?sha=main&per_page=100&since=2026-10-24T10:35:34Z", api)
+        self.assertIn("repos/TauCetiProject/TauCeti/commits?sha=main&per_page=100&since=2026-10-24T10:35:34Z"
+                      "&until=2026-10-25T11:35:34Z", api)  # the day before Bors closed it
 
     def test_closed_without_merging(self):
         self.view = {"state": "CLOSED", "mergeCommit": None, "closedAt": "2026-10-25T10:35:34Z"}

@@ -15,7 +15,7 @@ from evidence_core import records as rec  # noqa: E402
 from answerer.items import open_items  # noqa: E402
 from answerer.model import Outcome  # noqa: E402
 from answerer.post import Poster  # noqa: E402
-from answerer.run import REPLY_LIMIT, Config, answer  # noqa: E402
+from answerer.run import REPLY_LIMIT, UPSTREAM, Config, answer  # noqa: E402
 from answerer.state import State  # noqa: E402
 
 
@@ -36,6 +36,24 @@ class FakePRs:
         return (self.st, "c" * 40 if self.st == "MERGED" else None)
 
 
+class FakeUpstream:
+    def __init__(self):
+        self.link, self.st, self.inc, self.skips = None, "OPEN", False, []
+
+    def name(self, repo):
+        return "Mathlib"
+
+    def linked(self, issue, maintainers, tool, skip=()):
+        self.skips.append(list(skip))
+        return self.link if self.link and self.link not in set(skip) else None
+
+    def state(self, repo, number):
+        return (self.st, "d" * 40 if self.st == "MERGED" else None)
+
+    def includes(self, repo, sha):
+        return self.inc
+
+
 class Recorder:
     def __init__(self):
         self.calls = []
@@ -53,8 +71,9 @@ class RunTests(unittest.TestCase):
         self.gh = Recorder()
         self.poster = Poster("example/fixture-store", self.gh)
         self.prs = FakePRs()
+        self.upstream = FakeUpstream()
         self.cfg = Config(repo="example/fixture-store", library_repo="TauCetiProject/TauCeti", site="https://example.org/",
-                          commit="B", maintainers=("example",), log=lambda s: None)
+                          commit="B", root="Fixture", maintainers=("example",), log=lambda s: None)
         self.lib = NS(text=lambda p: None)
 
     def go(self, outcomes, items=None, **cfg):
@@ -62,7 +81,7 @@ class RunTests(unittest.TestCase):
         assess = lambda client, cfg_, system, brief, tools: outs.pop(0)  # noqa: E731
         cfg_ = Config(**{**vars(self.cfg), **cfg})
         return answer(items if items is not None else self.items, self.ev, self.ds, self.lib, None, None, self.poster,
-                      self.prs, self.state, cfg_, today="2026-10-25", system="S", assess=assess)
+                      self.prs, self.state, cfg_, today="2026-10-25", system="S", assess=assess, upstream=self.upstream)
 
     def bodies(self):
         return [(argv[:4], stdin) for argv, stdin in self.gh.calls]
@@ -136,6 +155,62 @@ class RunTests(unittest.TestCase):
         a = dict(zip(argv[2::2], argv[3::2]))
         self.assertEqual((argv[:2], a["--action"], a["--agent"], a["--commit"]),
                          (["evidence-store", "status"], "fixed", "Claude Code, claude-opus-5-5", "c" * 40))
+
+    def test_a_dependencys_docstring_fix_is_followed_upstream(self):
+        # Under root `Other`, the fixture's declarations are a dependency's, as Mathlib's are Tau Ceti's.
+        item, mathlib = self.items[0], ("leanprover-community/mathlib4", 45669)
+        self.go([Outcome(verdict("docstring_fix", reply="The docstring says a₄; the field tests c₄."), 1.0,
+                         "claude-fable-5-1", None, 3)], items=[item], root="Other")
+        e = self.state.items[item.id]
+        self.assertEqual((self.prs.proposed, e["outside"], e["flag"]), ([], True, UPSTREAM))
+        self.assertEqual([c[0][:3] for c in self.gh.calls], [["gh", "issue", "create"]])  # listed for a person only
+        self.assertIn("belongs upstream", self.gh.calls[0][1])
+
+        self.gh.calls.clear()
+        self.go([], items=[item], root="Other")  # nothing linked yet: still listed
+        self.assertEqual([c[0][:3] for c in self.gh.calls], [["gh", "issue", "edit"], ["gh", "api", "-X"]])
+        self.assertIn("belongs upstream", self.gh.calls[0][1])
+
+        self.upstream.link = mathlib
+        self.gh.calls.clear()
+        self.go([], items=[item], root="Other")
+        reply = self.bodies()[0]
+        self.assertEqual(reply[0], ["gh", "issue", "comment", "14"])
+        self.assertTrue(reply[1].startswith("<!-- agent: tool=Tau Ceti answerer; model=claude-fable-5-1 -->\n"
+                                            "The docstring says a₄; the field tests c₄.\n\nA fix is proposed upstream in "
+                                            "[mathlib4#45669](https://github.com/leanprover-community/mathlib4/pull/45669)"))
+        self.assertNotIn("/fixed", reply[1])
+        self.assertEqual((e["upstream"], "flag" in e), ({"repo": mathlib[0], "pr": 45669}, False))
+        self.assertIn("Nothing now.", self.gh.calls[1][1])  # the list for a person is empty, and closed
+
+        for st, inc in [("OPEN", False), ("MERGED", False)]:  # open, or merged but not yet in the library
+            self.upstream.st, self.upstream.inc = st, inc
+            self.gh.calls.clear()
+            self.go([], items=[item], root="Other")
+            self.assertEqual([c for c in self.gh.calls if c[0][:3] == ["gh", "issue", "comment"]], [])
+        self.upstream.inc = True
+        self.gh.calls.clear()
+        self.go([], items=[item], root="Other")
+        fixed = self.bodies()[0][1].split("\n")
+        self.assertEqual(fixed[1], "/fixed B")  # at the commit the site shows
+        self.assertIn("merged as `dddddddddddd`, which the library's Mathlib includes at `B`", "\n".join(fixed))
+        self.assertEqual(e["done"], "fixed")
+        self.gh.calls.clear()
+        self.go([], items=[item], root="Other")
+        self.assertEqual([c for c in self.gh.calls if c[0][:3] == ["gh", "issue", "comment"]], [])
+
+    def test_an_upstream_fix_closed_unmerged_is_listed_again(self):
+        item, mathlib = self.items[0], ("leanprover-community/mathlib4", 45669)
+        self.state.handled(item.id, {"verdict": "docstring_fix", "outside": True, "reply": "Wrong.", "issue": 14,
+                                     "upstream": {"repo": mathlib[0], "pr": 45669}, "by": {"tool": "T", "model": "m"}})
+        self.upstream.link, self.upstream.st = mathlib, "CLOSED"
+        self.go([], items=[item], root="Other")
+        e = self.state.items[item.id]
+        self.assertNotIn("upstream", e)
+        self.assertIn("was closed without merging", e["flag"])
+        self.go([], items=[item], root="Other")  # the closed one is not taken again
+        self.assertEqual(self.upstream.skips[-1], [mathlib])
+        self.assertNotIn("upstream", self.state.items[item.id])
 
     def test_at_most_none(self):
         self.go([], max_items=0)

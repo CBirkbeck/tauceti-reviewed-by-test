@@ -9,6 +9,7 @@ What each verdict does (the code decides, never the model):
 | `intended` | `/intended`, the reply its note | listed |
 | `not_a_problem` | `/invalid`, the reply its note | listed |
 | `docstring_fix` | a pull request; the reply, linking it; `/fixed <commit>` once it merges | listed |
+| `docstring_fix`, a dependency's declaration | listed until a person links the fix upstream (`upstream.py`); then the reply, linking it; `/fixed <commit>` once the site's commit includes it | listed |
 | `lean_fix_needed` | the reply; listed | listed |
 | `unclear`, or no verdict | listed | listed |
 | `not_mathematical` | nothing | nothing |
@@ -32,6 +33,10 @@ from .state import State
 COMMAND = {"intended": "intended", "not_a_problem": "invalid"}
 #: What a reply may run to, in characters: the prompt asks for 120 words; a longer one is cut at a paragraph.
 REPLY_LIMIT = 1200
+#: Why a docstring fix of a dependency's declaration is listed for a person.
+UPSTREAM = ("Its fix belongs upstream, the declaration being a dependency's: open a pull request there and link it in a "
+            "comment on the no's issue. The answerer then replies, linking it, and closes the no as fixed once the "
+            "commit the site shows includes the fix.")
 
 
 @dataclass
@@ -40,6 +45,7 @@ class Config:
     library_repo: str  # TauCetiProject/TauCeti
     site: str  # the review site's address
     commit: str  # the library commit the site shows
+    root: str = "TauCeti"  # the library's top module: a declaration in another is a dependency's
     maintainers: tuple = ("CBirkbeck",)  # exempt from the per-author limit
     model: str = "claude-fable-5-1"
     effort: str = "high"
@@ -80,7 +86,7 @@ def choose(items: list[Item], state: State, cfg: Config, today: str) -> list[Ite
         if len(chosen) >= cfg.max_items:
             break
         done = state.items.get(item.id)
-        if done and (done.get("pr") or not reopened_since(item, done.get("at", ""))):
+        if done and (done.get("pr") or done.get("upstream") or not reopened_since(item, done.get("at", ""))):
             continue
         if item.author not in cfg.maintainers:
             if per_author.get(item.author, 0) >= cfg.per_author:
@@ -113,6 +119,9 @@ def act(item: Item, decl: dict, out: Outcome, poster: Poster, prs: Any, cfg: Con
         return entry
     if verdict == "docstring_fix":
         entry["edits"] = v.get("edits") or []
+        module = decl.get("module") or ""
+        if module and module.split(".")[0] != cfg.root:  # a dependency's: a person proposes the fix upstream
+            return {**entry, "outside": True, "flag": UPSTREAM}
         number, err = prs.propose(item, decl, v, by)
         if not number:
             return {**entry, "flag": f"a docstring fix was not proposed: {err}"}
@@ -141,6 +150,52 @@ def follow_up(items: list[Item], prs: Any, poster: Poster, state: State, cfg: Co
             e["done"], e["flag"] = "closed", f"its docstring fix, {cfg.library_repo}#{e['pr']}, was closed without merging"
 
 
+def upstream_link(repo: str, number: int) -> str:
+    return f"[{repo.split('/')[-1]}#{number}](https://github.com/{repo}/pull/{number})"
+
+
+def follow_upstream(items: list[Item], upstream: Any, poster: Poster, state: State, cfg: Config) -> None:
+    """Docstring fixes of a dependency's declarations (`upstream.py`): once a maintainer links the pull request
+    upstream on the no's issue, the reply is posted, linking it; once it has merged and the dependency's revision
+    that the commit the site shows pins includes it, the no is closed as fixed at that commit. Closed without
+    merging, the no is listed for a person again, to link another."""
+    if upstream is None:
+        return
+    by_id = {i.id: i for i in items}
+    for item_id, e in state.items.items():
+        item = by_id.get(item_id)
+        if item is None or not e.get("outside") or e.get("done"):
+            continue
+        by = e.get("by") or {"tool": cfg.tool, "model": cfg.model}
+        up = e.get("upstream")
+        if not up:
+            skip = [tuple(c) for c in e.get("upstream_closed") or []]
+            link = upstream.linked(item.issue, cfg.maintainers, cfg.tool, skip) if item.issue else None
+            if link:
+                e["upstream"] = {"repo": link[0], "pr": link[1]}
+                e.pop("flag", None)
+                poster.reply(item, f"{e.get('reply', '')}\n\nA fix is proposed upstream in {upstream_link(*link)}; this "
+                                   f"no closes as fixed once the library's {upstream.name(link[0])} includes it.".strip(), by)
+                cfg.log(f"{item_id}: its fix upstream is {link[0]}#{link[1]}")
+            continue
+        st, sha = upstream.state(up["repo"], up["pr"])
+        if st == "MERGED" and sha:
+            if not upstream.includes(up["repo"], sha):
+                cfg.log(f"{item_id}: {up['repo']}#{up['pr']} merged as {sha[:12]}, not yet in the library at {cfg.commit[:12]}")
+                continue
+            note = (f"{e.get('reply', '')}\n\nFixed upstream by {upstream_link(up['repo'], up['pr'])}, merged as "
+                    f"`{sha[:12]}`, which the library's {upstream.name(up['repo'])} includes at `{cfg.commit[:12]}`, the "
+                    f"commit the site shows.")
+            poster.close(item, "fixed", note.strip(), by, commit=cfg.commit)
+            e["done"] = "fixed"
+            cfg.log(f"{item_id}: {up['repo']}#{up['pr']} merged and in the library, closed as fixed")
+        elif st == "CLOSED":
+            e.setdefault("upstream_closed", []).append([up["repo"], up["pr"]])
+            del e["upstream"]
+            e["flag"] = (f"Its fix upstream, {up['repo']}#{up['pr']}, was closed without merging: link another pull "
+                         f"request in a comment on the no's issue.")
+
+
 def flag_lines(items: list[Item], state: State, cfg: Config) -> list[str]:
     lines = []
     for item in items:
@@ -154,8 +209,10 @@ def flag_lines(items: list[Item], state: State, cfg: Config) -> list[str]:
 
 
 def answer(items: list[Item], ev: Evidence, ds: Dataset, lib: Any, tools: Any, client: Any, poster: Poster, prs: Any,
-           state: State, cfg: Config, today: str, system: str, assess: Callable = assess_item) -> list[dict]:
+           state: State, cfg: Config, today: str, system: str, assess: Callable = assess_item,
+           upstream: Any = None) -> list[dict]:
     follow_up(items, prs, poster, state, cfg)
+    follow_upstream(items, upstream, poster, state, cfg)
     state.save()
     done = []
     for item in choose(items, state, cfg, today):

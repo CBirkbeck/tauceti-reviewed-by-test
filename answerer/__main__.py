@@ -10,6 +10,9 @@ from the real one. `--only` answers just those records, whether or not they were
 run only). `seed` records docstring fixes proposed by hand before the answerer existed, from a JSON
 list of {id, pr, reply, by: {tool, model}, issue, decl, kind}, so that it closes them when they merge.
 `show` prints what it remembers.
+
+A docstring fix of a dependency's declaration (Mathlib's, say) is proposed upstream by a person, who links it
+in a comment on the no's issue; the run follows it from there (`upstream.py`).
 """
 from __future__ import annotations
 
@@ -33,6 +36,7 @@ from .pulls import PullRequests
 from .run import Config, answer
 from .state import State
 from .tools import LibraryTools
+from .upstream import Upstream, dependencies
 
 
 def log(s: str) -> None:
@@ -80,12 +84,14 @@ def run(a: argparse.Namespace) -> int:
         prs = PullRequests(p.prwork, settings["library"]["repo"], build=build_pr, roadmaps=roadmaps,
                            site=settings["site"]["url"], dry=a.dry_run)
         cfg = Config(repo=settings["repo"], library_repo=settings["library"]["repo"], site=settings["site"]["url"],
-                     commit=ready.commit, maintainers=maintainers, log=log)
+                     commit=ready.commit, root=settings["library"]["root"], maintainers=maintainers, log=log)
+        # The dependencies the library pins at the commit the site shows: where a dependency's declaration is fixed.
+        upstream = Upstream(settings["repo"], dependencies(p.work / "lake-manifest.json"))
         if a.max is not None:
             cfg.max_items = a.max
         system = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")
         today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
-        done = answer(items, ev, ds, lib, tools, client, poster, prs, state, cfg, today, system)
+        done = answer(items, ev, ds, lib, tools, client, poster, prs, state, cfg, today, system, upstream=upstream)
         if a.dry_run:
             for e in done:
                 print(json.dumps(e, ensure_ascii=False, indent=1))

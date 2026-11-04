@@ -139,6 +139,10 @@ under the hypotheses its results assume. Then:
 - a no that is not an error is closed as intended, or as not a problem;
 - a no that is right about a docstring gets a pull request to Tau Ceti changing only that docstring,
   and is closed as fixed, at the merge commit, once it merges;
+- a no that is right about the docstring of a Mathlib declaration is listed for a person, who
+  proposes the fix in Mathlib and links that pull request in a comment on the no's issue; the
+  answerer then replies with the link, and closes the no as fixed, at the commit the site shows,
+  once the Mathlib that commit pins includes the merge;
 - a no that is right about the Lean, or anything it cannot settle, stays open, listed in the issue
   "Answerer: needs a person".
 
