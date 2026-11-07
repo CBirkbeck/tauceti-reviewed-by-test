@@ -274,13 +274,15 @@ def review(browser, url, errors):
               q('.reviews-list .mark.agent:not(.stale) .ai').color === ai, person !== ai]; }""")
     expect(all(colours), f"a person's yes is a green tick, an approving AI agent's a blue one, its AI mark blue too ({colours})")
     why = box.locator(".reviews-list details.why")
-    expect(why.count() == 1 and not why.evaluate("d => d.open"), "the person's reasons, a closed twisty")
+    people = box.locator(".reviews-list details.people-box")
+    expect(why.count() == 1 and why.evaluate("d => d.open") and people.count() == 1 and people.evaluate("d => d.open")
+           and people.locator("details.why").count() == 1,
+           "the person's reasons, open, in the green box of people's reviews, itself open (asked 2026-11-07)")
     listed = box.locator(".reviews-list").inner_text()
     expect(box.locator(".reviews-list .mark.stale .who").all_inner_texts() == ["Codex, GPT-6 Astra AI via @example"]
            and "Opus 5" not in listed and "withdrawn" not in listed and "earlier version" not in tally.inner_text(),
            "an answer withdrawn under an old name, and one superseded, left out: greyed, only the AI agent that said yes earlier")
-    why.locator("summary").click()
-    expect(why.evaluate("d => d.open") and "Compared with Fixture documentation" in why.inner_text(), "which opens to why")
+    expect(why.evaluate("d => d.open") and "Compared with Fixture documentation" in why.inner_text(), "showing why")
     expect("Compared with its definition" not in box.inner_text(), "no AI agent's reasons on a declaration's page")
     expect(box.locator(".mark.tally.tested").count() == 1 and box.locator(".tests-list .pass").count() == 1, "Tested by: the listed test passes")
     test = box.locator(".tests-list details.test").first
@@ -404,13 +406,15 @@ def standard_review(browser, url, errors):
     expect(box.locator(".sub").all_text_contents() == ["Reviews", "AI review", "What could be better", "Tests"],
            "after the question, the reviews, then the AI review, the suggestions and the tests")
     ai = box.locator("details.standard-box")
-    expect(ai.count() == 1 and not ai.evaluate("d => d.open") and not box.locator(".standard").is_visible(),
-           "the AI review, a twisty, closed")
+    expect(ai.count() == 1 and ai.evaluate("d => d.open") and box.locator(".standard").is_visible(),
+           "the AI review, a card, open (asked 2026-11-07)")
     expect(words(ai.locator("summary").text_content()) == "AI review · approved by 2 AI agents",
            "its line: the AI review, approved by two AI agents, and not marked out of date (the declaration has not changed)")
-    ai.locator("summary").click()
     expect([h.inner_text() for h in box.locator(".standard h2").all()] == ["What it says", "References and tests", "Lean subtleties"],
-           "which opens to the three parts")
+           "showing its three parts")
+    ai.locator("summary").click()
+    expect(not ai.evaluate("d => d.open") and not box.locator(".standard").is_visible(), "which its reader may close")
+    ai.locator("summary").click()
     expect(box.locator(".standard").count() == 1 and "three times n." not in box.inner_text(),
            "one text, the current one: the earlier version of it is not on the page")
     version = fixture().standard.version_of(fixture().TRIPLE_V2)
@@ -462,8 +466,7 @@ def standard_review_states(browser, url, errors):
     box = page.locator(".review")
     expect(line(box) == "AI review · not yet approved · written for an earlier version of this declaration",
            "a review written for an earlier version of the declaration says so, in its line")
-    box.locator("details.standard-box > summary").click()
-    expect(box.locator(".standard h2").count() == 3 and box.locator(".standard").is_visible(), "and opens to its text")
+    expect(box.locator(".standard h2").count() == 3 and box.locator(".standard").is_visible(), "and shows its text")
     stale = box.locator(".reviews-list .mark.agent.stale")
     expect(box.locator(".reviews-list .mark.agent:not(.stale)").count() == 0 and stale.count() == 1
            and stale.locator(".note").inner_text() == "on an earlier version of the declaration"
@@ -477,7 +480,6 @@ def standard_review_states(browser, url, errors):
            and stale.count() == 1 and stale.locator(".note").inner_text() == "before the AI review"
            and "Codex, GPT-6 Astra" in stale.locator(".who").inner_text() and "said yes earlier" not in box.inner_text(),
            "a review nobody has approved says so, and lists, greyed, the AI agent that said yes before it, in the earlier form")
-    box.locator("details.standard-box > summary").click()
     expect(box.locator(".std-version").inner_text().endswith("Tau Ceti review migration, claude-opus-5-5 AI via @example"),
            "and who wrote it")
     # More than one said yes earlier: each, the latest first, from the build (an approval of an earlier text) and from
@@ -506,7 +508,6 @@ def standard_review_states(browser, url, errors):
     page = visit(browser, url, "#/d/Int", errors)
     box = page.locator(".review")
     expect(line(box) == "AI review · approved by 1 AI agent", "a declaration of Mathlib has its AI review")
-    box.locator("details.standard-box > summary").click()
     expect([h.inner_text() for h in box.locator(".standard h2").all()] == ["What it says", "References and tests", "Lean subtleties"],
            "and shows it")
     expect(box.locator(".reviews-list .mark.agent .who").all_inner_texts() == ["Claude Code, claude-opus-5-5 AI via @example"]
@@ -561,7 +562,7 @@ def standard_review_where_the_site_asks(browser, url, errors):
 def standard_review_html_is_inert(browser, url, errors):  # Review Focus 3: the fixture's V2 holds `<img src=x onerror="window.pwned=1">`
     page = visit(browser, url, "#/d/Fixture.triple", errors)
     ai = page.locator(".review details.standard-box")
-    ai.locator("summary").click()  # the AI review is a twisty: open, its text shows
+    # the AI review is open: its text shows
     page.wait_for_timeout(500)  # the handler of an <img> that failed to load would have run by now
     expect(ai.evaluate("d => d.open") and page.evaluate("window.pwned") is None and "<img" in ai.locator(".standard").inner_text(),
            "raw HTML stays text, inside the AI review's twisty")
@@ -665,7 +666,13 @@ def review_layout(browser, url, errors):
     expect(box.locator(".sub").all_text_contents() == ["Reviews", "AI review", "What could be better", "Tests"],
            "after the question: Reviews, the AI review, What could be better, Tests")
     # Each line of the list: whose (a person's mark, or an AI agent's), who, when, and whether it opens.
-    rows = box.locator(".reviews-list > *").evaluate_all("""rows => rows.map(r => {
+    # People's reviews are one box, first and open; each of its reviews a row of its own, then the AI agents' rows.
+    people = box.locator(".reviews-list > details.people-box")
+    expect(people.count() == 1 and people.evaluate("d => d.open")
+           and box.locator(".reviews-list > *").first.evaluate("r => r.classList.contains('people-box')"),
+           "people's reviews together in one box, first in the list, open")
+    rows = box.locator(".reviews-list > *").evaluate_all("""rows => rows.flatMap(r => r.classList.contains('people-box')
+        ? [...r.querySelectorAll(':scope > .twisty-body > .person-review > *')] : [r]).map(r => {
       const m = r.querySelector('.mark'), t = r.querySelector('time'), note = m && m.querySelector(':scope > .note');
       return m ? [m.classList.contains('agent') ? 'agent' : 'person', m.querySelector('.who').textContent, t && t.dateTime, r.tagName === 'DETAILS',
                   note ? note.textContent : '']
@@ -682,16 +689,16 @@ def review_layout(browser, url, errors):
     yes, no = box.locator(".mark.tally.yes"), box.locator(".mark.tally.no")
     expect(yes.locator(".who").inner_text() == "3 people · 2 AI" and no.locator(".who").inner_text() == "1 person · 1 AI",
            "over them, the yeses and the noes still open, counted")
-    # A person's yes: a twisty under their name, closed, that opens to what they said.
-    reader = box.locator(".reviews-list > details", has=page.locator(".who", has_text="@reader"))
-    expect(not reader.evaluate("d => d.open") and not reader.locator(".twisty-body").is_visible()
-           and "@reader" in reader.locator("summary").inner_text() and "28 Oct 2026" in reader.locator("summary").inner_text(),
-           "a person's yes, a closed twisty, their name and when on its line")
+    # A person's yes: in its own box in the people's box, under their name, open to what they said (asked 2026-11-07).
+    reader = box.locator(".people-box .person-review > details", has=page.locator(".who", has_text="@reader"))
+    expect(reader.count() == 1 and reader.evaluate("d => d.open")
+           and "@reader" in reader.locator("summary").inner_text() and "28 Oct 2026" in reader.locator("summary").inner_text()
+           and "Checked against Stacks, Tag 0001." in reader.locator(".twisty-body").inner_text(),
+           "a person's yes, in a box of its own: their name and when on its line, and what they said")
     reader.locator("summary").click()
-    expect(reader.evaluate("d => d.open") and "Checked against Stacks, Tag 0001." in reader.locator(".twisty-body").inner_text(),
-           "which opens to what they said")
+    expect(not reader.evaluate("d => d.open"), "which its reader may fold")
     # A no still open: open already, in full.
-    critic = box.locator(".reviews-list > details", has=page.locator(".who", has_text="@critic"))
+    critic = box.locator(".people-box .person-review > details", has=page.locator(".who", has_text="@critic"))
     expect(critic.evaluate("d => d.open") and "answered no by @critic" in critic.locator(".twisty-body .report").inner_text()
            and "It should be stated for any semiring." in critic.locator(".twisty-body").inner_text(),
            "a person's no still open, open already: the no in full")
@@ -699,16 +706,17 @@ def review_layout(browser, url, errors):
     expect(agent_no.evaluate("d => d.open") and "It is stated for" in agent_no.locator(".twisty-body").inner_text(),
            "and an AI agent's, as a person's")
     # A yes with nothing more to say: its line, its mark the link to its issue.
-    quiet = box.locator(".reviews-list > :not(details)", has=page.locator(".who", has_text="@quiet"))
+    quiet = box.locator(".people-box .person-review > :not(details)", has=page.locator(".who", has_text="@quiet"))
     expect(quiet.count() == 1 and quiet.locator(f"a.mark[href='{issue}93']").count() == 1, "a yes with no reasons, just its line")
-    # The AI review: after the reviews, one twisty, closed, that opens to the text.
+    # The AI review: after the reviews, one card, open, that its reader may close.
     ai = box.locator("details.standard-box")
     after = page.evaluate("""() => { const list = document.querySelector('.review .reviews-list'), ai = document.querySelector('.review details.standard-box');
       return !!(list && ai && list.compareDocumentPosition(ai) & Node.DOCUMENT_POSITION_FOLLOWING); }""")
-    expect(after and ai.count() == 1 and not ai.evaluate("d => d.open") and ai.locator("summary").text_content().startswith("AI review")
-           and not box.locator(".standard").is_visible(), "the AI review after the reviews: a twisty, closed, its line saying AI review")
+    expect(after and ai.count() == 1 and ai.evaluate("d => d.open") and ai.locator("summary").text_content().startswith("AI review")
+           and box.locator(".standard").is_visible() and box.locator(".std-version").is_visible(),
+           "the AI review after the reviews: a card, open, its line saying AI review, its text and its version shown")
     ai.locator("summary").click()
-    expect(box.locator(".standard").is_visible() and box.locator(".std-version").is_visible(), "which opens to the text and its version")
+    expect(not box.locator(".standard").is_visible(), "which closes when its line is clicked")
     # Nothing at all.
     page = visit(browser, url, "#/d/Fixture.Pos", errors)
     box = page.locator(".review")
@@ -1138,8 +1146,8 @@ def other_pages(browser, url, errors):
            and not fold.evaluate("d => d.open") and "Behaves as intended" in fold.locator("summary").inner_text(),
            "each no answered, folded: where it stands and who said it")
     fold.locator("summary").click()
-    expect(fold.locator(".resolution", has_text="Behaves as intended").locator(".md p").count() == 2
-           and fold.locator(".resolution .md p").first.is_visible(), "which opens to why, in full")
+    expect(fold.locator(".answer-box.decision", has_text="Behaves as intended").locator(".md p").count() == 2
+           and fold.locator(".answer-box.decision .md p").first.is_visible(), "which opens to why, in full, in its box")
     page = visit(browser, url, "#/d/Fixture.one", errors)
     box = page.locator(".review")
     settled = box.locator(".reviews-list .mark.yes.resolved")
@@ -1148,12 +1156,12 @@ def other_pages(browser, url, errors):
            "a no decided in its favour is a green tick, saying how, and no cross is left")
     row = box.locator(".reviews-list details.no")
     expect(row.count() == 1 and not row.evaluate("d => d.open") and row.locator("summary .mark.resolved").count() == 1
-           and box.locator("details details").count() == 0,
+           and row.locator("details").count() == 0,
            "a no answered, a closed twisty under its answerer's name, its line saying how it stands, with no fold inside")
     row.locator("summary").click()
     report = row.locator(".report.closed.resolved")
-    expect(report.locator(".state").inner_text() == "Behaves as intended" and report.locator(".resolution").count() == 2
-           and report.locator(".resolution").last.locator(".md p").all_inner_texts()
+    expect(report.locator(".state").inner_text() == "Behaves as intended" and report.locator(".answer-box.decision").count() == 2
+           and report.locator(".answer-box.decision").last.locator(".md p").all_inner_texts()
            == ["Pos admits 0 on purpose: it is the predicate, and the theorems about it assume 0 < n where they need it.",
                "With that usual hypothesis it is the positive integers, so the declaration says what it should."],
            "which opens to the no in full: how it stands, by whom, and why")

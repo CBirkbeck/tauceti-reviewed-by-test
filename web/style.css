@@ -434,3 +434,90 @@ pre.small-code { margin: 8px 0; padding: 10px 12px; border-radius: 8px; backgrou
 /* Under a review form: signing in, for whoever reviews several declarations. */
 .signin-offer { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
 .signin-offer .btn.link, .how .btn.link { padding: 0; font-size: inherit; }
+
+/* The AI review: a card, open by default, which the reader may close (asked 2026-11-07). Its badge and its Hide or Show
+   are drawn here, so that the line's text is only what it says. */
+.review details.standard-box { margin: 16px 0 12px; border: 1px solid color-mix(in srgb, var(--ai) 40%, var(--line));
+  border-radius: 10px; background: var(--surface); overflow: hidden; }
+.review details.standard-box > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px;
+  padding: 10px 12px 10px 14px; text-indent: 0; cursor: pointer;
+  background: color-mix(in srgb, var(--ai) 9%, var(--raised)); }
+.review details.standard-box[open] > summary { border-bottom: 1px solid color-mix(in srgb, var(--ai) 28%, var(--line)); }
+.review details.standard-box > summary::before { content: "AI"; transform: none; width: auto; margin: 0 10px 0 0;
+  padding: 1px 7px; border-radius: 5px; background: var(--ai); color: var(--bg); font: 700 11px/1.5 var(--sans);
+  letter-spacing: .04em; vertical-align: 0; }
+.review details.standard-box[open] > summary::before { transform: none; }
+.review details.standard-box > summary .std-line { flex: 1 1 0; min-width: 0; }
+.review details.standard-box > summary .sub { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--ink); }
+.review details.standard-box > summary .std-state { color: var(--ink-soft); font-size: 13.5px; }
+.review details.standard-box > summary .std-state.stale { color: var(--st-stale); }
+.review details.standard-box > summary::after { content: "Hide"; margin-left: auto; padding: 3px 12px;
+  border: 1px solid var(--edge); border-radius: 999px; font: 500 12.5px/1.4 var(--sans); color: var(--ink-soft); }
+.review details.standard-box:not([open]) > summary::after { content: "Show the AI review"; color: var(--accent-ink);
+  background: var(--accent); border-color: var(--accent); }
+.review details.standard-box > summary:hover::after { border-color: var(--accent); }
+.review details.standard-box > summary:hover .sub { color: var(--ink); }
+.review details.standard-box > .twisty-body { margin: 0; padding: 4px 18px 12px; border-left: none; }
+
+/* A no or a suggestion: what it says, set apart; the pull request that addresses it in a box of its own; then each
+   answer in its box (asked 2026-11-07: "put some boxes or something to make it more organised"). */
+.report .thread-body { color: var(--ink); }
+.report-text { margin: 6px 0 10px; padding: 8px 12px; border-left: 3px solid var(--st-problem); border-radius: 0 6px 6px 0;
+  background: var(--raised); font-size: 14.5px; }
+.report.question .report-text { border-left-color: var(--accent); }
+.pr-box { margin: 10px 0; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 8px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.pr-box.merged { border-color: color-mix(in srgb, var(--result) 60%, var(--line));
+  background: color-mix(in srgb, var(--result) 8%, var(--surface)); }
+.pr-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.pr-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pr-top > a { font-family: var(--mono); font-size: 15px; font-weight: 600; }
+.pill { padding: 1px 9px; border: 1px solid currentColor; border-radius: 999px; font-size: 11.5px; }
+.pill.proposed { color: var(--accent); }
+.pill.merged { color: var(--result); }
+.pr-title { margin: 7px 0 1px; font-weight: 600; color: var(--ink); }
+.pr-box .line { margin: 2px 0 6px; font-size: 12.5px; color: var(--muted); }
+.pr-box .pr-what { font-size: 13.5px; color: var(--ink-soft); }
+.answer-box { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.answer-box.decision { border-color: color-mix(in srgb, var(--st-covered) 22%, var(--line)); }
+.answer-head { margin: 0 0 4px; font-size: 12.5px; color: var(--muted); }
+.answer-head b { color: var(--ink-soft); font-weight: 600; }
+.answer-box .md { margin: 2px 0; }
+.pr-chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 999px; font-size: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.pr-chip.merged { border-color: color-mix(in srgb, var(--result) 60%, var(--line)); background: color-mix(in srgb, var(--result) 9%, transparent); }
+.pr-chip a { font-family: var(--mono); font-weight: 600; }
+.pr-glyph { color: var(--accent); }
+.pr-chip.merged .pr-glyph { color: var(--result); }
+.pr-chip-state { color: var(--muted); }
+.report.has-pr .state { color: var(--accent); }
+.report.has-pr.resolved .state { color: var(--result); }
+.thread .pr-box, .thread .answer-box { margin-left: 0; }
+
+/* People's reviews: one green card before the AI agents' and the AI review, open, which its reader may close (asked
+   2026-11-07: "put into some green box before the AI review"), each review in a box of its own under its reviewer. */
+.review details.people-box { margin: 8px 0 12px; border: 1px solid color-mix(in srgb, var(--result) 50%, var(--line));
+  border-radius: 10px; background: var(--surface); overflow: hidden; }
+.review details.people-box > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px;
+  padding: 10px 12px 10px 14px; cursor: pointer; color: var(--ink);
+  background: color-mix(in srgb, var(--result) 11%, var(--raised)); }
+.review details.people-box[open] > summary { border-bottom: 1px solid color-mix(in srgb, var(--result) 30%, var(--line)); }
+.review details.people-box > summary::before { content: "People"; transform: none; width: auto; margin: 0 10px 0 0;
+  padding: 1px 7px; border-radius: 5px; background: var(--result); color: var(--bg); font: 700 11px/1.5 var(--sans);
+  letter-spacing: .04em; }
+.review details.people-box[open] > summary::before { transform: none; }
+.review details.people-box > summary .people-line { flex: 1 1 0; min-width: 0; }
+.review details.people-box > summary .people-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.review details.people-box > summary .people-count { font-size: 13.5px; color: var(--ink-soft); }
+.review details.people-box > summary::after { content: "Hide"; margin-left: auto; padding: 3px 12px;
+  border: 1px solid var(--edge); border-radius: 999px; font: 500 12.5px/1.4 var(--sans); color: var(--ink-soft); }
+.review details.people-box:not([open]) > summary::after { content: "Show the reviews by people"; color: var(--bg);
+  background: var(--result); border-color: var(--result); }
+.review details.people-box > summary:hover::after { border-color: var(--result); }
+.review details.people-box > .twisty-body { margin: 0; padding: 4px 12px 10px; border-left: none; }
+.person-review { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: color-mix(in srgb, var(--result) 4%, var(--surface)); }
+.person-review.no { border-color: color-mix(in srgb, var(--st-problem) 35%, var(--line)); }
+.person-review > details.twisty, .person-review > .said { margin: 0; }
+.person-review > details.twisty > .twisty-body { margin-bottom: 0; }

@@ -183,15 +183,21 @@
     if (v.text) box.append(md(v.text));
     if (v.statement) { const pre = el('pre', 'small-code'); pre.textContent = v.statement; box.append(pre); }
     if (v.fix) box.append(el('div', 'faint small', 'Suggested fix:'), md(v.fix));
-    for (const id of v.replies || []) {
-      const r = byId.get(id);
-      if (!r) continue;
-      const reply = el('div', 'reply'), rh = el('div', 'thread-head');
-      rh.append(who(r.by), el('span', 'faint', date(r.at)));
-      reply.append(rh, md(r.text));
-      box.append(reply);
+    // The pull request that addresses it, then each answer, each in a box of its own, as on its declaration's page.
+    if (v.kind === 'review' && v.verdict !== 'accept') {
+      for (const p of pullsOf(v, byId)) box.append(pullBox(p, v.verdict === 'question'));
+      for (const b of answerBoxes(v, byId)) box.append(b);
+    } else {
+      for (const id of v.replies || []) {
+        const r = byId.get(id);
+        if (!r) continue;
+        const reply = el('div', 'reply'), rh = el('div', 'thread-head');
+        rh.append(who(r.by), el('span', 'faint', date(r.at)));
+        reply.append(rh, md(r.text));
+        box.append(reply);
+      }
+      for (const b of answerBoxes({statuses: v.statuses}, byId)) box.append(b);
     }
-    resolutions(box, v, who);
     if (v.actions && v.actions.length && v.url) {
       const acts = el('div', 'record-actions');
       acts.append('On its issue: ');
@@ -742,7 +748,14 @@
     const dot = () => el('span', 'sep', ' · ');
     const line = [el('span', 'sub', 'AI review'), dot(), el('span', 'std-state', n ? `approved by ${plural(n, 'AI agent')}` : 'not yet approved')];
     if (!std.current) line.push(dot(), el('span', 'std-state stale', 'written for an earlier version of this declaration'));
-    return twisty('standard-box', line, md(std.text, 'standard'), version);
+    // A card, open: the reader sees the AI review and may close it (asked 2026-11-07); its badge and its Hide or Show
+    // are the stylesheet's, so the line's text stays what it says.
+    // Its words flow as one text inside the card, so that it wraps between words and never at a "·".
+    const words = el('span', 'std-line');
+    words.append(...line);
+    const d = twisty('standard-box', [words], md(std.text, 'standard'), version);
+    d.open = true;
+    return d;
   }
   /* The AI agents that said yes earlier, and not to the AI review as it is now, each with a note saying how: from the
      build (`earlierApprovals`), an approval of an earlier version of the AI review, or of this one on an earlier version
@@ -1119,13 +1132,32 @@
     // The cross only while a no is open: one fixed (or found to be no problem) is a green tick below.
     if (no.some(stands)) row.append(tally('no', 'Not correctly stated', no.filter(stands).map(v => v.by), done ? `${done} resolved` : ''));
     const list = el('div', 'reviews-list'), newest = (a, b) => (b.at || '').localeCompare(a.at || ''), ai = x => x.by.kind === 'agent';
-    list.append(...answers.filter(v => !ai(v)).sort(newest).map(v => answerRow(v, byId)),
-                // An approval is not an answer of the box's: it has no verdict, and no reasons to open.
+    const people = answers.filter(v => !ai(v)).sort(newest);
+    if (people.length) list.append(peopleBox(people, byId));
+    list.append(// An approval is not an answer of the box's: it has no verdict, and no reasons to open.
                 ...[...answers.filter(ai), ...approvals].sort(newest).map(x => x.verdict ? answerRow(x, byId) : approvalRow(x)),
                 ...[...earlier].sort(newest).map(x => approvalRow(x, x.note)));
     if (row.childNodes.length) box.append(row);
     box.append(list);
     return box;
+  }
+  /* People's answers, yes and no, together in one green card before the AI agents' and the AI review: open, which its
+     reader may close (asked 2026-11-07), each answer in a box of its own under its answerer's name, a yes showing its
+     reasons; a no open while it is, an answered no folded, as everywhere. */
+  function peopleBox(people, byId) {
+    const words = el('span', 'people-line');
+    words.append(el('span', 'people-title', 'Reviews by people'), el('span', 'sep', '\u00a0·\u00a0'),
+                 el('span', 'people-count', plural(people.length, 'review')));
+    const rows = people.map(v => {
+      const r = answerRow(v, byId);
+      if (r.tagName === 'DETAILS' && v.verdict === 'accept') r.open = true;
+      const box = el('div', 'person-review ' + (v.verdict === 'problem' ? 'no' : 'yes'));
+      box.append(r);
+      return box;
+    });
+    const d = twisty('people-box', [words], ...rows);
+    d.open = true;
+    return d;
   }
   const TEST_RESULT = {passes: 'passes', sorry: 'has sorry', missing: 'missing at this commit'};
   /* Tested by: a mark that counts the tests that pass; then each listed test, a twisty that opens to what it
@@ -1188,44 +1220,93 @@
      (`whole`), as a no is among the reviews. */
   function report(v, byId, whole) {
     const open = v.state === 'open', question = v.verdict === 'question';
-    const cls = 'report' + (question ? ' question' : '') + (open ? '' : ' closed') + (resolved(v) ? ' resolved' : '');
-    const byPr = !open && (v.statuses || []).length && (v.statuses[v.statuses.length - 1] || {}).pr;
-    const head = [el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? (byPr ? 'Addressed' : 'Closed')
-                                                     : STATE_WORDS[v.state] || 'Closed'), ' · ',
+    const pulls = pullsOf(v, byId), merged = pulls.some(p => p.merged);
+    const cls = 'report' + (question ? ' question' : '') + (open && !pulls.length ? '' : ' closed') +
+      (resolved(v) || merged ? ' resolved' : '') + (pulls.length ? ' has-pr' : '');
+    const word = merged ? (question ? 'Addressed' : 'Fixed') : pulls.length ? (question ? 'PR proposed' : 'Fix proposed')
+      : open ? 'Open' : question && v.state === 'answered' ? 'Closed' : STATE_WORDS[v.state] || 'Closed';
+    const head = [el('span', 'state', word), ' · ',
                   question ? 'suggested by ' : (v.category && v.category !== 'other' ? v.category + ' · ' : '') + 'answered no by ',
                   markWho(v.by), ', ' + date(v.at)];
     const note = v.status !== 'current' && statusNote(v);
     if (note) head.push(' · ', el('span', 'note', note));
     if (v.source) head.push(` · from the ${v.source.name} store`);
-    const body = el('div');
-    if (v.text) body.append(md(v.text));
+    // The pull request, on the line itself: seen without opening the thread.
+    for (const p of pulls) {
+      const chip = el('span', 'pr-chip' + (p.merged ? ' merged' : ''));
+      chip.append(el('span', 'pr-glyph', '⇄'), prLink(p.pr), el('span', 'pr-chip-state', p.merged ? 'merged' : 'proposed'));
+      head.push(' ', chip);
+    }
+    const body = el('div', 'thread-body');
+    if (v.text) body.append(md(v.text, 'report-text'));
     if (v.fix) body.append(el('p', 'fix', 'Suggested fix'), md(v.fix));
-    replies(body, v, byId);
-    resolutions(body, v, markWho);
+    for (const p of pulls) body.append(pullBox(p, question));
+    for (const b of answerBoxes(v, byId)) body.append(b);
     if (v.url) { const foot = el('p', 'line'); foot.append(ext(v.url, issueText(v.url))); body.append(foot); }
     if (answered(v) && !whole) {
-      const n = (v.replies || []).length;
-      return twisty(cls, [...head, n ? ' · ' + plural(n, 'reply', 'replies') : '', el('span', 'gist', gist(v.text))], ...body.childNodes);
+      const n = (v.replies || []).length - pulls.filter(p => p.linked).length;
+      return twisty(cls, [...head, n > 0 ? ' · ' + plural(n, 'reply', 'replies') : '', el('span', 'gist', gist(v.text))], body);
     }
     const box = el('div', cls), line = el('p', 'head');
     line.append(...head);
-    box.append(line, ...body.childNodes);
+    box.append(line, body);
     return box;
   }
-  /* What was decided on a no or a suggestion, each decision in full: how it stands (fixed, at which commit; behaves
-     as intended; not a problem; answered), who decided and when, and why, as written: so anyone can see why a no
-     was closed. */
-  function resolutions(box, v, whoOf) {
-    for (const s of v.statuses || []) {
-      const block = el('div', 'resolution'), head = el('p', 'line');
-      if (s.pr) head.append(el('b', null, s.state === 'fixed' ? 'Fixed by ' : 'Addressed by '), prLink(s.pr));
-      else head.append(el('b', null, STATE_WORDS[s.state] || s.state));
-      head.append(s.commit ? ` at ${s.commit.slice(0, 7)}` : '', ' · ', whoOf(s.by), ', ' + date(s.at));
-      if (s.url && !(s.pr && s.url === prUrl(s.pr))) head.append(' · ', ext(s.url, issueText(s.url)));
-      block.append(head);
-      if (s.text) block.append(md(s.text));
-      box.append(block);
+  /* The pull requests that address a no or a suggestion (scripts/pr_links.py), each once: linked by a reply that names
+     it (its note: a title on the first line, then what it changes), and merged once a status names it. */
+  function pullsOf(v, byId) {
+    const found = new Map();
+    for (const id of v.replies || []) {
+      const r = byId.get(id);
+      if (r && r.pr) found.set(r.pr, {pr: r.pr, by: r.by, at: r.at, linked: true, merged: false,
+                                      text: r.text === `Addressed in ${r.pr}.` ? '' : r.text});
     }
+    for (const s of v.statuses || []) {
+      if (!s.pr) continue;
+      const p = found.get(s.pr) || {pr: s.pr, by: s.by, at: s.at, linked: false, text: s.text || ''};
+      found.set(s.pr, {...p, merged: true, commit: s.commit, mergedBy: s.by, mergedAt: s.at});
+    }
+    return [...found.values()];
+  }
+  /* A pull request, in a box of its own: its number, proposed or merged, its title, who linked it and when, and what
+     it changes. */
+  function pullBox(p, question) {
+    const box = el('div', 'pr-box' + (p.merged ? ' merged' : '')), top = el('div', 'pr-top');
+    top.append(el('span', 'pr-label', 'Pull request'), prLink(p.pr),
+               el('span', 'pill ' + (p.merged ? 'merged' : 'proposed'),
+                  p.merged ? 'merged' + (p.commit ? ` at ${p.commit.slice(0, 7)}` : '') : 'proposed, not merged yet'));
+    box.append(top);
+    const [first, ...rest] = String(p.text || '').split('\n');
+    if (first.trim()) box.append(el('p', 'pr-title', first.trim()));
+    const by = el('p', 'line');
+    by.append(p.merged ? (question ? 'It addresses this suggestion · ' : 'It fixes this · ') : 'Proposed by ', markWho(p.by), ', ' + date(p.at));
+    box.append(by);
+    const more = rest.join('\n').trim();
+    if (more) box.append(md(more, 'pr-what'));
+    return box;
+  }
+  /* The rest of the thread, each in a box of its own, in order: replies, and what was decided on it (fixed, at which
+     commit; behaves as intended; not a problem; answered), who said it and when, and why, as written: so anyone can
+     see why a no was closed. A reply or a decision that names a pull request is in its box (`pullBox`). */
+  function answerBoxes(v, byId) {
+    const items = [];
+    for (const id of v.replies || []) {
+      const r = byId.get(id);
+      if (r && !r.pr) items.push({at: r.at, by: r.by, text: r.text, word: 'Reply'});
+    }
+    for (const s of v.statuses || []) {
+      if (!s.pr) items.push({at: s.at, by: s.by, text: s.text, word: STATE_WORDS[s.state] || s.state, commit: s.commit,
+                             url: s.url, decision: true});
+    }
+    items.sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
+    return items.map(x => {
+      const box = el('div', 'answer-box' + (x.decision ? ' decision' : '')), head = el('p', 'answer-head');
+      head.append(el('b', null, x.word), x.commit ? ` at ${x.commit.slice(0, 7)}` : '', ' · ', markWho(x.by), ', ' + date(x.at));
+      if (x.url) head.append(' · ', ext(x.url, issueText(x.url)));
+      box.append(head);
+      if (x.text) box.append(md(x.text));
+      return box;
+    });
   }
   function replies(box, v, byId) {
     for (const id of v.replies || []) {
