@@ -3,7 +3,8 @@
 # Turns issues opened with the evidence forms, and the comments on them, into S3 records in the
 # store, and says so on the issue. An event's run, or one by hand, reads its own issue and the evidence
 # issues still open, so it also takes those whose runs a burst dropped; a sweep every six hours, of the
-# last 14 days, catches what else a dropped run missed.
+# last 14 days, catches what else a dropped run missed, and looks again at the library's pull requests
+# linked to a no or a suggestion with `/addressed` (scripts/pr_links.py): those merged since settle them.
 name: Evidence intake
 
 on:
@@ -35,6 +36,6 @@ jobs:
       - uses: ./.github/actions/intake
         with:
           store: evidence
-          sweep: ${{ github.event_name == 'schedule' && '--sweep-days 14' || '--sweep-open' }}
+          sweep: ${{ github.event_name == 'schedule' && '--sweep-days 14 --follow-pulls' || '--sweep-open' }}
           pages-workflow: 'pages.yml'
           ref: v0.7.2

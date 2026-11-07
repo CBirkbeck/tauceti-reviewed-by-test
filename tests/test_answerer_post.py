@@ -34,6 +34,8 @@ class PosterTests(unittest.TestCase):
         self.assertEqual(body, f"{mark(BY)}\n/intended\n\nIt is intended.")
         p.close(NS(id="abc", issue=14), "fixed", "Fixed.", BY, commit="0123456789abcdef")
         self.assertTrue(self.run.calls[1][1].startswith(f"{mark(BY)}\n/fixed 0123456789abcdef\n\nFixed."))
+        p.close(NS(id="abc", issue=14), "fixed", "Fixed.", BY, commit="0123456789abcdef", pr="TauCetiProject/TauCeti#7")
+        self.assertTrue(self.run.calls[2][1].startswith(f"{mark(BY)}\n/fixed 0123456789abcdef TauCetiProject/TauCeti#7\n\n"))
 
     def test_without_an_issue_the_status_form(self):
         p = self.poster()

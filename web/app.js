@@ -1012,6 +1012,9 @@
   const resolved = v => v.verdict === 'problem' && RESOLVED.has(v.state);
   const sign = answer => { const t = el('span', 'tick', answer === 'no' ? '✗' : '✓'); t.setAttribute('aria-hidden', 'true'); return t; };
   const issueText = url => { const m = /\/issues\/(\d+)$/.exec(url || ''); return m ? 'Issue #' + m[1] : 'issue'; };
+  /* A pull request named as `owner/repo#123` (scripts/pr_links.py): its link, and how a line names it, TauCeti#123. */
+  const prUrl = pr => { const [repo, n] = pr.split('#'); return `https://github.com/${repo}/pull/${n}`; };
+  const prLink = pr => { const [repo, n] = pr.split('#'); return ext(prUrl(pr), `${repo.split('/').pop()}#${n}`); };
   /* When a review was given, as its line says it. */
   const when = at => { const t = el('time', 'when', date(at)); t.dateTime = at || ''; return t; };
   /* Who made a record, as a mark says it: @login, or the agent, AI, and the account it acted through. */
@@ -1186,7 +1189,9 @@
   function report(v, byId, whole) {
     const open = v.state === 'open', question = v.verdict === 'question';
     const cls = 'report' + (question ? ' question' : '') + (open ? '' : ' closed') + (resolved(v) ? ' resolved' : '');
-    const head = [el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? 'Closed' : STATE_WORDS[v.state] || 'Closed'), ' · ',
+    const byPr = !open && (v.statuses || []).length && (v.statuses[v.statuses.length - 1] || {}).pr;
+    const head = [el('span', 'state', open ? 'Open' : question && v.state === 'answered' ? (byPr ? 'Addressed' : 'Closed')
+                                                     : STATE_WORDS[v.state] || 'Closed'), ' · ',
                   question ? 'suggested by ' : (v.category && v.category !== 'other' ? v.category + ' · ' : '') + 'answered no by ',
                   markWho(v.by), ', ' + date(v.at)];
     const note = v.status !== 'current' && statusNote(v);
@@ -1213,9 +1218,10 @@
   function resolutions(box, v, whoOf) {
     for (const s of v.statuses || []) {
       const block = el('div', 'resolution'), head = el('p', 'line');
-      head.append(el('b', null, STATE_WORDS[s.state] || s.state), s.commit ? ` at ${s.commit.slice(0, 7)}` : '', ' · ', whoOf(s.by),
-                  ', ' + date(s.at));
-      if (s.url) head.append(' · ', ext(s.url, issueText(s.url)));
+      if (s.pr) head.append(el('b', null, s.state === 'fixed' ? 'Fixed by ' : 'Addressed by '), prLink(s.pr));
+      else head.append(el('b', null, STATE_WORDS[s.state] || s.state));
+      head.append(s.commit ? ` at ${s.commit.slice(0, 7)}` : '', ' · ', whoOf(s.by), ', ' + date(s.at));
+      if (s.url && !(s.pr && s.url === prUrl(s.pr))) head.append(' · ', ext(s.url, issueText(s.url)));
       block.append(head);
       if (s.text) block.append(md(s.text));
       box.append(block);
@@ -1226,8 +1232,10 @@
       const r = byId.get(id);
       if (!r) continue;
       const reply = el('div', 'reply'), head = el('p', 'line');
+      if (r.pr) head.append(el('b', null, v.verdict === 'question' ? 'Taken up in ' : 'Fix proposed in '), prLink(r.pr), ' · ');
       head.append(markWho(r.by), ', ' + date(r.at));
-      reply.append(head, md(r.text));
+      reply.append(head);
+      if (!r.pr || r.text !== `Addressed in ${r.pr}.`) reply.append(md(r.text));
       box.append(reply);
     }
   }
@@ -1448,7 +1456,10 @@
       section("On an answer's issue", null, prose(
         p('A comment whose first line is a command changes where the answer stands: ', el('code', null, '/withdraw'),
           ' takes it back; on a no, ', el('code', null, '/fixed <commit>'), ', ', el('code', null, '/intended'), ' or ',
-          el('code', null, '/invalid'), ' resolves it, and ', el('code', null, '/reopen'), ' opens it again. Other comments are kept as replies.'))),
+          el('code', null, '/invalid'), ' resolves it, and ', el('code', null, '/reopen'), ' opens it again. Other comments are kept as replies.'),
+        p('On a no or a suggestion, ', el('code', null, '/addressed TauCetiProject/TauCeti#123'), ' (or the pull request\'s link) names ',
+          'the pull request that addresses it. Once it has merged, the no is fixed, the suggestion answered, and the page names the ',
+          'pull request; one still open is shown as proposed, and settles it when it merges.'))),
       section('Where this comes from', null, prose(
         p('Built with the ', ext('https://github.com/LeanTrustBuilders', 'LeanTrustBuilders'), ` tools: the dataset of ${lib} at `,
           ext(`https://github.com/${meta.library.repo}/commit/${meta.library.commit}`, meta.library.commit.slice(0, 7)),

@@ -400,6 +400,24 @@ right side should be `n * (n - 1) / 2`: at `n = 1` the sum is `0` and the right 
 
 A reply to a no, or a note closing one, follows the same rule.
 
+### The pull request that addresses a no or a suggestion
+
+When a pull request fixes a no, or does what a suggestion (What could be better) asks, say so on its
+issue, in a comment whose first line names it, with a line on what it changes:
+
+```markdown
+<!-- agent: tool=Claude Code; model=claude-opus-5-5 -->
+/addressed TauCetiProject/TauCeti#123 — states it under `SecondCountableTopology`
+```
+
+The link (`https://github.com/TauCetiProject/TauCeti/pull/123`) works too; a bare `#123` would name an
+issue here. Only the no's or the suggestion's author and the maintainers can (an agent through the
+maintainer's account can). Once the pull request has merged, the no is fixed and the suggestion
+answered, at its commit, and the page names the pull request; one still open shows as proposed, and
+the scheduled intake settles the no or the suggestion once it merges. A pull request to Mathlib is
+linked, never followed: a maintainer comments `/fixed <commit> <pull request>` once Tau Ceti's Mathlib
+includes it. Never open pull requests to Mathlib yourself: a person does.
+
 ## Rules
 
 - Review the Lean before the review: never approve, edit or write the standard review of what you have

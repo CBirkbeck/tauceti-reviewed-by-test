@@ -180,7 +180,7 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(wf["on"]["schedule"], [{"cron": "23 */6 * * *"}])
         self.assertIn("workflow_dispatch", wf["on"])  # a run by hand reads what is open, as an event's does
         self.assertEqual(intake_step(wf["jobs"]["intake"])["with"]["sweep"],
-                         "${{ github.event_name == 'schedule' && '--sweep-days 14' || '--sweep-open' }}")
+                         "${{ github.event_name == 'schedule' && '--sweep-days 14 --follow-pulls' || '--sweep-open' }}")
 
     def test_the_action_is_evidence_stores_with_that_sweep(self):
         action = yaml.safe_load((ACTIONS / "intake" / "action.yml").read_text(encoding="utf-8"))

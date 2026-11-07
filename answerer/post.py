@@ -5,7 +5,7 @@ records it as an AI agent's (through the server's GitHub account), naming the mo
 
 - `close`: a status on the item, with the reply as its note. On the item's own issue it is a comment
   whose first line (after the mark) is the command, `/intended`, `/invalid`, `/answered` or
-  `/fixed <commit>`, and whose rest intake keeps as the note. An item from a pull request's file (an
+  `/fixed <commit> [<pull request>]`, and whose rest intake keeps as the note. An item from a pull request's file (an
   AI agent's batch) has no issue: the store's status form is used instead (`evidence-store status`).
 - `reply`: a comment on the item's own issue, kept as a reply; an item without one gets none.
 - `flags`: the one issue listing what needs a person, created once and rewritten each run.
@@ -43,9 +43,10 @@ class Poster:
     def comment(self, issue: int, body: str) -> str:
         return self.call(["gh", "issue", "comment", str(issue), "-R", self.repo, "--body-file", "-"], body).strip()
 
-    def close(self, item: Any, command: str, note: str, by: dict, commit: str | None = None) -> str:
+    def close(self, item: Any, command: str, note: str, by: dict, commit: str | None = None, pr: str | None = None) -> str:
         if item.issue:
-            head = f"/{command}" + (f" {commit}" if commit else "")
+            # `pr`, `owner/repo#123`: the pull request that fixed it, recorded with the status (scripts/pr_links.py)
+            head = f"/{command}" + (f" {commit}" if commit else "") + (f" {pr}" if pr else "")
             return self.comment(item.issue, f"{mark(by)}\n{head}\n\n{note}")
         argv = ["evidence-store", "status", "--repo", self.repo, "--record", item.id, "--action", command,
                 "--note", note, "--agent", f"{by['tool']}, {by['model']}"]

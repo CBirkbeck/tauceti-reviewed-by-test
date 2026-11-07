@@ -45,6 +45,7 @@ from evidence_store import cli, github, intake
 from evidence_store.forms import FORMS
 from evidence_store.intake import BULK_LABEL
 
+import pr_links
 import standard_intake
 
 #: What GitHub says when it refuses for a while: the secondary limit on comments, or the hourly one.
@@ -170,10 +171,22 @@ def main(argv: list[str] | None = None) -> int:
         for n in apply(json.loads(Path(outcome_file).read_text(encoding="utf-8")), repo):
             print(f"::warning::GitHub refused the reply on #{n}: it stays open, and the next run answers it")
         return 0
+    # `--follow-pulls` (the six-hourly run): after reading the issues, look again at the library's pull requests
+    # linked with `/addressed` and not yet merged (pr_links.follow).
+    follow = "--follow-pulls" in argv
+    argv = [a for a in argv if a != "--follow-pulls"]
     if argv[:1] == ["intake"]:
         standard_intake.install()
-    if "--sweep-open" not in argv:
-        return cli.main(argv)
+    code = cli.main(argv) if "--sweep-open" not in argv else sweep_open(argv, repo, outcome_file)
+    if code == 0 and follow and argv[:1] == ["intake"]:
+        pr_links.follow_into(repo, value(argv, "--store", "evidence"), outcome_file)
+    return code
+
+
+def sweep_open(argv: list[str], repo: str, outcome_file: str) -> int:
+    """evidence-store's intake over the event's issue and the evidence issues still open, and then those an earlier
+    run left undone (`unfinished`)."""
+    argv = list(argv)
     argv.remove("--sweep-open")
     swept: list[dict] = []
     said: dict[int, list[dict]] = {}

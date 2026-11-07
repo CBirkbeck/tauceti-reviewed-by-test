@@ -419,6 +419,13 @@ class Site:
         its replies, or a no it hangs from would be taken for answered."""
         v = views.record_view(self.ev, r, s, name)
         v["replies"] = [c["id"] for c in self.ev.replies.get(r["id"], []) if standard.kind_of(c) != "version"]
+        # The pull request that addresses a no or a suggestion (scripts/pr_links.py): named by a status that settled
+        # it, or by a reply that links it while it is open.
+        for sv, x in zip(v["statuses"], self.ev.statuses.get(r["id"], [])):
+            if x.get("pr"):
+                sv["pr"] = x["pr"]
+        if r.get("pr"):
+            v["pr"] = r["pr"]
         if standard.kind_of(r):
             v["std"], v["text"] = standard.act(r), ""
         return v

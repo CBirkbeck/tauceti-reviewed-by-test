@@ -143,7 +143,8 @@ def follow_up(items: list[Item], prs: Any, poster: Poster, state: State, cfg: Co
             if item_id in open_ids:
                 note = f"{e.get('reply', '')}\n\nFixed by {pr_link(cfg, e['pr'])}, merged as `{sha[:12]}`."
                 poster.close(SimpleNamespace(id=item_id, issue=e.get("issue")), "fixed", note.strip(),
-                             e.get("by") or {"tool": cfg.tool, "model": cfg.model}, commit=sha)
+                             e.get("by") or {"tool": cfg.tool, "model": cfg.model}, commit=sha,
+                             pr=f"{cfg.library_repo}#{e['pr']}")
             e["done"] = "fixed"
             cfg.log(f"{item_id}: {cfg.library_repo}#{e['pr']} merged, closed as fixed")
         elif st == "CLOSED":
@@ -186,7 +187,7 @@ def follow_upstream(items: list[Item], upstream: Any, poster: Poster, state: Sta
             note = (f"{e.get('reply', '')}\n\nFixed upstream by {upstream_link(up['repo'], up['pr'])}, merged as "
                     f"`{sha[:12]}`, which the library's {upstream.name(up['repo'])} includes at `{cfg.commit[:12]}`, the "
                     f"commit the site shows.")
-            poster.close(item, "fixed", note.strip(), by, commit=cfg.commit)
+            poster.close(item, "fixed", note.strip(), by, commit=cfg.commit, pr=f"{up['repo']}#{up['pr']}")
             e["done"] = "fixed"
             cfg.log(f"{item_id}: {up['repo']}#{up['pr']} merged and in the library, closed as fixed")
         elif st == "CLOSED":

@@ -140,7 +140,8 @@ class RunTests(unittest.TestCase):
         self.prs.st = "MERGED"
         self.go([], items=self.items[:1])
         fixed = self.bodies()[0]
-        self.assertEqual(fixed[1].split("\n")[1], "/fixed " + "c" * 40)
+        # the status names the pull request (scripts/pr_links.py)
+        self.assertEqual(fixed[1].split("\n")[1], "/fixed " + "c" * 40 + " TauCetiProject/TauCeti#501")
         self.assertIn("The docstring is wrong.", fixed[1])
         self.assertEqual(self.state.items[self.items[0].id]["done"], "fixed")
 
@@ -192,7 +193,7 @@ class RunTests(unittest.TestCase):
         self.gh.calls.clear()
         self.go([], items=[item], root="Other")
         fixed = self.bodies()[0][1].split("\n")
-        self.assertEqual(fixed[1], "/fixed B")  # at the commit the site shows
+        self.assertEqual(fixed[1], f"/fixed B {mathlib[0]}#45669")  # at the commit the site shows, naming the pull request
         self.assertIn("merged as `dddddddddddd`, which the library's Mathlib includes at `B`", "\n".join(fixed))
         self.assertEqual(e["done"], "fixed")
         self.gh.calls.clear()

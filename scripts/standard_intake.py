@@ -86,6 +86,7 @@ from evidence_core.status import classify
 from evidence_store import cli, forms, intake
 from evidence_store.intake import Context, Outcome
 
+import pr_links
 import standard
 from common import load_settings
 
@@ -761,6 +762,8 @@ def process_issue(issue: dict, ctx: Context, announce: bool = True) -> tuple[Out
 
 def install() -> None:
     """Puts this module in place of evidence-store's reading: its command line's `process`, and the `process_issue`
-    that its own `process` calls."""
+    that its own `process` calls; and `pr_links` in place of its `process_comment`, for the pull request that
+    addresses a no or a suggestion."""
     cli.process = process
     intake.process_issue = process_issue
+    intake.process_comment = pr_links.process_comment
