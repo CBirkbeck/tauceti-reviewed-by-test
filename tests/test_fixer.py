@@ -88,9 +88,9 @@ class Checkout(unittest.TestCase):
         (self.work / "TauCeti" / "Bar.lean").write_text("public import TauCeti.Foo\n\ntheorem bar : True := trivial\n",
                                                         encoding="utf-8")
         (self.work / ".gitignore").write_text(".lake\n", encoding="utf-8")
-        for args in (["git", "init", "-q"], ["git", "add", "-A"],
-                     ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base"]):
-            sh(*args, cwd=self.work)
+        for args in (["git", "init", "-q"], ["git", "config", "user.name", "t"], ["git", "config", "user.email", "t@t"],
+                     ["git", "add", "-A"], ["git", "commit", "-qm", "base"]):
+            sh(*args, cwd=self.work)  # its own identity: CI's runners have none
         self.base = subprocess.run(["git", "-C", str(self.work), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
         ml = self.work / ".lake" / "packages" / "mathlib"
         (ml / "Mathlib" / "Order").mkdir(parents=True)
