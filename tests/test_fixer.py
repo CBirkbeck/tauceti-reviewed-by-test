@@ -67,6 +67,17 @@ class PickTests(unittest.TestCase):
         self.assertEqual([v.id for v in got], [a["id"]])  # b is too old, c taken, d linked
         self.assertEqual([v.id for v in pick.choose(found, {}, "2026-11-08", 5, only=[b["id"]])], [b["id"]])
 
+    def test_not_what_the_answerer_is_fixing(self):
+        a, b, c = review(1), review(2), review(3)
+        found = pick.reviews([a, b, c], REPO)
+        state = Path(tempfile.mkdtemp()) / "state.json"
+        state.write_text(json.dumps({"items": {a["id"]: {"pr": 501}, b["id"]: {"pr": 502, "done": "fixed"},
+                                               c["id"]: {"outside": True, "upstream": {"repo": "x/y", "pr": 1}}}}))
+        busy = pick.answerer_busy(state)
+        self.assertEqual(busy, {a["id"], c["id"]})  # a docstring fix waiting, a fix upstream followed; not one done
+        self.assertEqual([v.id for v in pick.choose(found, {}, "2026-11-01", None, busy=busy)], [b["id"]])
+        self.assertEqual(pick.answerer_busy(Path(tempfile.mkdtemp()) / "none.json"), set())
+
     def test_outside_the_library(self):
         self.assertTrue(pick.Review("x", "problem", review(1, module="Mathlib.Order.Basic"), 1).outside("TauCeti"))
         self.assertFalse(pick.Review("x", "problem", review(1), 1).outside("TauCeti"))

@@ -1,7 +1,8 @@
 """What a run needs on the server, made ready at its start.
 
-Under the fixer's home (`~/tauceti-fixer`): `review`, a clone of the review repository, pulled, which the run reads
-the reviews from (its store) and runs from; `work/TauCeti`, its own clone of the library, checked out at the commit
+The review repository is the clone the run runs from (the answerer's, `~/tauceti-answerer/review`, since the two are
+one system), pulled: the run reads the reviews from its store. Under the fixer's home (`~/tauceti-fixer`):
+`work/TauCeti`, its own clone of the library, checked out at the commit
 the site shows, with Mathlib's and the library's builds from their Lake caches (fetched again only when that commit
 moves), where the model edits and builds; `sandbox`, where a check's file is written; `state/fixer.json`, its memory.
 The API key is read from `~/.config/tauceti/secrets/anthropic.key`, as the answerer's is, and never reaches the
@@ -28,7 +29,11 @@ class Paths:
     def default(cls) -> "Paths":
         return cls(Path(os.environ.get("FIXER_HOME", Path.home() / "tauceti-fixer")))
 
-    review = property(lambda s: s.home / "review")
+    #: the clone of the review repository the code runs from, or `FIXER_REVIEW`
+    review = property(lambda s: Path(os.environ.get("FIXER_REVIEW", Path(__file__).resolve().parents[1])))
+    #: what the answerer remembers: the items it has a pull request open for (`busy`)
+    answerer_state = property(lambda s: Path(os.environ.get("ANSWERER_STATE",
+                                                            Path.home() / "tauceti-answerer" / "state" / "state.json")))
     work = property(lambda s: s.home / "work" / "TauCeti")
     scratch = property(lambda s: s.home / "sandbox")
     state = property(lambda s: s.home / "state" / "fixer.json")

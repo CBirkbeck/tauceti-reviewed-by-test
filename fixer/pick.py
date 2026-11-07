@@ -42,6 +42,18 @@ class Review:
         return next((t["pr"] for t in reversed(self.thread) if t.get("pr")), None)
 
 
+def answerer_busy(path) -> set[str]:
+    """The items the answerer is fixing itself, from its state: a docstring fix proposed in a pull request, or one
+    upstream it is following, not yet done."""
+    import json
+    from pathlib import Path
+    try:
+        items = json.loads(Path(path).read_text(encoding="utf-8")).get("items", {})
+    except (OSError, ValueError):
+        return set()
+    return {k for k, e in items.items() if (e.get("pr") or e.get("upstream") or e.get("outside")) and not e.get("done")}
+
+
 def reviews(records: list[dict], repo: str) -> list[Review]:
     """People's noes and suggestions from issues of `repo`, in force, with their threads, the oldest first."""
     statuses: dict[str, list[dict]] = {}
@@ -72,9 +84,11 @@ def reviews(records: list[dict], repo: str) -> list[Review]:
     return sorted(out, key=lambda v: (v.at, v.id))
 
 
-def choose(found: list[Review], taken: dict, since: str, max_items: int | None, only: list[str] | None = None) -> list[Review]:
-    """The reviews to take this run: those `only` names (any of the people's, for a test), else the new ones."""
+def choose(found: list[Review], taken: dict, since: str, max_items: int | None, only: list[str] | None = None,
+           busy: set[str] = frozenset()) -> list[Review]:
+    """The reviews to take this run: those `only` names (any of the people's, for a test), else the new ones, but not
+    those the answerer is fixing (`busy`: a docstring fix or a fix upstream it is waiting on)."""
     if only:
         return [v for v in found if v.id in set(only)]
-    new = [v for v in found if v.at >= since and v.id not in taken and not v.linked()]
+    new = [v for v in found if v.at >= since and v.id not in taken and v.id not in busy and not v.linked()]
     return new if max_items is None else new[:max_items]

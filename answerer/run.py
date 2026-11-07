@@ -53,7 +53,7 @@ class Config:
     max_turns: int = 40
     item_budget: float = 6.0  # dollars: past it, the model is asked for its verdict at once
     daily_budget: float = 20.0
-    max_items: int = 6  # a run
+    max_items: int = 20  # a run, twice a day (asked 2026-11-07: one system every twelve hours)
     per_author: int = 2  # a day
     tool: str = "Tau Ceti answerer"
     log: Callable[[str], None] = field(default=print, repr=False)
@@ -61,6 +61,11 @@ class Config:
 
 def now() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def linked(ev: Evidence, item_id: str) -> bool:
+    """Whether a pull request is named as addressing the item: a reply or a status that names one (scripts/pr_links.py)."""
+    return any(r.get("pr") for r in ev.replies.get(item_id, [])) or any(s.get("pr") for s in ev.statuses.get(item_id, []))
 
 
 def thread_of(ev: Evidence, item: Item) -> list[dict]:
@@ -125,7 +130,8 @@ def act(item: Item, decl: dict, out: Outcome, poster: Poster, prs: Any, cfg: Con
         number, err = prs.propose(item, decl, v, by)
         if not number:
             return {**entry, "flag": f"a docstring fix was not proposed: {err}"}
-        poster.reply(item, f"{reply}\n\nA fix is proposed in {pr_link(cfg, number)}; this no closes when it is merged.", by)
+        poster.address(item, f"{cfg.library_repo}#{number}",
+                       f"{reply}\n\nA fix is proposed in {pr_link(cfg, number)}; this no closes when it is merged.", by)
         return {**entry, "pr": number}
     if verdict == "lean_fix_needed" and reply:
         poster.reply(item, reply, by)
@@ -175,7 +181,7 @@ def follow_upstream(items: list[Item], upstream: Any, poster: Poster, state: Sta
             if link:
                 e["upstream"] = {"repo": link[0], "pr": link[1]}
                 e.pop("flag", None)
-                poster.reply(item, f"{e.get('reply', '')}\n\nA fix is proposed upstream in {upstream_link(*link)}; this "
+                poster.address(item, f"{link[0]}#{link[1]}", f"{e.get('reply', '')}\n\nA fix is proposed upstream in {upstream_link(*link)}; this "
                                    f"no closes as fixed once the library's {upstream.name(link[0])} includes it.".strip(), by)
                 cfg.log(f"{item_id}: its fix upstream is {link[0]}#{link[1]}")
             continue
@@ -216,7 +222,8 @@ def answer(items: list[Item], ev: Evidence, ds: Dataset, lib: Any, tools: Any, c
     follow_upstream(items, upstream, poster, state, cfg)
     state.save()
     done = []
-    for item in choose(items, state, cfg, today):
+    # An item a pull request already addresses (`/addressed`, the fixer's or the answerer's own) is not answered again.
+    for item in choose([i for i in items if not linked(ev, i.id)], state, cfg, today):
         if state.spent(today) >= cfg.daily_budget:
             cfg.log(f"the day's budget, ${cfg.daily_budget:.2f}, is spent: the rest waits")
             break

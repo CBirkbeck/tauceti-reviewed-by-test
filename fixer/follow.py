@@ -1,4 +1,5 @@
-"""The fixer's pull requests, seen through Tau Ceti's review. Every two hours (`python -m fixer follow`) each pull
+"""The fixer's pull requests, seen through Tau Ceti's review. In every run of the answerer, every twelve hours
+(`python -m fixer follow`, `answerer/systemd`), each pull
 request the fixer opened, while it is open, is read from GitHub, and if it needs something from its author, the
 model works on it in the fixer's checkout (instructions: `follow.md`) and the run, not the model, pushes and replies.
 

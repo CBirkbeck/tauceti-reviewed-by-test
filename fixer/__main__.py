@@ -26,7 +26,7 @@ from answerer.post import Poster, gh as run_gh
 from answerer.prepare import roadmaps
 
 from . import follow as following
-from .pick import choose, reviews
+from .pick import answerer_busy, choose, reviews
 from .prepare import Paths, prepare
 from .publish import Publisher, gate, git
 from .run import Config, flag_lines, fix, now, reset
@@ -97,7 +97,8 @@ def cmd_run(a: argparse.Namespace) -> int:
         if a.budget is not None:
             cfg.item_budget = a.budget
         found = reviews(store.records, cfg.review_repo)
-        picked = choose(found, state.items if not a.only else {}, state.since, cfg.max_items, a.only)
+        picked = choose(found, state.items if not a.only else {}, state.since, cfg.max_items, a.only,
+                        busy=answerer_busy(p.answerer_state))
         log(f"{len(picked)} review(s) to take, of {len(found)} by people; since {state.since}")
         client = anthropic.Anthropic(api_key=p.key.read_text(encoding="utf-8").strip(), timeout=1800, max_retries=3)
         system = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")

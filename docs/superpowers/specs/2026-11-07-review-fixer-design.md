@@ -14,8 +14,11 @@ have answered one already: an answer is not a fix, so it is taken all the same, 
 
 ## How
 
-`python -m fixer run`, a systemd user timer on the server at 06:30 UTC (`fixer/systemd`), from its own clone of
-this repository (`~/tauceti-fixer/review`) with the answerer's virtual environment.
+One system with the answerer since 2026-11-07 (asked: "lets merge the two into one system that runs every 12
+hours"): `tauceti-answerer` (`answerer/systemd`), at 06:00 and 18:00 UTC, runs `python -m answerer run` (answering),
+`python -m fixer follow`, then `python -m fixer run`, all from the answerer's clone of this repository with its
+virtual environment. The answerer names its own docstring pull requests with `/addressed`, and leaves items a pull
+request already addresses; the fixer leaves the items the answerer is fixing itself (`pick.answerer_busy`).
 
 1. Prepare (`fixer/prepare.py`): its own clone of Tau Ceti (`~/tauceti-fixer/work/TauCeti`) at the commit the site
    shows, with Mathlib's and Tau Ceti's builds from the Lake caches.
@@ -48,7 +51,7 @@ it (asked the same day: "make sure the worker that opens the pr also deals with 
 
 ## Seeing its pull requests through review
 
-`python -m fixer follow`, every two hours (`fixer/systemd/tauceti-fixer-follow.*`; `fixer/follow.py`,
+`python -m fixer follow`, in each run (`fixer/follow.py`,
 instructions `fixer/follow.md`, which takes the rules and the way of working from `fixer/prompt.md`). For each pull
 request the fixer opened and that is open, the first of these that applies is the round's work:
 

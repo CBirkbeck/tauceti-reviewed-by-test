@@ -1,9 +1,9 @@
 [Unit]
-Description=Run the Tau Ceti review answerer every hour
+Description=Run the Tau Ceti review answerer (answering, then fixing) every twelve hours
 
 [Timer]
-OnCalendar=hourly
-RandomizedDelaySec=300
+OnCalendar=*-*-* 06,18:00:00 UTC
+RandomizedDelaySec=600
 Persistent=true
 
 [Install]

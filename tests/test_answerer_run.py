@@ -99,6 +99,15 @@ class RunTests(unittest.TestCase):
         self.assertAlmostEqual(self.state.spent("2026-10-25"), 3.0)
         self.assertEqual(self.state.items[self.items[0].id]["verdict"], "intended")
 
+    def test_an_item_a_pull_request_addresses_is_left_alone(self):
+        # The fixer named a pull request on the no (`/addressed`): one system, so the answerer does not answer it again.
+        self.ev.replies.setdefault(self.items[0].id, []).append(
+            {"kind": "comment", "pr": "TauCetiProject/TauCeti#32075", "text": "Addressed in it.", "at": "2026-11-07T15:47:38Z"})
+        self.go([Outcome(verdict("answered", reply="A semiring would do."), 1.0, "claude-fable-5-1", None, 2)])
+        (only,) = self.bodies()
+        self.assertEqual(only[0], ["gh", "issue", "comment", "15"])
+        self.assertNotIn(self.items[0].id, self.state.items)
+
     def test_a_long_reply_is_cut_at_a_paragraph(self):
         first = "It is the junk value at 0, which the theorems built on it exclude by assuming `0 < n`."
         long = first + "\n\n" + "\n\n".join(["More evidence, at length. " * 12] * 8)
@@ -136,6 +145,7 @@ class RunTests(unittest.TestCase):
         self.assertEqual(reply[0], ["gh", "issue", "comment", "14"])
         self.assertNotIn("/fixed", reply[1])
         self.assertIn("[TauCeti#501](https://github.com/TauCetiProject/TauCeti/pull/501)", reply[1])
+        self.assertEqual(reply[1].split("\n")[1], "/addressed TauCetiProject/TauCeti#501")  # named first
         self.gh.calls.clear()
         self.prs.st = "MERGED"
         self.go([], items=self.items[:1])
@@ -177,7 +187,9 @@ class RunTests(unittest.TestCase):
         self.go([], items=[item], root="Other")
         reply = self.bodies()[0]
         self.assertEqual(reply[0], ["gh", "issue", "comment", "14"])
+        # named with `/addressed` first (scripts/pr_links.py): the site's pull request box, and the fixer leaves it
         self.assertTrue(reply[1].startswith("<!-- agent: tool=Tau Ceti answerer; model=claude-fable-5-1 -->\n"
+                                            f"/addressed {mathlib[0]}#45669\n\n"
                                             "The docstring says a₄; the field tests c₄.\n\nA fix is proposed upstream in "
                                             "[mathlib4#45669](https://github.com/leanprover-community/mathlib4/pull/45669)"))
         self.assertNotIn("/fixed", reply[1])

@@ -54,6 +54,14 @@ class Poster:
             argv += ["--commit", commit]
         return self.call(argv).strip()
 
+    def address(self, item: Any, pr: str, text: str, by: dict) -> str | None:
+        """Names the pull request that addresses the item on its own issue, `/addressed owner/repo#N` first, the reply
+        after it (scripts/pr_links.py): the site shows it in the item's pull request box, and the fixer leaves the item
+        alone. An item without an issue gets none."""
+        if not item.issue:
+            return None
+        return self.comment(item.issue, f"{mark(by)}\n/addressed {pr}\n\n{text}")
+
     def reply(self, item: Any, text: str, by: dict) -> str | None:
         if not item.issue:
             return None
