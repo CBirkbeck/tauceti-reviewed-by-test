@@ -59,9 +59,10 @@ class Poster:
             return None
         return self.comment(item.issue, f"{mark(by)}\n{text}")
 
-    def flags(self, entries: list[str], number: int | None) -> int | None:
-        body = ("Items the review answerer could not settle, or where it found the Lean itself wrong: each needs "
-                "a person. It rewrites this list every hour.\n\n" + ("\n".join(entries) if entries else "Nothing now."))
+    def flags(self, entries: list[str], number: int | None, title: str = FLAG_TITLE, intro: str = "") -> int | None:
+        intro = intro or ("Items the review answerer could not settle, or where it found the Lean itself wrong: each "
+                          "needs a person. It rewrites this list every hour.")
+        body = intro + "\n\n" + ("\n".join(entries) if entries else "Nothing now.")
         if number:
             self.call(["gh", "issue", "edit", str(number), "-R", self.repo, "--body-file", "-"], body)
             # Open while something needs a person, closed while nothing does, so that its title says true.
@@ -70,6 +71,6 @@ class Poster:
             return number
         if not entries:
             return None
-        out = self.call(["gh", "issue", "create", "-R", self.repo, "--title", FLAG_TITLE, "--body-file", "-"], body)
+        out = self.call(["gh", "issue", "create", "-R", self.repo, "--title", title, "--body-file", "-"], body)
         m = re.search(r"/issues/(\d+)", out)
         return int(m.group(1)) if m else None
