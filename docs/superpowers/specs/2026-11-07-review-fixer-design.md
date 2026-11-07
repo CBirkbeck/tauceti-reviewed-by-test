@@ -9,7 +9,7 @@ change is left to a person.
 
 People's noes and suggestions (`by.kind == "person"`, verdicts `problem` and `question`) from issues of the review
 repository, in force, not linked to a pull request yet, filed since the fixer started (`since`, a day before its
-first run), not taken before; the oldest first, at most three a run. The answerer (hourly, Claude Fable 5.1) may
+first run), not taken before; the oldest first, all of them each run. The answerer (hourly, Claude Fable 5.1) may
 have answered one already: an answer is not a fix, so it is taken all the same, and the model reads the answer.
 
 ## How
@@ -20,7 +20,7 @@ this repository (`~/tauceti-fixer/review`) with the answerer's virtual environme
 1. Prepare (`fixer/prepare.py`): its own clone of Tau Ceti (`~/tauceti-fixer/work/TauCeti`) at the commit the site
    shows, with Mathlib's and Tau Ceti's builds from the Lake caches.
 2. For each review (`fixer/run.py`), the model (`fixer/agent.py`): `claude-opus-5-5`, effort high, the refusal
-   fallback on, a JSON result (`output_config.format`), about $25 a review and $75 a day. Its tools
+   fallback on, a JSON result (`output_config.format`), about $25 a review, with no daily cap (asked 2026-11-07: "we dont need a daily cap"). Its tools
    (`fixer/tools.py`) read and search Tau Ceti and Mathlib, edit and create Lean files below `TauCeti/`, find a
    module's importers, build modules and check short files with Lean sealed off (`bwrap`: no network, an empty
    environment, a fresh home; the API key and the GitHub login stay outside), and show the diff. No shell. The
@@ -64,6 +64,6 @@ The model fixes what is right and contests what is wrong (a reply in the finding
 takes as the author's contest); it may correct the `Roadmap:` line, or close a pull request that should not go in.
 A change passes the same gate and is pushed on top of the branch. The builds of each round's checkout are prepared
 from the Lake caches first (its base may pin another Mathlib). A round is keyed by the head, the scoreboard or the
-comments, and never worked twice; at most eight rounds a pull request, about $15 a round, within the day's $75.
+comments, and never worked twice; at most eight rounds a pull request, about $15 a round, no daily cap.
 Merged: done, and intake settles the review on the site. Closed without merging, eight rounds spent, or a round
 given up or refused: listed for a person.

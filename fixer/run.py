@@ -47,8 +47,7 @@ class Config:
     max_tokens: int = 64000
     max_turns: int = 150
     item_budget: float = 25.0  # dollars a review: near it the model is told to finish, past it asked for its result
-    daily_budget: float = 75.0
-    max_items: int = 3  # a run
+    max_items: int | None = None  # a run: None takes every new review (no daily cap: asked 2026-11-07)
     tool: str = "Tau Ceti fixer"
     log: Callable[[str], None] = field(default=print, repr=False)
 

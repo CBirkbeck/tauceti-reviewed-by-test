@@ -72,9 +72,9 @@ def reviews(records: list[dict], repo: str) -> list[Review]:
     return sorted(out, key=lambda v: (v.at, v.id))
 
 
-def choose(found: list[Review], taken: dict, since: str, max_items: int, only: list[str] | None = None) -> list[Review]:
+def choose(found: list[Review], taken: dict, since: str, max_items: int | None, only: list[str] | None = None) -> list[Review]:
     """The reviews to take this run: those `only` names (any of the people's, for a test), else the new ones."""
     if only:
         return [v for v in found if v.id in set(only)]
     new = [v for v in found if v.at >= since and v.id not in taken and not v.linked()]
-    return new[:max_items]
+    return new if max_items is None else new[:max_items]

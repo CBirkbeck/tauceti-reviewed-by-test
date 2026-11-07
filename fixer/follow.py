@@ -17,7 +17,7 @@ The model fixes what is right and contests what is wrong; the change passes the 
 threads, marked as the fixer's. Each round has a key (the head, the scoreboard, the comments): a round worked is not
 worked again, so a contest stands until the reviewers answer it. A merged pull request is done (intake settles the
 review on the site); one closed without merging, one still needing work after `MAX_ROUNDS` rounds, and a round the
-model gives up on or the gate refuses are listed for a person.
+model gives up on or the gate refuses are listed for a person. There is no daily cap: each round has its own budget.
 """
 from __future__ import annotations
 
@@ -352,7 +352,7 @@ def round_(s: Snapshot, w: Work, entry: dict, review: Review | None, client: Any
 def follow_all(state: State, reviews_by_id: dict[str, Review], client: Any, tools: WorkTools, gh: GitHub, cfg: Config,
                system: str, today: str, areas: set[str], dry: bool = False, only: int | None = None,
                work_fn: Callable = agent.work) -> list[dict]:
-    """A round on each open pull request the fixer opened that needs one, within the day's budget."""
+    """A round on each open pull request the fixer opened that needs one."""
     done = []
     for item_id, e in sorted(state.items.items(), key=lambda kv: kv[1].get("at", "")):
         pr = e.get("pr") or ""
@@ -380,9 +380,6 @@ def follow_all(state: State, reviews_by_id: dict[str, Review], client: Any, tool
                 f["done"] = "stopped"
                 e["flag"] = f"{pr} still needs work after {MAX_ROUNDS} rounds: a person takes over"
                 cfg.log(e["flag"])
-            elif state.spent(today) >= cfg.daily_budget:
-                cfg.log(f"the day's budget, ${cfg.daily_budget:.2f}, is spent: {pr} waits")
-                break
             else:
                 cfg.log(f"{pr}: {w.kind} ({w.key})")
                 out = round_(s, w, e, reviews_by_id.get(item_id), client, tools, gh, state, cfg, system, today, areas,

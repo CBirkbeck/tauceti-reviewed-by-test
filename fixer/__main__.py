@@ -1,7 +1,7 @@
 """python -m fixer run | follow | publish | show
 
-`run` takes the people's reviews filed since the fixer started that it has not taken (at most a few a run, within the
-day's budget), and acts on each (`run.fix`). `--dry-run` publishes and posts nothing: a change is kept on a local
+`run` takes the people's reviews filed since the fixer started that it has not taken (all of them: there is no daily
+cap; `--max N` takes at most N), and acts on each (`run.fix`). `--dry-run` publishes and posts nothing: a change is kept on a local
 branch and remembered as a draft, its reply printed. `--only RECORD ...` takes those reviews, whether or not they are
 new (a test). `publish RECORD` publishes a dry run's draft: the gate again, then the pull request and the reply.
 `follow` sees the pull requests it opened through Tau Ceti's review (`follow.py`): a merge conflict, CI failing,
@@ -104,9 +104,6 @@ def cmd_run(a: argparse.Namespace) -> int:
         today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
         areas = roadmaps()
         for review in picked:
-            if state.spent(today) >= cfg.daily_budget:
-                log(f"the day's budget, ${cfg.daily_budget:.2f}, is spent: the rest waits")
-                break
             log(f"{review.id} ({review.kind}, {review.decl}, issue #{review.issue})")
             entry = fix(review, client, tools, publisher, state, cfg, system, today, areas, gh_out)
             if not a.dry_run:
