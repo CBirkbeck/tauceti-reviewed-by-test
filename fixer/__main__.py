@@ -1,18 +1,22 @@
-"""python -m fixer run | publish | show
+"""python -m fixer run | follow | publish | show
 
 `run` takes the people's reviews filed since the fixer started that it has not taken (at most a few a run, within the
 day's budget), and acts on each (`run.fix`). `--dry-run` publishes and posts nothing: a change is kept on a local
 branch and remembered as a draft, its reply printed. `--only RECORD ...` takes those reviews, whether or not they are
 new (a test). `publish RECORD` publishes a dry run's draft: the gate again, then the pull request and the reply.
+`follow` sees the pull requests it opened through Tau Ceti's review (`follow.py`): a merge conflict, CI failing,
+findings, people's comments; `--dry-run` says what each needs and does nothing; `--pr N` takes one pull request.
 `show` prints what it remembers.
 """
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from evidence_core.store import Store
@@ -21,6 +25,7 @@ from answerer.leancheck import Sandbox
 from answerer.post import Poster, gh as run_gh
 from answerer.prepare import roadmaps
 
+from . import follow as following
 from .pick import choose, reviews
 from .prepare import Paths, prepare
 from .publish import Publisher, gate, git
@@ -61,11 +66,26 @@ def setup(p: Paths, state: State, dry: bool, commit: str | None = None):
     return store, tools, poster, publisher, cfg
 
 
+def waiting(path: Path, minutes: int = 180):
+    """The state's lock, waited for: a round of `follow` may hold it for a while."""
+    for _ in range(minutes):
+        try:
+            lock = State.locked(path)
+            lock.__enter__()
+            return lock
+        except BlockingIOError:
+            log("another run of the fixer holds its state: waiting")
+            time.sleep(60)
+    raise SystemExit(f"the fixer's state stayed locked for {minutes} minutes")
+
+
 def cmd_run(a: argparse.Namespace) -> int:
     import anthropic
 
     p = Paths.default()
-    with State.locked(p.state):
+    lock = waiting(p.state)
+    with contextlib.ExitStack() as stack:
+        stack.callback(lock.__exit__, None, None, None)
         state = State(p.state)
         if not state.since:
             start = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)
@@ -102,6 +122,53 @@ def cmd_run(a: argparse.Namespace) -> int:
             if lines or state.flag_issue:
                 state.flag_issue = poster.flags(lines, state.flag_issue, title=FLAG_TITLE, intro=FLAG_INTRO)
             state.save()
+    return 0
+
+
+def github() -> following.GitHub:
+    def graphql(query: str, variables: dict) -> dict:
+        argv = ["gh", "api", "graphql", "-f", f"query={query}"]
+        for k, v in variables.items():
+            argv += ["-F" if isinstance(v, int) else "-f", f"{k}={v}"]
+        return json.loads(gh_out(argv))
+
+    from answerer.prepare import cache
+    return following.GitHub(graphql=graphql, rest=lambda path: json.loads(gh_out(["gh", "api", path]) or "null"),
+                            rest_text=lambda path: gh_out(["gh", "api", path]), gh=run_gh, builds=cache)
+
+
+def cmd_follow(a: argparse.Namespace) -> int:
+    import anthropic
+
+    p = Paths.default()
+    try:
+        lock = State.locked(p.state)
+        lock.__enter__()
+    except BlockingIOError:
+        log("another run of the fixer holds its state: this one stops")
+        return 0
+    try:
+        state = State(p.state)
+        if not any(e.get("outcome") == "pr" and not (e.get("follow") or {}).get("done") for e in state.items.values()):
+            log("no pull request of the fixer is open")
+            return 0
+        store, tools, poster, publisher, cfg = setup(p, state, a.dry_run)
+        cfg.item_budget = a.budget if a.budget is not None else 15.0
+        by_id = {v.id: v for v in reviews(store.records, cfg.review_repo)}
+        client = anthropic.Anthropic(api_key=p.key.read_text(encoding="utf-8").strip(), timeout=1800, max_retries=3)
+        today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+        done = following.follow_all(state, by_id, client, tools, github(), cfg, following.system_prompt(Path(__file__).parent),
+                                    today, roadmaps(), dry=a.dry_run, only=a.pr)
+        if a.dry_run:
+            for d in done:
+                print(json.dumps(d, ensure_ascii=False, indent=1))
+        else:
+            lines = flag_lines(reviews(Store.load(p.review / "evidence").records, cfg.review_repo), state, cfg)
+            if lines or state.flag_issue:
+                state.flag_issue = poster.flags(lines, state.flag_issue, title=FLAG_TITLE, intro=FLAG_INTRO)
+            state.save()
+    finally:
+        lock.__exit__(None, None, None)
     return 0
 
 
@@ -163,10 +230,14 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--since", help="on the first run: take reviews filed since then (ISO time); default a day before")
     r.add_argument("--max", type=int)
     r.add_argument("--budget", type=float, help="dollars for each review")
+    f = sub.add_parser("follow")
+    f.add_argument("--dry-run", action="store_true")
+    f.add_argument("--pr", type=int)
+    f.add_argument("--budget", type=float, help="dollars for each round")
     sub.add_parser("publish").add_argument("record")
     sub.add_parser("show")
     a = ap.parse_args(argv)
-    return {"run": cmd_run, "publish": cmd_publish, "show": cmd_show}[a.cmd](a)
+    return {"run": cmd_run, "follow": cmd_follow, "publish": cmd_publish, "show": cmd_show}[a.cmd](a)
 
 
 if __name__ == "__main__":

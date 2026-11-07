@@ -43,4 +43,27 @@ this repository (`~/tauceti-fixer/review`) with the answerer's virtual environme
 `--dry-run` publishes nothing: a change stays on its local branch as a draft, and `python -m fixer publish
 <record>` publishes it later, through the gate again. `--only <record>` takes the reviews named, new or not.
 
-The pull requests then go through Tau Ceti's own CI and AI review like any other.
+The pull requests then go through Tau Ceti's own CI and AI review like any other, and the fixer sees them through
+it (asked the same day: "make sure the worker that opens the pr also deals with the reviews").
+
+## Seeing its pull requests through review
+
+`python -m fixer follow`, every two hours (`fixer/systemd/tauceti-fixer-follow.*`; `fixer/follow.py`,
+instructions `fixer/follow.md`, which takes the rules and the way of working from `fixer/prompt.md`). For each pull
+request the fixer opened and that is open, the first of these that applies is the round's work:
+
+1. a merge conflict: the change is put on the current `main` again (`git apply --3way`), the model resolves the
+   markers, and the branch is replaced (`--force-with-lease`, one commit on `main`);
+2. CI failing on the head: the failing jobs' errors, from their logs;
+3. Tau Ceti's AI review of the head asking for changes: the scoreboard's `<!--tauceti-meta:v1 …-->` names the head
+   and each rubric's state; the threads of the rubrics not green (`<!--tauceti-rubric:NAME-->`) on that head, not
+   resolved and not answered by the fixer, are the findings;
+4. people's comments and review threads since the head was committed.
+
+The model fixes what is right and contests what is wrong (a reply in the finding's thread, which Tau Ceti's review
+takes as the author's contest); it may correct the `Roadmap:` line, or close a pull request that should not go in.
+A change passes the same gate and is pushed on top of the branch. The builds of each round's checkout are prepared
+from the Lake caches first (its base may pin another Mathlib). A round is keyed by the head, the scoreboard or the
+comments, and never worked twice; at most eight rounds a pull request, about $15 a round, within the day's $75.
+Merged: done, and intake settles the review on the site. Closed without merging, eight rounds spent, or a round
+given up or refused: listed for a person.

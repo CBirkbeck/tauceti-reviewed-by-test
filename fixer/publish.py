@@ -41,7 +41,9 @@ FORBIDDEN = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?(?:(?:private|protected|local|scoped|public|noncomputable)\s+)*"
     r"(?:meta|macro|macro_rules|elab|elab_rules|syntax|declare_syntax_cat|initialize|builtin_initialize|axiom|"
     r"notation|infix|infixl|infixr|prefix|postfix)\b|"
-    r"^\s*(?:public\s+)?(?:meta\s+)?import\s+(?:Lean|Lake|Mathlib\.Lean)\b",
+    r"^\s*(?:public\s+)?(?:meta\s+)?import\s+(?:Lean|Lake|Mathlib\.Lean)\b|"
+    # a merge conflict left unresolved
+    r"^(?:<<<<<<<|>>>>>>>)(?: |$)|^=======$",
     re.M)
 FOOTER = "🤖 Proposed by the Tau Ceti review fixer ({model}), an AI agent, from a review on the Tau Ceti review site."
 

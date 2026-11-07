@@ -73,8 +73,10 @@ def text_turn(content: Any, text: str) -> list:
     return (content if isinstance(content, list) else [{"type": "text", "text": content}]) + [{"type": "text", "text": text}]
 
 
-def work(client: Any, cfg: Any, system: str, brief_text: str, tools: Tools, log: Any = None) -> Result:
-    """Runs the conversation for one review; `cfg` has model, effort, max_tokens, max_turns, item_budget."""
+def work(client: Any, cfg: Any, system: str, brief_text: str, tools: Tools, log: Any = None, schema: dict = RESULT,
+         outcomes: list[str] = OUTCOMES) -> Result:
+    """Runs the conversation for one review, or one round of its pull request's review (`schema`, `outcomes`:
+    `follow.FOLLOW`); `cfg` has model, effort, max_tokens, max_turns, item_budget."""
     messages: list[dict] = [{"role": "user", "content": brief_text}]
     cost, model, warned = 0.0, None, False
     for turn in range(1, cfg.max_turns + 1):
@@ -86,7 +88,7 @@ def work(client: Any, cfg: Any, system: str, brief_text: str, tools: Tools, log:
             warned = True
         kw: dict[str, Any] = dict(model=cfg.model, max_tokens=cfg.max_tokens, system=system, tools=TOOLS,
                                   messages=messages,
-                                  output_config={"effort": cfg.effort, "format": {"type": "json_schema", "schema": RESULT}},
+                                  output_config={"effort": cfg.effort, "format": {"type": "json_schema", "schema": schema}},
                                   cache_control={"type": "ephemeral"}, betas=[FALLBACK_BETA], fallbacks="default")
         if last:
             kw["tool_choice"] = {"type": "none"}
@@ -115,7 +117,7 @@ def work(client: Any, cfg: Any, system: str, brief_text: str, tools: Tools, log:
             result = json.loads(text)
         except ValueError:
             return Result(None, cost, model, "the last answer was not the result", turn)
-        if not isinstance(result, dict) or result.get("outcome") not in OUTCOMES:
+        if not isinstance(result, dict) or result.get("outcome") not in outcomes:
             return Result(None, cost, model, "the last answer was not the result", turn)
         return Result(result, cost, model, None, turn)
     return Result(None, cost, model, "no result within the turns allowed", cfg.max_turns)
