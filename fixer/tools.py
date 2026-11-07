@@ -58,27 +58,39 @@ TOOLS = [
 ]
 
 
-#: What a build may write: the library's sources (which the model edits anyway) and the build's outputs. Nothing
-#: else of the checkout: not `.git` (its hooks and config run with the run's git), not `.lake/packages` (Mathlib's
-#: `cache` program runs when the checkout is next prepared), not the lakefile, the pins or `scripts/`.
+#: What a build may write and keep: the library's sources (which the model edits anyway) and the build's outputs.
 WRITABLE = ("TauCeti", ".lake/build")
+#: What Lake writes to while building (a replayed step's hash below a package, the artifacts it caches), given a
+#: throwaway layer: written in the sandbox, gone when it ends. Never kept: Mathlib's `cache` program, in
+#: `.lake/packages`, runs outside the sandbox when the checkout is next prepared, and the toolchain's artifact cache
+#: is the server's, shared with every other checkout.
+OVERLAID = (".lake/packages",)
 
 
 def build_command(sandbox: Sandbox, workdir: Path, modules: list[str], timeout: int) -> list[str]:
     """`lake build` of `modules` in `workdir`, sealed off: no network, an empty environment, a fresh home directory,
-    the toolchain and the checkout read only but for `WRITABLE`. `.lake/packages` must be the checkout's own
+    the toolchain and the checkout read only but for `WRITABLE`, and `OVERLAID` and the toolchain's Lake artifact
+    cache written only to a layer that is thrown away. Not `.git`: its hooks and config run with the run's own git.
+    The library's own modules come from that cache, as in Tau Ceti's CI (`LAKE_ARTIFACT_CACHE`,
+    `LAKE_RESTORE_ARTIFACTS`, and `LAKE_NO_CACHE`: nothing fetched). `.lake/packages` must be the checkout's own
     directory, not a link to another checkout's: the sandbox shows nothing outside the checkout."""
+    cache = sandbox.toolchain / "lake" / "cache"
     argv = ["bwrap", "--unshare-all", "--die-with-parent", "--new-session", "--clearenv"]
     for d in ("/usr", "/bin", "/lib", "/lib64", "/etc/ld.so.cache"):
         if Path(d).exists():
             argv += ["--ro-bind", d, d]
     argv += ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", str(sandbox.home),
              "--ro-bind", str(sandbox.toolchain), str(sandbox.toolchain), "--ro-bind", str(workdir), str(workdir)]
+    for d in [workdir / d for d in OVERLAID] + [cache]:
+        if d.is_dir():
+            argv += ["--overlay-src", str(d), "--tmp-overlay", str(d)]
     for d in WRITABLE:
         (workdir / d).mkdir(parents=True, exist_ok=True)
         argv += ["--bind", str(workdir / d), str(workdir / d)]
     return argv + ["--chdir", str(workdir), "--setenv", "HOME", "/tmp",
                    "--setenv", "PATH", f"{sandbox.toolchain / 'bin'}:/usr/bin:/bin",
+                   "--setenv", "LAKE_CACHE_DIR", str(cache), "--setenv", "LAKE_ARTIFACT_CACHE", "true",
+                   "--setenv", "LAKE_RESTORE_ARTIFACTS", "true", "--setenv", "LAKE_NO_CACHE", "true",
                    "timeout", "-k", "5", str(timeout), str(sandbox.toolchain / "bin" / "lake"), "build", *modules]
 
 

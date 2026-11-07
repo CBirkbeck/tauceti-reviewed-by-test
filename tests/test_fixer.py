@@ -162,6 +162,9 @@ class ToolsTests(Checkout):
         self.assertIn(["--ro-bind", w, w], [argv[i:i + 3] for i in range(len(argv))])
         writable = [argv[i + 1] for i in range(len(argv)) if argv[i] == "--bind"]
         self.assertEqual(writable, [f"{w}/TauCeti", f"{w}/.lake/build"])
+        overlaid = [argv[i + 1] for i in range(len(argv)) if argv[i] == "--tmp-overlay"]
+        self.assertEqual(overlaid, [f"{w}/.lake/packages"])  # written to a throwaway layer only
+        self.assertIn(["--setenv", "LAKE_ARTIFACT_CACHE", "true"], [argv[i:i + 3] for i in range(len(argv))])
         self.assertTrue(self.tools.run("lean_build", {"modules": ["Mathlib.Order.Basic"]})[1])
         self.assertTrue(self.tools.run("lean_build", {"modules": ["TauCeti.Missing"]})[1])
         self.build_result = (1, "error: TauCeti/Foo.lean:2:0: unknown identifier")
