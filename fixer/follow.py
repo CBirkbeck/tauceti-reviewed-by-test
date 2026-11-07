@@ -118,6 +118,10 @@ def read(graphql: Callable[[str, dict], dict], rest: Callable[[str], Any], repo:
     head = pr["headRefOid"]
     runs = (rest(f"repos/{repo}/commits/{head}/check-runs?per_page=100") or {}).get("check_runs", [])
     checks = [{"name": c.get("name", ""), "conclusion": c.get("conclusion"), "url": c.get("details_url") or ""} for c in runs]
+    # Tau Ceti's `build`, `scope` and `bump-guard` are commit statuses, set from its CI's run
+    statuses = (rest(f"repos/{repo}/commits/{head}/status") or {}).get("statuses", [])
+    checks += [{"name": c.get("context", ""), "conclusion": "failure" if c.get("state") in ("failure", "error") else c.get("state"),
+                "url": c.get("target_url") or ""} for c in statuses]
     comments = [{"id": c["databaseId"], "by": (c.get("author") or {}).get("login", ""), "body": c.get("body") or "",
                  "at": c.get("createdAt", "")} for c in pr["comments"]["nodes"]]
     scoreboard = None
@@ -177,19 +181,33 @@ def needs(s: Snapshot, seen: set[str]) -> Work | None:
     return None
 
 
-def ci_errors(rest_text: Callable[[str], str], repo: str, check: dict, limit: int = 6000) -> str:
-    """The errors of a failing check, from its job's log: lines naming an error, then the log's end."""
-    m = re.search(r"/actions/runs/\d+/job/(\d+)", check.get("url", ""))
-    if not m:
-        return "(no log: the check is not a GitHub Actions job)"
-    try:
-        log = rest_text(f"repos/{repo}/actions/jobs/{m.group(1)}/logs")
-    except (subprocess.SubprocessError, OSError) as e:
-        return f"(the log could not be read: {e})"
-    lines = [re.sub(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ", "", l) for l in log.splitlines()]
-    errors = [l for l in lines if re.search(r"\berror\b|✖|FAIL", l, re.I)][:60]
-    text = "\n".join(errors) + "\n…\n" + "\n".join(lines[-80:])
-    return text[-limit:]
+def ci_errors(rest_text: Callable[[str], str], repo: str, check: dict, limit: int = 6000,
+              rest: Callable[[str], Any] | None = None) -> str:
+    """The errors of a failing check, from its job's log (or, for a status naming a whole run, from the logs of the
+    run's failed jobs): lines naming an error, then the log's end."""
+    url = check.get("url", "")
+    m = re.search(r"/actions/runs/\d+/job/(\d+)", url)
+    jobs = [m.group(1)] if m else []
+    run_ = re.search(r"/actions/runs/(\d+)", url)
+    if not jobs and run_ and rest is not None:
+        try:
+            listed = (rest(f"repos/{repo}/actions/runs/{run_.group(1)}/jobs?per_page=100") or {}).get("jobs", [])
+        except (subprocess.SubprocessError, OSError, ValueError):
+            listed = []
+        jobs = [str(j["id"]) for j in listed if j.get("conclusion") in FAILED][:3]
+    if not jobs:
+        return "(no log: the check names no GitHub Actions job that failed)"
+    parts = []
+    for job in jobs:
+        try:
+            log = rest_text(f"repos/{repo}/actions/jobs/{job}/logs")
+        except (subprocess.SubprocessError, OSError) as e:
+            parts.append(f"(the log of job {job} could not be read: {e})")
+            continue
+        lines = [re.sub(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ", "", l) for l in log.splitlines()]
+        errors = [l for l in lines if re.search(r"\berror\b|✖|FAIL", l, re.I)][:60]
+        parts.append("\n".join(errors) + "\n…\n" + "\n".join(lines[-80:]))
+    return "\n\n".join(parts)[-limit:]
 
 
 def brief(s: Snapshot, w: Work, review: Review | None, cfg: Config, areas: set[str], errors: dict[str, str],
@@ -286,7 +304,7 @@ def round_(s: Snapshot, w: Work, entry: dict, review: Review | None, client: Any
         state.save()
         if dry:
             return {"kind": w.kind, "would": "work", "conflicts": conflicts}
-        errors = {c["name"]: ci_errors(gh.rest_text, repo, c) for c in w.failed}
+        errors = {c["name"]: ci_errors(gh.rest_text, repo, c, rest=gh.rest) for c in w.failed}
         tools.created.clear()
         res = work_fn(client, cfg, system, brief(s, w, review, cfg, areas, errors, conflicts, main), tools,
                       log=cfg.log, schema=FOLLOW, outcomes=FOLLOW_OUTCOMES)

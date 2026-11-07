@@ -42,8 +42,9 @@ FINDING = thread(10, "<!--tauceti-rubric:documentation-->\n### 🟡 documentatio
 
 
 def snap(**kw):
-    checks = kw.pop("checks", [])
-    return follow.read(lambda q, v: gql(**kw), lambda path: {"check_runs": checks}, LIB, 32075)
+    checks, statuses = kw.pop("checks", []), kw.pop("statuses", [])
+    rest = lambda path: {"statuses": statuses} if path.endswith("/status") else {"check_runs": checks}  # noqa: E731
+    return follow.read(lambda q, v: gql(**kw), rest, LIB, 32075)
 
 
 class ReadTests(unittest.TestCase):
@@ -67,6 +68,10 @@ class NeedsTests(unittest.TestCase):
         w = follow.needs(snap(threads=[FINDING], comments=[SCOREBOARD]), set())
         self.assertEqual((w.kind, w.key, [t["id"] for t in w.threads]), ("review", "review:1", ["10"]))
         self.assertIsNone(follow.needs(snap(threads=[FINDING], comments=[SCOREBOARD]), {"review:1"}))
+        # Tau Ceti's build is a commit status
+        status = [{"context": "build", "state": "failure", "target_url": "https://github.com/x/y/actions/runs/9"}]
+        w = follow.needs(snap(statuses=status, threads=[FINDING], comments=[SCOREBOARD]), set())
+        self.assertEqual((w.kind, w.failed[0]["name"], w.failed[0]["conclusion"]), ("ci", "build", "failure"))
         self.assertIsNone(follow.needs(snap(state="MERGED", threads=[FINDING], comments=[SCOREBOARD]), set()))
 
     def test_review_findings_of_this_head_not_answered(self):
@@ -234,7 +239,7 @@ class FollowAllTests(RoundCase):
                  4: gql(threads=[FINDING], comments=[SCOREBOARD])}
         asked = []
         gh = follow.GitHub(graphql=lambda q, v: asked.append(v["n"]) or snaps[v["n"]],
-                           rest=lambda path: {"check_runs": []}, rest_text=lambda p: "", gh=lambda a, s: "")
+                           rest=lambda path: {}, rest_text=lambda p: "", gh=lambda a, s: "")
         done = follow.follow_all(st, {}, None, self.tools, gh, self.cfg, "system", "2026-11-07", set(),
                                  work_fn=lambda *a, **k: self.fail("no round"))
         self.assertEqual(asked, [1, 2, 4])  # not #3: it only named that one
@@ -269,6 +274,12 @@ class CiTests(unittest.TestCase):
                                {"url": "https://github.com/x/y/actions/runs/5/job/77"})
         self.assertTrue(out.startswith("error: TauCeti/Foo.lean:3:0: line too long"))
         self.assertIn("(no log", follow.ci_errors(lambda p: "", LIB, {"url": "https://example.org/check"}))
+        # a status names the whole run: the logs of its failed jobs
+        jobs = {"jobs": [{"id": 77, "conclusion": "failure"}, {"id": 78, "conclusion": "success"}]}
+        out = follow.ci_errors(lambda path: log if path.endswith("/actions/jobs/77/logs") else "nope", LIB,
+                               {"url": "https://github.com/x/y/actions/runs/5"}, rest=lambda path: jobs)
+        self.assertTrue(out.startswith("error: TauCeti/Foo.lean:3:0: line too long"))
+        self.assertNotIn("nope", out)
 
 
 if __name__ == "__main__":
