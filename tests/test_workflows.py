@@ -162,6 +162,14 @@ class PagesWorkflowTests(unittest.TestCase):
         self.assertEqual(load("follow.yml")["jobs"]["site"]["uses"], "./.github/workflows/pages.yml")
         self.assertEqual(load("voyager.yml")["jobs"]["site"]["uses"], "./.github/workflows/pages.yml")
 
+    def test_the_site_and_the_reader_keep_to_a_published_dataset(self):
+        # 2026-11-09: the checks stopped a dataset after the pin had moved to it, and until the next one
+        # passed neither the site nor the reader of Voyager's announcements could be built.
+        for name, job in (("pages.yml", "build"), ("voyager.yml", "named")):
+            text = runs(load(name)["jobs"][job])
+            self.assertIn('commit=$(python3 scripts/dataset_commit.py)', text)
+            self.assertIn('evidence-store dataset --store evidence --commit "$commit"', text)
+
     def test_intake_rebuilds_the_site(self):
         intake = load("evidence-intake.yml")["jobs"]["intake"]
         self.assertEqual(intake_step(intake)["with"]["pages-workflow"], "pages.yml")

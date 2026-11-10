@@ -2,8 +2,9 @@ name: Voyager
 
 # Twice a day, after Voyager's usual posts: reads its topic on the Lean Zulip (read only, with the
 # ZULIP_* secrets), keeps every announcement in data/voyager.jsonl, records a `named` record for each
-# whose declaration the pinned dataset has, and rebuilds the site when it recorded any. follow.yml runs
-# it too, after a new dataset, with `site: false`, and rebuilds the site itself.
+# whose declaration the pinned dataset has (the newest published one, while the pinned one is not:
+# scripts/dataset_commit.py), and rebuilds the site when it recorded any. follow.yml runs it too, after
+# a new dataset, with `site: false`, and rebuilds the site itself.
 on:
   schedule:
     - cron: '15 4,16 * * *'
@@ -44,7 +45,7 @@ jobs:
       - run: pip install -q -r requirements.txt
       - name: The pinned dataset
         run: |
-          commit=$(python3 -c "import json; print(json.load(open('data/settings.json'))['tauceti'])")
+          commit=$(python3 scripts/dataset_commit.py)
           evidence-store dataset --store evidence --commit "$commit" --out "$RUNNER_TEMP/dataset" > /dev/null
       - name: Read the topic, record the announcements
         id: record
