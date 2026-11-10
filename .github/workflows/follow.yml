@@ -4,7 +4,8 @@ name: Follow Tau Ceti
 # Voyager's window also ends, or the newest before it the extractor can read (scripts/pin.py). When
 # that moves, which is when new docs go live (a few times a day), it extracts the dataset, records what
 # Voyager announced against it, rebuilds the site, and deletes the datasets nobody needs any more
-# (scripts/prune.py); otherwise it stops there, in a minute. Voyager also starts it by hand when the
+# (scripts/prune.py); otherwise it stops there, in a minute. It does the same when the pin has not
+# moved but its dataset is still owed: not published, and no open issue saying the checks stopped it. Voyager also starts it by hand when the
 # site is behind `docgen` at the time of a post. Reviews keep
 # the meaning hashes they were made on: a declaration whose meaning changed shows them greyed until
 # reviewed again.

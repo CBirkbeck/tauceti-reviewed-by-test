@@ -7,6 +7,11 @@ among 30 commits, the pin takes the newest that can be extracted cheaply: whose 
 series has a release for and whose build Tau Ceti's cache has published. When the docs have moved to a
 toolchain the series does not support, the pin waits on the last commit before the move, and says so.
 
+A pin that stays can still owe its dataset: the run that moved it publishes the dataset only if the
+checks pass, and may fail before them. While the pin's dataset is not published and no open issue says
+the checks stopped it, the answer is moved=true all the same, and the run extracts it again. So closing
+that issue, once what stopped the dataset is mended, is what has it extracted again.
+
   python3 scripts/pin.py      prints moved=true or moved=false (a line for $GITHUB_OUTPUT)
 """
 from __future__ import annotations
@@ -74,6 +79,30 @@ def cached_in(repo: str):
     return check
 
 
+def open_titles(repo: str) -> list[str]:
+    """The titles of ``repo``'s open issues, all pages of them."""
+    out = subprocess.run(["gh", "api", "--paginate", f"repos/{repo}/issues?state=open&per_page=100",
+                          "--jq", ".[].title"], check=True, capture_output=True, text=True).stdout
+    return out.splitlines()
+
+
+def owed(site: str, pinned: str) -> bool:
+    """Whether the pin's dataset is still to be extracted: `dataset-<pin12>` is not among ``site``'s
+    releases, and no open issue there is titled `Dataset <pin12>: …`, as dataset.yml titles the issue
+    it opens when the checks stop a dataset."""
+    try:
+        gh_json(f"repos/{site}/releases/tags/dataset-{pinned[:12]}")
+        return False
+    except subprocess.CalledProcessError:
+        return not any(t.startswith(f"Dataset {pinned[:12]}:") for t in open_titles(site))
+
+
+def stays(settings: dict) -> int:
+    """The pin does not move: moved=false, unless its dataset is owed."""
+    print("moved=true" if owed(settings["repo"], settings["tauceti"]) else "moved=false")
+    return 0
+
+
 def main() -> int:
     settings = load_settings()
     repo = settings["library"]["repo"]
@@ -81,8 +110,7 @@ def main() -> int:
     branch = settings["library"].get("docs_branch")
     start = (docs_commit(repo, branch) if branch else None) or "main"
     if start == settings["tauceti"]:
-        print("moved=false")  # the docs show the pinned commit already
-        return 0
+        return stays(settings)  # the docs show the pinned commit already
     commits = recent_commits(repo, start)
     first = next(commits, None)
     if first and toolchain_of(first[1]) not in toolchains:
@@ -91,8 +119,7 @@ def main() -> int:
               file=sys.stderr)
     sha = choose(itertools.chain([first] if first else [], commits), toolchains, cached_in(repo))
     if sha is None or sha == settings["tauceti"]:
-        print("moved=false")
-        return 0
+        return stays(settings)
     settings["tauceti"] = sha
     save_settings(settings)
     print("moved=true")

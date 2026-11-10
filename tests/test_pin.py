@@ -39,16 +39,21 @@ class PinTests(unittest.TestCase):
     def test_nothing_when_nothing_fits(self):
         self.assertIsNone(pin.choose(self.COMMITS, {"4.35.0"}, lambda sha, text: True))
 
-    def run_main(self, pinned: str, docs_runs: list):
+    def run_main(self, pinned: str, docs_runs: list, published: bool = True, titles: tuple = ()):
         """pin.main() against a fake GitHub: the docgen branch (at the head of ``docs_runs``' first, or
-        unreadable when there is none), two commits from d2 back, and main.
+        unreadable when there is none), two commits from d2 back, and main; the site's repository with
+        the pin's dataset ``published`` or not, and open issues titled ``titles``.
         Returns (what it printed, the pin it saved, the API paths it read)."""
-        settings = {"tauceti": pinned, "library": {"repo": "o/r", "docs_branch": "docgen"},
+        settings = {"tauceti": pinned, "repo": "s/site", "library": {"repo": "o/r", "docs_branch": "docgen"},
                     "extractor": {"repo": "x/e", "series": "0.13"}}
         paths, saved, printed = [], {}, []
 
         def gh(path):
             paths.append(path)
+            if path == f"repos/s/site/releases/tags/dataset-{pinned[:12]}":
+                if not published:
+                    raise pin.subprocess.CalledProcessError(1, "gh")
+                return {"tag_name": f"dataset-{pinned[:12]}"}
             if path == "repos/o/r/branches/docgen":
                 if not docs_runs:
                     raise pin.subprocess.CalledProcessError(1, "gh")
@@ -64,6 +69,7 @@ class PinTests(unittest.TestCase):
              mock.patch.object(pin, "save_settings", side_effect=saved.update), \
              mock.patch.object(pin, "release_tags", return_value=TAGS), \
              mock.patch.object(pin, "gh_json", side_effect=gh), \
+             mock.patch.object(pin, "open_titles", return_value=list(titles)), \
              mock.patch.object(pin, "cached_in", return_value=lambda sha, text: True), \
              mock.patch("builtins.print", side_effect=lambda *a, **k: printed.append(a[0] if a else "")):
             pin.main()
@@ -77,7 +83,23 @@ class PinTests(unittest.TestCase):
     def test_nothing_moves_while_the_docs_show_the_pin(self):
         printed, pinned, paths = self.run_main("d2", [{"head_sha": "d2"}])
         self.assertEqual((pinned, printed[-1]), (None, "moved=false"))
-        self.assertFalse(any("commits?" in p for p in paths))  # one request, and done
+        self.assertFalse(any("commits?" in p for p in paths))  # the docs, the pin's dataset, and done
+        self.assertEqual(len(paths), 2)
+
+    def test_a_pin_whose_dataset_is_not_published_is_extracted_again(self):
+        # 2026-11-09: a run moved the pin and its dataset was not published; no later run tried again.
+        printed, pinned, _ = self.run_main("d2", [{"head_sha": "d2"}], published=False)
+        self.assertEqual((pinned, printed[-1]), (None, "moved=true"))
+
+    def test_not_while_an_open_issue_says_the_checks_stopped_it(self):
+        titles = ("A form about something else", "Dataset d2: its signatures differ from the docs")
+        printed, pinned, _ = self.run_main("d2", [{"head_sha": "d2"}], published=False, titles=titles)
+        self.assertEqual((pinned, printed[-1]), (None, "moved=false"))
+
+    def test_an_issue_about_another_dataset_does_not_hold_it(self):
+        titles = ("Dataset d1: its signatures differ from the docs",)
+        printed, pinned, _ = self.run_main("d2", [{"head_sha": "d2"}], published=False, titles=titles)
+        self.assertEqual((pinned, printed[-1]), (None, "moved=true"))
 
     def test_main_when_there_are_no_docs_to_follow(self):
         printed, pinned, _ = self.run_main("old", [])
