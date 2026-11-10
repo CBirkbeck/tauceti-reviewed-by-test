@@ -45,6 +45,14 @@ class UntypedTests(unittest.TestCase):
                      "∑ i ∈ s, f i", "∑ (i : ι), f i", "{x : M | x ∈ l}", "{x : T // p x}", "(x : ℕ) → x = x"):
             self.assertIsNone(cs.untyped(text), text)
 
+    def test_a_set_of_one_finsupp_is_not_a_set_builder(self):
+        # `{Finsupp.single n 1}` in Mathlib's notation: no binder, so no type is missing.
+        self.assertIsNone(cs.untyped("MvPolynomial.support_X.{u_1, u_2} {R : Type u_1} {σ : Type u_2} [CommSemiring R] "
+                                     "[Nontrivial R] {n : σ} : (MvPolynomial.X n).support = {fun₀ | n => 1}"))
+        # A set-builder beside it is still found, and so is one whose variable only starts like the notation.
+        self.assertEqual(cs.untyped("s = {fun₀ | n => 1} ∪ {x | p x}"), "{x |")
+        self.assertEqual(cs.untyped("{fun₀' | p}"), "{fun₀' |")
+
     def test_not_in_an_arguments_default_tactic(self):
         # Printed as written, in the docs too: `(le : α → α → Bool := by exact fun a b => a ≤ b)`.
         self.assertIsNone(cs.untyped("List.mergeSort (xs : List α) (le : α → α → Bool := by exact fun a b => decide (a ≤ b)) : List α"))

@@ -38,9 +38,10 @@ from common import ROOT, header, load_settings  # noqa: E402
 
 IDENT = r"[^\W\d][\w'!?]*"
 #: A binder printed without its type: `∃ x,`, `∃! x y,`, `∀ x,`, `fun x =>`, `∑ i,`, `⋃ i,`, `∫ x in s,`,
-#: `{x | p x}`, `{x // p x}`. (`∃ x ∈ s,`, whose type the set gives, is not one.)
+#: `{x | p x}`, `{x // p x}`. (`∃ x ∈ s,`, whose type the set gives, is not one. Nor is `{fun₀ | i => a}`:
+#: the set whose one member is `Finsupp.single i a` in Mathlib's notation, which binds nothing.)
 UNTYPED = re.compile(rf"(?:∃!?|∀|fun|λ|∑|∏|⋃|⋂|⨆|⨅|∫⁻?) {IDENT}(?: {IDENT})*\s*(?:,|=>|↦)"
-                     rf"|\{{{IDENT}(?: {IDENT})* (?:\||//)")
+                     rf"|\{{(?!fun₀ \|){IDENT}(?: {IDENT})* (?:\||//)")
 #: A signature that binds variables, where a lost type would hide something.
 BINDS = re.compile(r"∃|∀|fun |λ|∑|∏|⋃|⋂|⨆|⨅|∫")
 UNIVERSES = re.compile(r"\.\{[^{}]*\}")
