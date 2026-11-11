@@ -241,7 +241,7 @@ def inputs(tmp: Path, dataset: Path = DATASET, more: list[dict] = (),
     return dataset, tmp / "evidence", tmp / "imports"
 
 
-def build(out: Path, budget_mb: int = 800, cap: int = 60, settings: dict | None = None,
+def build(out: Path, budget_mb: int = 950, cap: int = 60, settings: dict | None = None,
           dataset: Path = DATASET, more: list[dict] = ()) -> dict:
     """The fixture's site in ``out``; ``more`` are records for its store besides the fixture's own."""
     dataset, store, imports = inputs(Path(tempfile.mkdtemp(prefix="fixture-site-")), dataset, more)

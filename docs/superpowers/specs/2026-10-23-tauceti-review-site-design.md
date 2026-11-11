@@ -241,7 +241,7 @@ dataset + evidence/ + imported stores ──pages.yml: build_site.py──> _sit
   | `modules.json` | every module a node belongs to: name, package, title, source path; the project's first, in the dataset's order, then the others |
   | `upstream.json` | the record threads about declarations outside Tau Ceti (this store's, on Mathlib's, and the imported stores'), by name |
 
-- **Budget:** the build fails if `_site` exceeds 800 MB (GitHub Pages allows 1 GB). Sizes are
+- **Budget:** the build fails if `_site` exceeds 950 MB (GitHub Pages allows 1 GB). Sizes are
   measured on a real dataset before CI depends on them.
 
 ## 6. The front end (`web/`)

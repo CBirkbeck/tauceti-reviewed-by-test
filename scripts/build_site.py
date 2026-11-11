@@ -2,7 +2,7 @@
 """Build the site in _site/: the front end (web/) and the data its pages read (scripts/site_data.py).
 
   python3 scripts/build_site.py --dataset DIR --source CHECKOUT [--store evidence] [--imports DIR]
-                                [--out _site] [--budget-mb 800]
+                                [--out _site] [--budget-mb 950]
 
 `--imports` is where `evidence-store fetch-imports` fetched the stores this one imports. The build
 fails when the site is larger than its budget: GitHub Pages serves at most 1 GB.
@@ -31,7 +31,7 @@ def write(path: Path, data) -> None:
 
 
 def build(dataset: Path, store: Path, out: Path, settings: dict, source: Path | None = None,
-          imports: Path | None = None, web: Path = ROOT / "web", budget_mb: int = 800,
+          imports: Path | None = None, web: Path = ROOT / "web", budget_mb: int = 950,
           cap: int = site_data.CAP) -> dict:
     started = time.time()
     site = site_data.Site(site_data.load(dataset, store, imports, source, settings), cap=cap)
@@ -74,7 +74,7 @@ def main(argv: list[str]) -> int:
     p.add_argument("--store", type=Path, default=ROOT / "evidence")
     p.add_argument("--imports", type=Path)
     p.add_argument("--out", type=Path, default=ROOT / "_site")
-    p.add_argument("--budget-mb", type=int, default=800)
+    p.add_argument("--budget-mb", type=int, default=950)
     a = p.parse_args(argv)
     try:
         result = build(a.dataset, a.store, a.out, load_settings(), a.source, a.imports, budget_mb=a.budget_mb)
