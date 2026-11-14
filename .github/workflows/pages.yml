@@ -32,7 +32,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # the pinned Playwright installs Chromium on this image; ubuntu-latest moved to one it does not support
     timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
