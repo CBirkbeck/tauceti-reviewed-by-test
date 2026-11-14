@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # as the site build: the helper test reads Node's TAP output, which ubuntu-latest's Node no longer prints by default
     steps:
       - uses: actions/checkout@v4
         with:
