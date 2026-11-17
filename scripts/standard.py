@@ -51,6 +51,26 @@ IDENT = r"[^\W\d][\w'!?]*"
 BULLET = re.compile(r"^[-*+][ \t]+(\S.*)$")
 TEST = re.compile(rf"^`({IDENT}(?:\.[\w'!?]+)*)`")
 CHECK = re.compile(r"^Check\s+\*([^*]+)\*")
+#: A Check of Part 2, by how the roadmap names it (`check_of`): its tag in asterisks (`Check *test_two*`), the Lean name
+#: it gives in backticks (`Check `Foo.bar_two``), or, for a Check the roadmap gives in prose, its first words in quotes
+#: (`Check "The constant S₃ over ℂ …"`).
+CHECK_ANY = re.compile(r'^Check\s+(?:\*(?P<tag>[^*]+)\*|`(?P<name>[^`]+)`|"(?P<quote>[^"]+)"|“(?P<quote2>[^”]+)”)')
+#: What a Check found, after the spaced dash that ends its name and where it is: it passes, it is missing, or it has
+#: `sorry`.
+RESULT = re.compile(r"^[^—]*?\s(?:—|--)\s+(passes|missing|sorry)\b", re.I)
+#: Where a Check is carried, after its name: `, ` and a declaration's name or a place `path:line`, in backticks.
+CARRIER = re.compile(r"^,\s*(?:by\s+|in\s+)?`([^`]+)`")
+#: A Lean name as a test or a carrier gives it, whole.
+LEAN_NAME = re.compile(rf"^{IDENT}(?:\.[\w'!?]+)*$")
+#: The guide's length of a text, in words (`words`): a reading guide, not a paper.
+WORDS = (150, 400)
+#: A Markdown link's target, `](…)` with its title, which `words` and `unlinked` set aside.
+LINK_TARGET = re.compile(r"\]\((?:[^()\s]|\([^()\s]*\))*(?:\s+\"[^\"]*\")?\)")
+#: A commit in a GitHub address (`/blob/<sha>/`, `/tree/<sha>/`, `/commit/<sha>`), which `unlinked` sets aside.
+LINK_COMMIT = re.compile(r"(/(?:blob|tree|commit|blame)/)[0-9a-f]{7,40}\b")
+#: A roadmap target as a text names one: `target `name``, `the target `name``, in a line or a bullet that speaks of a
+#: roadmap (`targets`); the name a word, a Lean name or a label, so that a map's target (`X ⟶ Y`) is none.
+TARGET = re.compile(r"\b[Tt]argets?\s*:?\s+`([\w.'!?\-]+)`")
 #: A cell: its axis alone, `axis n/a`, or `axis=state`.
 CELL = re.compile(r"^([^\s=]+)(?:\s*=\s*(\S+)|\s+(n/a))?$")
 CELL_STATES = {"checked": "checked", "na": "na", "n/a": "na"}
@@ -130,19 +150,58 @@ def bullets(body: str) -> list[str]:
     return [" ".join(b) for b in out]
 
 
+@dataclass(frozen=True)
+class Check:
+    """A Check a bullet of Part 2 records (`check_of`): how the roadmap names it (`kind`: "tag", "name" or "prose") and
+    by what (`key`: the tag, the Lean name, or the first words quoted), its `result` (passes, missing, sorry; None when
+    the bullet gives none) and what carries it, as the bullet gives it after the name (`carrier`: a declaration's name,
+    or a place `path:line`; None)."""
+    kind: str
+    key: str
+    result: str | None
+    carrier: str | None
+
+    @property
+    def label(self) -> str:
+        return {"tag": f"*{self.key}*", "name": f"`{self.key}`", "prose": f'"{self.key}"'}[self.kind]
+
+
+def check_of(bullet: str) -> Check | None:
+    """The Check a bullet of Part 2 records, if it records one: a bullet that opens with `Check` and the name the roadmap
+    gives it (`CHECK_ANY`)."""
+    m = CHECK_ANY.match(bullet)
+    if m is None:
+        return None
+    kind = "tag" if m["tag"] is not None else "name" if m["name"] is not None else "prose"
+    key = " ".join((m["tag"] or m["name"] or m["quote"] or m["quote2"] or "").split())
+    rest = bullet[m.end():]
+    carried = CARRIER.match(rest)
+    result = RESULT.match(rest)
+    return Check(kind, key, result[1].lower() if result else None, carried[1].strip() if carried else None)
+
+
+def part_two(text: str) -> list[str]:
+    """The bullets of the text's Part 2 (`bullets`); none when it has no Part 2."""
+    return bullets(next((b for heading, b in sections(text)[1] if heading == HEADINGS[1]), ""))
+
+
 def items(text: str) -> Items:
     """The items of the text's Part 2. It reads what it finds, so a text with its parts wrong still has
     items, and a text with no Part 2 has none."""
-    body = next((b for heading, b in sections(text)[1] if heading == HEADINGS[1]), "")
     references, tests, checks = [], [], []
-    for bullet in bullets(body):
+    for bullet in part_two(text):
         if m := TEST.match(bullet):
             tests.append(m[1])
-        elif m := CHECK.match(bullet):
-            checks.append(m[1].strip())
+        elif c := check_of(bullet):
+            checks.append(c.key)
         else:
             references.append(bullet)
     return Items(references, tests, checks)
+
+
+def checks_of(text: str) -> list[Check]:
+    """The Checks the text's Part 2 records, in order."""
+    return [c for b in part_two(text) if not TEST.match(b) and (c := check_of(b)) is not None]
 
 
 def squash(text: str) -> str:
@@ -220,16 +279,23 @@ def mentions(item: str, name: str) -> bool:
     return re.search(rf"(?<![\w'!?.]){re.escape(name)}(?![\w'!?]|\.\w)", item) is not None
 
 
+def same_check(a: str, b: str) -> bool:
+    """Whether two Checks' names are one: the same tag or Lean name, or first words that read the same, case and
+    punctuation aside, or alike (`like`), as a quote shortened or lengthened by a word does."""
+    return a == b or plain(a) == plain(b) or (" " in a and " " in b and like(a, b))
+
+
 def losses(old: Items, new: Items, dropped: Sequence[tuple[str, str]]) -> list[str]:
     """What `new` leaves out of `old` that no `dropped` line names, with a reason: a test or a Check is
-    named by a line whose item holds its name or tag, a reference by one whose item reads alike. A
-    reference is not left out while a new one keeps it (`kept`)."""
+    named by a line whose item holds its name or tag (or, for a Check given in prose, its first words), a
+    reference by one whose item reads alike. A reference is not left out while a new one keeps it (`kept`)."""
     said = [item for item, why in dropped if why.strip()]
     ask = "keep it, or give the reason on a `Dropped:` line that names it"
     problems = [f"the edit drops the test `{name}`: {ask}" for name in dict.fromkeys(old.tests)
                 if name not in new.tests and not any(mentions(item, name) for item in said)]
     problems += [f"the edit drops the Check *{tag}*: {ask}" for tag in dict.fromkeys(old.checks)
-                 if tag not in new.checks and not any(mentions(item, tag) for item in said)]
+                 if not any(same_check(tag, n) for n in new.checks)
+                 and not any(mentions(item, tag) or same_check(item.strip(' "“”*`'), tag) for item in said)]
     refs = distinct(old.references)
     keeps = kept(refs, new.references)
     problems += [f'the edit drops the reference "{ref}": {ask}' for ref in refs
@@ -237,23 +303,123 @@ def losses(old: Items, new: Items, dropped: Sequence[tuple[str, str]]) -> list[s
     return problems
 
 
+def check_problems(text: str, exists: Callable[[str], bool] | None) -> list[str]:
+    """What is wrong with the Checks the text records (`checks_of`). One named by a Lean name or given in prose says
+    what it found (`RESULT`). One named by a Lean name passes, or has `sorry`, only if a declaration of that name exists,
+    and is missing only if none does: a Check the roadmap names by a Lean name that nothing carries is missing. A
+    carrier given by its Lean name exists. Whether a name exists is `exists`'s to say; without it, nothing is said of
+    names."""
+    out = []
+    for c in checks_of(text):
+        if c.kind != "tag" and c.result is None:
+            out.append(f"the Check {c.label} says nothing of what was found: follow its name (and what carries it) "
+                       "with ` — passes`, ` — missing` or ` — sorry`, then a line on what it shows")
+        if exists is None:
+            continue
+        if c.kind == "name" and LEAN_NAME.match(c.key) and c.result in ("passes", "sorry") and not exists(c.key):
+            out.append(f"the Check `{c.key}` is said to be there, but `{c.key}` is not a declaration that exists: if "
+                       "nothing carries it, it is missing; if something else does, name that after a comma")
+        if c.kind == "name" and LEAN_NAME.match(c.key) and c.result == "missing" and c.carrier is None and \
+                exists(c.key):
+            out.append(f"the Check `{c.key}` is said to be missing, but `{c.key}` is a declaration of the library: say "
+                       "whether it passes or has `sorry`")
+        if c.carrier and LEAN_NAME.match(c.carrier) and not exists(c.carrier):
+            out.append(f"the Check {c.label} is carried by `{c.carrier}`, which is not a declaration that exists")
+    return out
+
+
+def targets(text: str) -> list[str]:
+    """The roadmap targets the text names, as it names them (`TARGET`), each once: in a line, or a bullet of Part 2 with
+    its indented lines, that speaks of a roadmap (`roadmap`, `TauCetiRoadmap`)."""
+    units = part_two(text) + normalize(text).split("\n")
+    return list(dict.fromkeys(m for unit in units if re.search(r"roadmap", unit, re.I) for m in TARGET.findall(unit)))
+
+
+def target_problems(text: str, roadmap: Callable[[str], bool] | None) -> list[str]:
+    """The roadmap targets the text names that TauCetiRoadmap does not have (`roadmap(name)`, None: not checked)."""
+    if roadmap is None:
+        return []
+    return [f"the text names the roadmap target `{name}`, and TauCetiRoadmap has no such name: a target is named as "
+            "its roadmap names it (a heading, or a name in its README or Suggested.lean); a `tauceti-target` id of a "
+            "Tau Ceti pull request is no roadmap's. Link the README line instead, or leave the name out"
+            for name in targets(text) if not roadmap(name)]
+
+
+def words(text: str) -> int:
+    """How many words the text has, as the guide counts them (`WORDS`): its words, names and formulas, but not its
+    headings, its links' addresses, or marks with no letter or digit (a bullet's dash)."""
+    lines = [line for line in normalize(text).split("\n") if line not in HEADINGS]
+    return sum(1 for w in LINK_TARGET.sub("]", "\n".join(lines)).split() if any(c.isalnum() for c in w))
+
+
+def unlinked(text: str) -> str:
+    """The text with its links' targets and the commits in its addresses set aside: what a reader reads of it."""
+    return LINK_COMMIT.sub(r"\1<commit>", LINK_TARGET.sub("]()", normalize(text)))
+
+
+def roadmap_line(bullet: str) -> bool:
+    """Whether a bullet of Part 2 is a roadmap reference: it names TauCetiRoadmap, or opens with `Roadmap`."""
+    return "TauCetiRoadmap" in bullet or bool(re.match(r"^(?:\*\*)?Roadmap\b", bullet))
+
+
+def without_roadmap_lines(text: str) -> str:
+    """The text without the bullets of Part 2 that are roadmap references (`roadmap_line`), their indented lines with
+    them."""
+    out, part, dropping = [], None, False
+    for line in normalize(text).split("\n"):
+        if line in HEADINGS:
+            part, dropping = line, False
+        elif part == HEADINGS[1]:
+            m = BULLET.match(line)
+            if m:
+                dropping = roadmap_line(m[1])
+            elif not (dropping and line[:1] in (" ", "\t") and line.strip()):
+                dropping = False
+            if dropping:
+                continue
+        out.append(line)
+    return "\n".join(out)
+
+
+def scope(parent: str, text: str) -> str | None:
+    """What an edit changes when it changes only links: "links" when its text and its parent's differ only in their
+    links' targets and the commits in their addresses (`unlinked`), nothing a reader reads; "roadmap" when, those set
+    aside, they differ only in bullets of Part 2 that are roadmap references (`roadmap_line`); None when they differ in
+    anything else."""
+    a, b = unlinked(parent), unlinked(text)
+    if a == b:
+        return "links"
+    if without_roadmap_lines(a) == without_roadmap_lines(b):
+        return "roadmap"
+    return None
+
+
 def check(text: str, parent: str | None = None, dropped: Sequence[tuple[str, str]] = (),
-          exists: Callable[[str], bool] = lambda n: True, note: str | None = None) -> list[str]:
+          exists: Callable[[str], bool] | None = None, note: str | None = None,
+          roadmap: Callable[[str], bool] | None = None) -> list[str]:
     """What stops `text` becoming the review, as problems; none means it passes. Its three parts must be
-    there, and each test it lists must exist (`exists`). An edit, which has the `parent` text it replaces,
-    must also change something, carry a `note` saying what it adds or changes, and lose no test, example
-    Check or reference of the parent unless a (item, reason) pair in `dropped` names it. The items are
-    compared only when the parts are right: with a part missing, every item would be a loss."""
+    there, each test it lists must exist (`exists`; None: every name does), its Checks must say what they found
+    (`check_problems`), and each roadmap target it names must be TauCetiRoadmap's (`roadmap`; None: not checked).
+    An edit, which has the `parent` text it replaces, must also change something a reader reads (not only the
+    targets of its links, `scope`), carry a `note` saying what it adds or changes, and lose no test, example Check
+    or reference of the parent unless a (item, reason) pair in `dropped` names it. The items are compared only when
+    the parts are right: with a part missing, every item would be a loss."""
     bodies, problems = parts(text)
     if parent is not None:
         if not (note or "").strip():
             problems.append("an edit says what it adds or changes: give a note")
         if normalize(text) == normalize(parent):
             problems.append("the edit changes nothing: its text is its parent's")
+        elif scope(parent, text) == "links":
+            problems.append("the edit changes only where its links point (their addresses, or the commit in them), "
+                            "which no reader reads: approve the text instead. A new version would leave behind every "
+                            "approval of the text it replaces")
     if bodies is not None:
         new = items(text)
         problems += [f"the test `{name}` is not a declaration that exists" for name in dict.fromkeys(new.tests)
-                     if not exists(name)]
+                     if exists is not None and not exists(name)]
+        problems += check_problems(text, exists)
+        problems += target_problems(text, roadmap)
         if parent is not None:
             problems += losses(items(parent), new, dropped)
     return problems
@@ -337,6 +503,12 @@ class Seen:
     superseded: bool
 
 
+def by_author(record: dict) -> bool:
+    """Whether the record is by an author of its declaration: the site marks those (`involvement: author`, from the
+    dataset's facet `authors`, scripts/site_data.py), and no approval of an author's counts."""
+    return ((record.get("by") or {}).get("involvement")) == "author"
+
+
 def ai_accept(record: dict) -> bool:
     """Whether an AI said yes in the record: an accept by an agent, in whichever form. A person's accept is
     not one, whatever it carries."""
@@ -377,22 +549,32 @@ def current_version(seen: list[Seen]) -> Seen | None:
 def summary(seen: list[Seen]) -> dict | None:
     """The standard review of a declaration as its page shows it, or None while it has no version. It holds
     the current version's `text` as recorded, its `version` and its `record`. `approving` is whether that
-    record is an AI's accept, which approves the text by writing it; a comment, held for the owner, and a
-    person's accept approve nothing. `approvers` are the AI accepts of this version that apply to the
-    declaration as it is now, latest first, and `earlier` counts the other AI accepts: yeses of the earlier
+    record is an AI's accept, which approves the text by writing it, by someone who is not an author of the
+    declaration; a comment, held for the owner, and a person's accept approve nothing. `approvers` are the AI
+    accepts of this version that apply to the declaration as it is now, by others than its authors (`by_author`),
+    latest first, and `earlier` counts the other AI accepts by others than its authors: yeses of the earlier
     form, approvals of other texts, and approvals of this one made for an earlier version of the declaration.
-    `earlier_approvals` are those of them that approved a text, the last two kinds, latest first. An accept
-    withdrawn or superseded counts in none. The text is `current` when the version's record or any approver
-    applies; otherwise it was written for an earlier version of the declaration."""
+    `earlier_approvals` are those of them that approved a text, the last two kinds, latest first. `by_authors` are
+    the AI accepts of its authors that approved a text, which count in nothing, latest first. An accept withdrawn
+    or superseded counts in none. The text is `current` when the version's record or any accept that approves it
+    applies, an author's too; otherwise it was written for an earlier version of the declaration. `checked_for` is
+    the latest record that wrote or approved this text, an author's too: the declaration as it was last read with
+    it, whose subject says at which commit."""
     now = current_version(seen)
     if now is None:
         return None
     text = now.record["text"]
     version = version_of(text)
     live = [s for s in seen if ai_accept(s.record) and not (s.withdrawn or s.superseded)]
+    counted = [s for s in live if not by_author(s.record)]
     latest = lambda rows: sorted(rows, key=lambda s: order(s.record), reverse=True)  # noqa: E731
     approves = lambda s: s.applies and approved(s.record) == version  # noqa: E731
-    approvers = latest(s for s in live if approves(s))
-    return {"text": text, "version": version, "record": now.record, "approving": ai_accept(now.record),
-            "current": bool(now.applies or approvers), "approvers": approvers, "earlier": len(live) - len(approvers),
-            "earlier_approvals": latest(s for s in live if approved(s.record) is not None and not approves(s))}
+    approvers = latest(s for s in counted if approves(s))
+    mine = [s for s in live if by_author(s.record) and approved(s.record) is not None]
+    read = [now] + [s for s in live if approved(s.record) == version]
+    return {"text": text, "version": version, "record": now.record,
+            "approving": ai_accept(now.record) and not by_author(now.record),
+            "current": bool(now.applies or approvers or any(approves(s) for s in mine)), "approvers": approvers,
+            "earlier": len(counted) - len(approvers),
+            "earlier_approvals": latest(s for s in counted if approved(s.record) is not None and not approves(s)),
+            "by_authors": latest(mine), "checked_for": max(read, key=lambda s: order(s.record)).record}

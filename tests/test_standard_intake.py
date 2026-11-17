@@ -800,7 +800,9 @@ class ReplyTests(IntakeCase):
         shown = [row for row in rows if f"\n- {row}\n" in said]
         self.assertEqual(shown, rows[:len(shown)])  # the first ones
         self.assertGreater(len(shown), 300)  # as many as fit: some 340 of these
-        self.assertIn(f"\n- … and {400 - len(shown)} more recorded\n\n<!-- bulk-reply: 902 -->", said)
+        # The fixture's dataset records no authors, which the reply says once, after the list.
+        unchecked = standard_intake.UNCHECKED.format(commit="B")
+        self.assertIn(f"\n- … and {400 - len(shown)} more recorded\n\n{unchecked}\n\n<!-- bulk-reply: 902 -->", said)
         self.assertTrue(said.endswith("\n\n<!-- bulk-reply: 902 -->"))
 
     def test_a_reason_is_given_once_for_the_lines_it_refuses(self):
@@ -1307,7 +1309,7 @@ class DocsTests(unittest.TestCase):
                 self.assertIsNotNone(line, "an agent approves, and a person restores")
                 f = standard_intake.given(cmd, line)
                 self.assertIsNotNone(f, line)
-                if agent:
+                if agent and "cells" in f:  # a withdrawal carries none
                     self.assertEqual(standard.cells(f["cells"], RUBRIC.names)[1], "")
                 for version in (f[key] for key in ("version", "parent", "earlier version") if key in f):
                     self.assertTrue(standard_intake.HEX.fullmatch(intake.clean(version).lower()), version)
