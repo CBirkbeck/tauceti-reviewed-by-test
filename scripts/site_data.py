@@ -23,6 +23,7 @@ from evidence_core.source import Sources, split_statement
 from evidence_core.status import Status, classify
 from evidence_core.store import Store, with_imports
 
+import authorship
 import standard
 from common import fnv_shard, header
 
@@ -31,8 +32,9 @@ NAME_SHARDS = 64
 STANDARD_SHARDS = 256
 CAP = 60
 TEXT_CAP = 4000
-#: People only, and people with AI agents; every other switch at evidence-core's default.
-POLICIES = (Policy(agents=False), Policy(agents=True))
+#: People only, and people with AI agents; no review by an author of its declaration counts (`Site.mark_authors`); every
+#: other switch at evidence-core's default.
+POLICIES = (Policy(agents=False, authors=False), Policy(agents=True, authors=False))
 #: The page's state codes: the index in this tuple.
 STATES = ("unreviewed", "covered", "uncounted", "stale", "problem", "disputed")
 KIND_CODE = {"theorem": "t", "definition": "d", "structure": "s", "class": "c", "inductive": "n",
@@ -199,6 +201,9 @@ class Site:
         self.sorry = {name for name, rows in ds.facet("axioms").items() if rows[0].get("sorry")}
         # The roadmap each declaration of the library belongs to (scripts/roadmaps.py), where it has one.
         self.roadmaps = {name: rows[0]["roadmap"] for name, rows in ds.facet("roadmap").items()}
+        # Who wrote each (scripts/authors.py), where the dataset says: their reviews of it count in nothing.
+        self.authors = {name: rows[0] for name, rows in ds.facet(authorship.FACET).items()}
+        self.marked = self.mark_authors()
         self.named = self._named()
         self.mdocs = docs_mod.module_docs(ds)
         self.project_modules = len(ds.modules)
@@ -215,6 +220,25 @@ class Site:
                        for name in self.ev.by_decl if name in ds.by_name}
 
     # --- what is known of each declaration ---------------------------------------------------------
+
+    def mark_authors(self) -> int:
+        """Marks every review and comment about a declaration by one of its authors (`authors`, with the settings'
+        accounts of one person, `authors.same_person`) as an author's, `involvement: author`, in memory only: the store
+        keeps the record as filed. evidence-core then counts none of their yeses (`POLICIES`), and neither do the
+        standard review's approvers (`standard.by_author`) nor the Reviewed page. How many records were marked."""
+        same = self.inp.settings.get("authors", {}).get("same_person", [])
+        marked = 0
+        for name, rows in self.ev.by_decl.items():
+            authors = (self.authors.get(name) or {}).get("authors")
+            if not authors:
+                continue
+            for r, _ in rows:
+                by = r.get("by") or {}
+                if r.get("kind") in ("review", "comment") and by.get("involvement") != "author" and \
+                        authorship.which(authorship.login_of(by), authors, same):
+                    r["by"] = {**by, "involvement": "author"}
+                    marked += 1
+        return marked
 
     def _named(self) -> dict[str, dict]:
         """Current declaration name → Voyager's `named` record about it (the first, not withdrawn)."""
@@ -319,11 +343,12 @@ class Site:
         md = self.mdocs.get(name)
         start = lambda d: ((self.ds.facet_row("source", d.name) or {}).get("start") or [0])[0]
         names: dict[str, int] = {}  # what its signatures link to, each once
-        decls = [self.entry(d, names) for d in sorted(self.by_module.get(name, []), key=start)]
+        people: dict[str, int] = {}  # who wrote its declarations, each once
+        decls = [self.entry(d, names, people) for d in sorted(self.by_module.get(name, []), key=start)]
         return {"name": name, "title": title, "path": path, "doc": md.text if md else "", "names": list(names),
-                "decls": decls}
+                "decls": decls, **({"people": list(people)} if people else {})}
 
-    def entry(self, d: Decl, names: dict[str, int]) -> dict:
+    def entry(self, d: Decl, names: dict[str, int], people: dict[str, int] | None = None) -> dict:
         i, name = d.id, d.name
         e: dict = {"id": i, "name": name, "k": KIND_CODE.get(d.kind, "o"), "doc": self.docstrings.get(name, "")}
         sig = self.statement(e, name, names)
@@ -348,6 +373,12 @@ class Site:
         routine = self.proof_steps(d)[2]
         if routine:
             e["nRoutine"] = routine
+        if name in self.authors and people is not None:
+            # Who wrote it (scripts/authors.py), as places in the module's table `people`, which the module's
+            # declarations share: written out, the logins cost the site 14 MB on 2026-11-17, close to its budget.
+            e["au"] = [people.setdefault(a, len(people)) for a in self.authors[name].get("authors") or []]
+            if self.authors[name].get("unknown"):
+                e["auU"] = self.authors[name]["unknown"]
         if name in self.ev.by_decl:
             e["records"] = self.views_on(name)
             tests = [self.test_view(t) for t in self.ev.tests(name)]
@@ -464,20 +495,53 @@ class Site:
         if s["earlier_approvals"]:
             view["earlierApprovals"] = [{**approval(a), "version": standard.approved(a.record)}
                                         for a in s["earlier_approvals"]]
+        if s["by_authors"]:
+            view["byAuthors"] = [{**approval(a), "version": standard.approved(a.record)} for a in s["by_authors"]]
+        if standard.by_author(r):
+            view["byAuthor"] = True
+        if not s["current"]:
+            # The declaration as the text was last read with it, so that a reviewer sees what changed since.
+            then = s["checked_for"].get("subject") or {}
+            view["checkedFor"] = {k: then[k] for k in ("name", "module", "commit") if then.get(k)}
         return view
 
+    def standard_views(self) -> dict[str, dict]:
+        """The standard review of each declaration the site asks about that has a version, those outside the library
+        too, by name (`standard_view`), each computed once."""
+        if not hasattr(self, "_standard"):
+            self._standard = {}
+            for name in self.ev.by_decl:
+                d = self.ds.by_name.get(name)
+                if d is None or not self.answerable(d):
+                    continue
+                review = standard.summary(self.seen(name))
+                if review:
+                    self._standard[name] = self.standard_view(review)
+        return self._standard
+
     def standard_shards(self) -> dict[int, dict[str, dict]]:
-        """`standard/<k>.json` for every k: the standard review of each declaration the site asks about that has a
-        version, those outside the library too, by name in the shard of its name (`fnv_shard`, as names are sharded).
-        A shard no name falls in is empty, since the page asks for the shard of any declaration."""
+        """`standard/<k>.json` for every k: the standard reviews (`standard_views`), by name in the shard of its name
+        (`fnv_shard`, as names are sharded). A shard no name falls in is empty, since the page asks for the shard of any
+        declaration."""
         out: dict[int, dict[str, dict]] = {k: {} for k in range(STANDARD_SHARDS)}
-        for name in self.ev.by_decl:
-            d = self.ds.by_name.get(name)
-            if d is None or not self.answerable(d):
-                continue
-            review = standard.summary(self.seen(name))
-            if review:
-                out[fnv_shard(name, STANDARD_SHARDS)][name] = self.standard_view(review)
+        for name, view in self.standard_views().items():
+            out[fnv_shard(name, STANDARD_SHARDS)][name] = view
+        return out
+
+    def standard_export(self) -> list[dict]:
+        """`standard.jsonl.gz`, the one file a run over many declarations reads in place of the shards (asked for on
+        2026-11-17, after a bulk run's ~2,500 reads of the shards met GitHub Pages' HTTP 429): each standard review as
+        its shard holds it, its declaration's name as `decl`, with the declaration's authors (`authors`, where the
+        dataset records them) and its signature as the page shows it (`sig`), by name."""
+        out = []
+        for name, view in sorted(self.standard_views().items()):
+            row = {"decl": name, **view}
+            if name in self.authors:
+                row["authors"] = self.authors[name].get("authors") or []
+            sig = self.signature_row(name)
+            if sig and sig.get("text"):
+                row["sig"] = sig["text"]
+            out.append(row)
         return out
 
     def upstream(self) -> dict[str, dict]:
@@ -500,7 +564,7 @@ class Site:
         """The acceptances in force: (by people, by AI agents)."""
         people = ai = 0
         for r, s in self.ev.records_on(name, "review"):
-            if r.get("verdict") == "accept" and self.ev.in_force(r, s):
+            if r.get("verdict") == "accept" and self.ev.in_force(r, s) and not standard.by_author(r):
                 if (r.get("by") or {}).get("kind") == "agent":
                     ai += 1
                 else:
@@ -545,6 +609,8 @@ class Site:
             for v in self.views_on(name, "review"):
                 if v.get("verdict") not in ("accept", "problem") or not v["inForce"]:
                     continue
+                if v["verdict"] == "accept" and v["by"].get("involvement") == "author":
+                    continue  # an author's yes is no review
                 k = 1 if v["by"]["kind"] == "agent" else 0
                 if v["verdict"] == "accept":
                     j = 0 if v["applies"] else 2
@@ -612,6 +678,9 @@ class Site:
                 "dataset": {"producer": ds.producer(), "spec": ds.meta.get("spec", "")},
                 "store": {"repo": s["repo"], "name": self.inp.store.name, "bulk": s["bulk_issue"]},
                 "review": {"outside": s.get("review_outside", [])},
+                # Who wrote what (scripts/authors.py): whether this dataset says, and the accounts of one person.
+                "authors": {"recorded": authorship.known(ds),
+                            "samePerson": s.get("authors", {}).get("same_person", [])},
                 # Signing in with GitHub, to answer from the page (web/signin.js): the GitHub App's client ID and the
                 # sign-in helper's address (signin/worker.js), neither of them secret. Absent: the forms open on GitHub.
                 **({"signin": s["signin"]} if s.get("signin") else {}),
@@ -619,4 +688,11 @@ class Site:
                             for r in self.inp.imports],
                 "counts": counts, "areas": self.areas(),
                 "shards": {"nodes": NODE_SHARD, "names": NAME_SHARDS, "standard": STANDARD_SHARDS},
+                # Files for a run over many declarations (`review_site.py snapshot`): every standard review in one file,
+                # and the release this dataset is published as, in the store's repository.
+                "exports": {"standard": "standard.jsonl.gz",
+                            "dataset": f"https://github.com/{s['repo']}/releases/download/dataset-{ds.commit[:12]}/"
+                                       "dataset.tar.gz"},
+                **({"roadmap": {k: ds.meta["roadmap"][k] for k in ("repo", "commit") if k in ds.meta["roadmap"]}}
+                   if isinstance(ds.meta.get("roadmap"), dict) else {}),
                 "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
