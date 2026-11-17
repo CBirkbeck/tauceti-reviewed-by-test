@@ -1289,12 +1289,12 @@ class DocsTests(unittest.TestCase):
                         (templates if PLACEHOLDER.search(" ".join(cmd.fields)) else examples).append((name, cmd, agent))
                         texts += [cmd.block] if cmd.block is not None else []
             for span in SPAN.findall(prose):
-                if re.match(r"(Approve|Write|Edit|Restore):\s*\S", span):
+                if re.match(r"(Approve|Write|Edit|Restore|Withdraw):\s*\S", span):
                     cmd, = standard_intake.commands(span)
                     templates.append((name, cmd, None))
         self.assertTrue(templates)
-        self.assertEqual({cmd.keyword for _, cmd, _ in examples} & {"Approve", "Write", "Edit"},
-                         {"Approve", "Write", "Edit"})
+        self.assertEqual({cmd.keyword for _, cmd, _ in examples} & {"Approve", "Write", "Edit", "Withdraw"},
+                         {"Approve", "Write", "Edit", "Withdraw"})
 
         for text in texts:
             with self.subTest(text=text[:80]):
