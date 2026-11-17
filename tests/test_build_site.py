@@ -573,5 +573,94 @@ class StandardEdgeTests(unittest.TestCase):
                          [("Voyager", standard.version_of(fixture_site.TRIPLE_V2))])
 
 
+#: An edit of `double`'s text, for the declaration as it is now.
+DOUBLE_V2 = fixture_site.DOUBLE_V1.replace("twice `n`.", "twice `n`: `n + n`.")
+
+
+class AuthorsTests(unittest.TestCase):
+    """Reviews by an author of their declaration (the facet `authors`, fixture_site.AUTHORS): `writer` approves the
+    current text of `triple` through an AI agent, and `co-writer`, in another case than the facet's, says yes to it as a
+    person; `writer` also writes the first text of `double_triple`, which has no authors recorded."""
+
+    @classmethod
+    def setUpClass(cls):
+        ds = Dataset.load(fixture_site.DATASET)
+        key = lambda name: rec.subject_from_decl(ds.by_name[name], ds)
+        writer = {**fixture_site.AGENT, "identity": {"kind": "github", "id": "writer"}}
+        approved = standard.version_of(fixture_site.TRIPLE_V2)
+        cls.approval = fixture_site.accepting(key("Fixture.triple"), writer, "2026-10-28T10:00:00Z",
+                                              f"Approves the standard review `{approved}`.", fixture_site.bulk(4201),
+                                              {"approves": approved})
+        cls.yes = {"schema": rec.SCHEMA, "kind": "review", "verdict": "accept", "subject": key("Fixture.triple"),
+                   "by": {"kind": "person", "identity": {"kind": "github", "id": "co-writer"}},
+                   "text": "It is what the docs say.", "at": "2026-10-28T11:00:00Z",
+                   "origin": {"kind": "issue", "ref": "example/fixture-store#30"}}
+        cls.other = fixture_site.accepting(key("Fixture.double_triple"), writer, "2026-10-28T12:00:00Z",
+                                           fixture_site.DOUBLE_V1, fixture_site.bulk(4202), {})
+        cls.edit = fixture_site.accepting(key("Fixture.double"), writer, "2026-10-28T13:00:00Z", DOUBLE_V2,
+                                          fixture_site.bulk(4203), {"parent": standard.version_of(fixture_site.DOUBLE_V1),
+                                                                    "note": "says what twice means", "dropped": []})
+        cls.root = OUT / "authors"
+        fixture_site.build(cls.root, more=[cls.approval, cls.yes, cls.other, cls.edit])
+
+    def test_the_authors_are_on_the_page(self):
+        # Each entry names its authors by their places in its module's table of logins, `people`.
+        people = module_of("Fixture.triple", self.root)["people"]
+        authors = lambda name: [people[i] for i in entry(name, self.root)["au"]]  # noqa: E731
+        self.assertEqual(authors("Fixture.triple"), ["writer", "Co-Writer"])
+        self.assertEqual((authors("Fixture.double"), entry("Fixture.double", self.root)["auU"]), (["writer"], 1))
+        self.assertEqual(sorted(people), ["Co-Writer", "writer"])  # each once
+        self.assertNotIn("au", entry("Fixture.triple_two", self.root))
+        self.assertEqual(data("meta.json", self.root)["authors"], {"recorded": True, "samePerson": []})
+
+    def test_an_authors_approval_counts_in_nothing(self):
+        s = std("Fixture.triple", self.root)
+        self.assertEqual([a["by"]["agent"]["tool"] for a in s["approvers"]], ["Voyager", "Claude Code"])
+        self.assertNotIn("writer", [a["by"]["login"] for a in s["approvers"]])
+        self.assertEqual([(a["by"]["login"], a["version"]) for a in s["byAuthors"]],
+                         [("writer", standard.version_of(fixture_site.TRIPLE_V2))])
+        # The page lists both as the author's, and the Reviewed page counts neither yes.
+        views = {v["id"]: v for v in entry("Fixture.triple", self.root)["records"]}
+        self.assertEqual(views[rec.with_id(self.approval)["id"]]["by"]["involvement"], "author")
+        self.assertEqual(views[rec.with_id(self.yes)["id"]]["by"]["involvement"], "author")
+        mine = next(r for r in data("reviewed.json", self.root) if r["name"] == "Fixture.triple")
+        before = next(r for r in data("reviewed.json") if r["name"] == "Fixture.triple")
+        self.assertEqual(mine["yes"], before["yes"])
+
+    def test_a_text_an_author_wrote_approves_nothing(self):
+        # `writer` wrote `double` (the facet says so) and edited its text: the text is current, and approved by no one.
+        s = std("Fixture.double", self.root)
+        self.assertEqual((s["text"], s["approving"], s["approvers"], s["byAuthor"], s["current"]),
+                         (DOUBLE_V2, False, [], True, True))
+        self.assertEqual([a["by"]["login"] for a in s["byAuthors"]], ["writer"])
+        # `double_triple` has no authors recorded: what `writer` wrote of it approves it.
+        s = std("Fixture.double_triple", self.root)
+        self.assertEqual((s["approving"], [a["by"]["login"] for a in s["approvers"]], s.get("byAuthor")),
+                         (True, ["writer"], None))
+
+
+class ExportTests(unittest.TestCase):
+    def test_every_standard_review_in_one_file(self):
+        import gzip
+        rows = [json.loads(line) for line in gzip.decompress((OUT / "site" / "data" / build_site.EXPORT).read_bytes())
+                .decode("utf-8").splitlines()]
+        names = sorted(name for k in range(256) for name in data(f"standard/{k}.json"))
+        self.assertEqual([r["decl"] for r in rows], names)
+        for r in rows:
+            self.assertEqual({k: v for k, v in r.items() if k not in ("decl", "authors", "sig")}, std(r["decl"]))
+        triple = next(r for r in rows if r["decl"] == "Fixture.triple")
+        self.assertEqual(triple["authors"], ["writer", "Co-Writer"])
+        self.assertTrue(triple["sig"].startswith("Fixture.triple"))
+        m = data("meta.json")
+        self.assertEqual(m["exports"], {"standard": "standard.jsonl.gz", "dataset": "https://github.com/example/"
+                                        "fixture-store/releases/download/dataset-B/dataset.tar.gz"})
+
+    def test_a_stale_text_says_what_it_was_written_for(self):
+        s = std("Fixture.double")
+        self.assertFalse(s["current"])
+        self.assertEqual(s["checkedFor"], {"name": "Fixture.double", "module": "Fixture.Basic", "commit": "A"})
+        self.assertNotIn("checkedFor", std("Fixture.triple"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -81,8 +81,12 @@ Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.
 write and edit standard reviews there, after a line naming themselves, tool and exact model; the site
 shows their records apart from people's. An approval names the version its page shows and the eight
 checks, a check that does not apply marked n/a; a write or an edit gives its text after its line
-([AI-REVIEWS.md](AI-REVIEWS.md#filing) has the forms). The issue also takes tests, challenges and
-names:
+([AI-REVIEWS.md](AI-REVIEWS.md#filing) has the forms). An account takes back its own approval, write or
+edit of a version with `Withdraw: <decl> — <version> — <note>`
+([AI-REVIEWS.md](AI-REVIEWS.md#withdrawing) says what the text becomes). No one approves, writes or
+edits the standard review of a declaration they wrote or changed: the intake refuses those lines from
+the declaration's authors, as Tau Ceti's history names them (below). The issue also takes tests,
+challenges and names:
 
 ```
 <!-- agent: tool=Claude Code; model=claude-opus-5-5 -->
@@ -162,7 +166,8 @@ and `python -m answerer run --dry-run` to see what it would do.
   reviews; one reviewed by AI agents alone says so ("AI only"). Since 2026-10-29 there is no switch to
   count AI agents' reviews as people's.
 - **Reviewed**: every declaration answered for, the latest answer first, with its yeses and noes
-  counted (people apart from AI agents, an AI agent's yes being its approval of the standard review),
+  counted (people apart from AI agents, an AI agent's yes being its approval of the standard review; a
+  yes by one of the declaration's authors counts in nothing),
   Mathlib's marked; filters for yes or no, for people, AI agents
   or one AI model, and for the roadmap a declaration of Tau Ceti belongs to (below; asked for on
   2026-10-29); and an order with most answers standing first (this version's yeses and the noes still
@@ -205,15 +210,18 @@ and `python -m answerer run --dry-run` to see what it would do.
 
 Colour on a declaration means its review state: an open ring for not reviewed, white for reviewed,
 salmon for reviewed by AI agents only or on an earlier version, red for a no still open. A switch on
-the Named page says whether AI agents' reviews count.
+the Named page says whether AI agents' reviews count. Since 2026-11-17 no review counts that one of the
+declaration's authors gave (below): its review box says who wrote it, and marks such a yes, a person's
+or an AI agent's approval, "an author of it: not counted"; a text an author wrote or edited approves
+nothing, and says so under it.
 
 ## How it is built
 
 | workflow | when | what |
 |---|---|---|
-| [Follow Tau Ceti](.github/workflows/follow.yml) | every 20 minutes, going on only when new docs have gone live (a few times a day); and by Voyager, when the site is behind at the time of a post | pins the commit Tau Ceti's published API docs show, its `docgen` branch, where Voyager's window also ends, or the newest before it that the extractor's 0.13 series can read and its cache has built (`scripts/pin.py`), so that the site has every declaration Voyager can announce and link to it, and shows what the docs show; when that moves, extracts its dataset as the release `dataset-<commit12>` ([Dataset](.github/workflows/dataset.yml)); records Voyager's announcements; deletes datasets nobody needs (`scripts/prune.py`); rebuilds the site |
+| [Follow Tau Ceti](.github/workflows/follow.yml) | every 20 minutes, going on only when new docs have gone live (a few times a day); and by Voyager, when the site is behind at the time of a post | pins the commit Tau Ceti's published API docs show, its `docgen` branch, where Voyager's window also ends, or the newest before it that the extractor's 0.13 series can read and its cache has built (`scripts/pin.py`), so that the site has every declaration Voyager can announce and link to it, and shows what the docs show; when that moves, extracts its dataset as the release `dataset-<commit12>` ([Dataset](.github/workflows/dataset.yml)), with each declaration's roadmap and authors and TauCetiRoadmap's names; records Voyager's announcements; deletes datasets nobody needs (`scripts/prune.py`); rebuilds the site |
 | [Voyager](.github/workflows/voyager.yml) | 04:15 and 16:15 UTC | reads Voyager's topic on the Lean Zulip (secrets `ZULIP_SITE`, `ZULIP_EMAIL`, `ZULIP_API_KEY`; read only) into `data/voyager.jsonl`, and records a `named` record for each announcement whose declaration the pinned dataset has (`scripts/voyager.py`) |
-| [Evidence intake](.github/workflows/evidence-intake.yml), [Evidence check](.github/workflows/evidence-check.yml) | on every issue event; on every change to `evidence/` | evidence-store's, through our copy of its action (`.github/actions/intake`, `scripts/evidence_intake.py`), which reads the bulk issue our way (`scripts/standard_intake.py`): records from forms, comments and the bulk issue, the standard review's approvals, writes and edits among them; the check that the store only grows, and that a push adds only its author's records |
+| [Evidence intake](.github/workflows/evidence-intake.yml), [Evidence check](.github/workflows/evidence-check.yml) | on every issue event; on every change to `evidence/` | evidence-store's, through our copy of its action (`.github/actions/intake`, `scripts/evidence_intake.py`), which reads the bulk issue our way (`scripts/standard_intake.py`): records from forms, comments and the bulk issue, the standard review's approvals, writes, edits and withdrawals among them (an author's refused, a roadmap target TauCetiRoadmap lacks refused, a long text said to be); the check that the store only grows, and that a push adds only its author's records |
 | [Label answers](.github/workflows/label.yml) | on every new issue | gives an answer that came without its form's label (filed from the page, or by `evidence-store submit`, under an account that cannot label) that label, from its title and fields, then runs intake on it (`scripts/label_issue.py`) |
 | [Pages](.github/workflows/pages.yml) | after any of these | runs the tests, builds the site (`scripts/build_site.py`), checks it in a browser, and publishes it from `main` |
 | [Tests](.github/workflows/tests.yml) | on every change to a workflow or a test | runs the unit tests, which Pages runs only when the site or the store changes; among them, that every call of a workflow grants the permissions the called workflow asks for, without which GitHub refuses to start the run |
@@ -233,15 +241,22 @@ edit's `standard` names its `parent`, its `note`, and what it `dropped` and why.
 is an accept whose `standard.approves` is the version it approves. A maintainer's write, edit or restore
 is a comment, approving nothing, which replies to the version it replaces or, for a first version, to
 the declaration's latest yes, never to a no or a suggestion (with no yes, a first version is refused).
-A version is named by the first 16 hex digits of the SHA-256 of its text in UTF-8 (with `\n` line
-ends, no white space at the end of a line and no blank lines at either end). A version's record does
+A withdrawal (`Withdraw:`) is
+a `withdrawn` status of the account's own record. An edit that only adds or removes roadmap bullets
+carries `standard.scope: "roadmap"`: a roadmap-line edit, no correction of the text; one that only
+moves where links point is refused. A version is named by the first 16 hex digits of the SHA-256 of its
+text in UTF-8 (with `\n` line ends, no white space at the end of a line and no blank lines at either end). A version's record does
 not store its own hash, which is computed from the text wherever it is needed; what names a version
 holds it in full (an approval's `standard.approves`, an edit's `parent`, a restore's `restores`, the
 `version` in the build's shards). The current version is the latest one not withdrawn; its approvers
 are the AI agents' accepts of it, neither withdrawn nor superseded, that apply to the declaration as it
-is now. The history stays in the store: the build writes only the current text and its approvers, in
-`data/standard/<k>.json` (`k` the name's shard, found as for `data/names/`), and no page shows an
-earlier text.
+is now, by others than its authors. The history stays in the store: the build writes only the current
+text and its approvers, in `data/standard/<k>.json` (`k` the name's shard, found as for `data/names/`),
+with its authors' approvals apart (`byAuthors`) and, for a text written for an earlier version of the
+declaration, the commit, module and name the declaration had when the text was last read with it
+(`checkedFor`); no page shows an earlier text. Every standard review is also in one file,
+`data/standard.jsonl.gz` (JSON lines, gzipped, each with the declaration's authors and statement), for
+a run over many declarations, which must not read the shards one by one.
 
 **A page shows each statement as the docs do, and that is checked.** On 2026-10-25 the site showed
 existentials without their binders' types (`∃ V, … ∃ f, …` for
@@ -280,19 +295,37 @@ invalid) and a commit that names no PR credit nothing. At 36f24f5d, 98% of the r
 Tau Ceti had a roadmap; Mathlib's have none. When the labels cannot be read the dataset is published
 without the facet, and the Reviewed page has no roadmap filter until the next one.
 
+**Each declaration's authors** are the facet `authors`, which the Dataset workflow adds
+(`scripts/authors.py`, under a minute): everyone who wrote or changed a line of the declaration (its
+statement, its proof, its docstring) in any commit of Tau Ceti's main, as GitHub logins. Each line is
+followed back through every commit that changed it, across renames, through rewrites (a line that
+replaces others carries their history) and moves to another file in one commit, and a commit's people
+are its author and its `Co-authored-by:` trailers (much of the library is committed by a bot account
+with its person as co-author); a merge's are its pull request's commits'. An address is a login by
+GitHub's noreply form, by the owner's map in `data/settings.json` (`authors.emails`), or as GitHub's
+API knows it; an address that is none is counted in the row (`unknown`) and listed in the dataset's
+meta, so that the check says what it could not check. `authors.same_person` lists one person's several
+accounts. The intake refuses an author's approval, write or edit, and the build marks every review of
+an author's (`involvement: author`, in memory: the store keeps the record as filed) and counts none
+of their yeses. A dataset without the facet checks nothing, and the intake's reply says so. The same
+step records the names TauCetiRoadmap has at its main (`roadmap-names.json`, `scripts/roadmaps.py
+--roadmap`), against which the intake checks the roadmap targets a text names.
+
 ## Files
 
 - `evidence/`: the store (`store.json`, `records/*.jsonl`).
 - `data/settings.json`: the pin, the library, the packages outside it the site also asks about
   (`review_outside`: Mathlib), the extractor series, dataset retention, Voyager's topic, signing in
-  (`signin`).
+  (`signin`), and authorship (`authors`: addresses mapped to logins, and one person's accounts).
 - `data/voyager.jsonl`: every announcement Voyager has made.
 - `scripts/`: `pin.py`, `extractor.py`, `prune.py`, `voyager.py`, `label_issue.py`; `site_data.py`
   (everything a page shows, from evidence-core) and `build_site.py` (writes `_site/`);
   `standard.py` (the standard review: its three parts, its version, the check an edit must pass, the
   cells of a tick, and which version is current and who approved it), `standard_intake.py` (the bulk
-  issue read our way: approvals, writes, edits and restores) and `evidence_intake.py` (our intake:
-  evidence-store's command line, with that reading).
+  issue read our way: approvals, writes, edits, restores and withdrawals) and `evidence_intake.py` (our
+  intake: evidence-store's command line, with that reading); `roadmaps.py` and `authors.py` (the
+  dataset's facets `roadmap` and `authors`, and TauCetiRoadmap's names), and `authorship.py` (whether
+  an account is a declaration's author, which the intake and the build ask).
 - `web/`: the front end (`index.html`, `style.css`, `data.js`, `render.js`, `map.js`, `signin.js`,
   `app.js`) and `vendor/` (elkjs, KaTeX, the Atlas's `markdown.js`; see `web/vendor/NOTICE`).
 - `signin/`: the sign-in helper (`worker.js`, `wrangler.toml`) and its tests.

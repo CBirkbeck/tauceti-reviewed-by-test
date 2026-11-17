@@ -86,13 +86,17 @@ from evidence_core.status import classify
 from evidence_store import cli, forms, intake
 from evidence_store.intake import Context, Outcome
 
+import authorship
 import pr_links
+import roadmaps
 import standard
 from common import load_settings
 
-OURS = ("Approve", "Write", "Edit", "Restore")
+OURS = ("Approve", "Write", "Edit", "Restore", "Withdraw")
+#: Our commands that say the text is right: no author of the declaration gives them (`authorship`).
+OWN_WORK = ("Approve", "Write", "Edit")
 #: A command line: ours, or evidence-store's. A block ends before the next one.
-COMMAND = re.compile(r"^\s*(Approve|Write|Edit|Restore|Reviewed-by|Test|Named|Challenge)\s*:\s*(.*?)\s*$")
+COMMAND = re.compile(r"^\s*(Approve|Write|Edit|Restore|Withdraw|Reviewed-by|Test|Named|Challenge)\s*:\s*(.*?)\s*$")
 DROPPED = re.compile(r"^\s*Dropped\s*:\s*(.*?)\s*$")
 OPEN, CLOSE = "~~~review", "~~~"
 #: The fewest leading hex digits that name a version.
@@ -104,7 +108,9 @@ FORMS = {("Approve", True): "Approve: <decl> — <version> — <cells>",
          ("Write", False): "Write: <decl>",
          ("Edit", True): "Edit: <decl> — <parent> — <cells> — <note>",
          ("Edit", False): "Edit: <decl> — <parent> — <note>",
-         ("Restore", False): "Restore: <decl> — <earlier version> — <note>"}
+         ("Restore", False): "Restore: <decl> — <earlier version> — <note>",
+         ("Withdraw", True): "Withdraw: <decl> — <version> — <note>",
+         ("Withdraw", False): "Withdraw: <decl> — <version> — <note>"}
 TEXT = "its text is missing: a `~~~review` line, the text, then a line `~~~`"
 #: Why each line of a comment is refused whose agent mark is only on a command or `Dropped:` line (`misplaced`).
 MISPLACED = ("the comment's agent mark is on the line of a command or of a `Dropped:` item, where it names no one: put "
@@ -256,7 +262,10 @@ def as_of(ctx: Context, at: str, comment: int, line: int) -> Context:
 
 
 def may(keyword: str, agent: bool, maintainer: bool) -> str:
-    """Why the author of a comment may not give a command of ours; empty when they may."""
+    """Why the author of a comment may not give a command of ours; empty when they may. Anyone withdraws what their
+    account filed (`withdrawal`)."""
+    if keyword == "Withdraw":
+        return ""
     if keyword == "Approve":
         return "" if agent else "only an AI agent approves the standard review: a person says yes with the page's form"
     if keyword == "Restore":
@@ -377,14 +386,87 @@ def supersedes(mine: list[dict], by: dict) -> dict:
     return {"links": {"supersedes": max(earlier, key=standard.order)["id"]}} if earlier else {}
 
 
+def own_work(name: str, by: dict, authors: list[str]) -> str:
+    """Why an author of a declaration may not approve, write or edit its standard review: which of its authors they
+    are."""
+    login = authorship.login_of(by)
+    mine = authorship.which(login, authors)
+    if not mine:
+        return ""
+    who = ", ".join(f"`{a}`" for a in mine)
+    return (f"`{name}` is the work of {login}: Tau Ceti's history names {who} among its authors (who wrote or changed "
+            "its lines, co-authors included), and no one approves, writes or edits the standard review of their own "
+            "work (AI-REVIEWS.md, Rules). Leave it to another reviewer; if a line of its history is wrongly yours, "
+            "tell the maintainers")
+
+
+def authorship_notes(ds: Dataset, decl: Decl) -> list[str]:
+    """What a reply says of a record of `decl`'s standard review when some of its authors could not be checked: people
+    of its history with no GitHub login the site knows. A dataset that records no authors at all is said once for the
+    reply (`UNCHECKED`)."""
+    if not decl.is_project or not authorship.known(ds):
+        return []
+    unknown = (ds.facet_row(authorship.FACET, decl.name) or {}).get("unknown")
+    return [f"{unknown} of the people in its history have no GitHub login the site knows, so they were not checked"] \
+        if unknown else []
+
+
+def length_notes(text: str) -> list[str]:
+    """What a reply says of a text longer than the guide asks (`standard.WORDS`): a warning, not a refusal."""
+    n, (low, high) = standard.words(text), standard.WORDS
+    return [f"its text is {n} words, over the {low} to {high} the guide asks for: an edit may condense it, keeping "
+            "every reference, test and Check (AI-REVIEWS.md, The standard review)"] if n > high else []
+
+
+#: The roadmap names of each dataset read, by its directory (`roadmap_names`).
+ROADMAP_NAMES: dict[str, frozenset[str] | None] = {}
+
+
+def roadmap_names(ds: Dataset) -> Callable[[str], bool] | None:
+    """Whether TauCetiRoadmap, at the commit the dataset recorded it (its meta's `roadmap`, scripts/roadmaps.py), has a
+    name; None when the dataset recorded none, and then no target is checked."""
+    key = str(ds.root)
+    if key not in ROADMAP_NAMES:
+        ROADMAP_NAMES[key] = roadmaps.read_names(ds.root, ds.meta)
+    names = ROADMAP_NAMES[key]
+    return None if names is None else partial(roadmaps.has_name, names)
+
+
+def withdrawal(f: dict, name: str, by: dict, at: str, origin: dict, ctx: Context, mine: list[dict],
+               changed: Callable[[], bool]) -> tuple[list[dict] | None, str]:
+    """The withdrawals a `Withdraw:` line asks for, or why it cannot be made: every approval, write or edit of the
+    version it names that the comment's account filed and has not withdrawn, among the declaration's records (`mine`).
+    Each becomes a `withdrawn` status, with the line's note. Withdrawing a write or an edit makes the version before it
+    current again, so it changes the review, which a comment does once (`changed`)."""
+    login = authorship.login_of(by).lower()
+    standing = [r for r in mine if standard.kind_of(r) in ("version", "approval")
+                and authorship.login_of(r.get("by")).lower() == login and intake.current_state(ctx, r) != "withdrawn"]
+    of = {r["id"]: standard.approved(r) or standard.version_of(r["text"]) for r in standing}
+    found = named(f["version"], set(of.values()))
+    if not found:
+        return None, (f"`{f['version']}` names no approval, write or edit of the standard review of `{name}` that "
+                      f"{authorship.login_of(by)} filed and has not withdrawn")
+    if len(found) > 1:
+        return None, f"`{f['version']}` names more than one version of the standard review of `{name}`: give more digits"
+    if not f["note"].strip():
+        return None, "a withdrawal says why: give a note"
+    version = found.pop()
+    targets = sorted((r for r in standing if of[r["id"]] == version), key=standard.order)
+    if any(standard.kind_of(r) == "version" for r in targets) and changed():
+        return None, (f"this comment changes the standard review of `{name}` in another line, and a comment changes it "
+                      "once")
+    return [intake.status_record(r, "withdrawn", by, at, origin, f["note"].strip()) for r in targets], ""
+
+
 def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: Context,
-         changed: Callable[[Dataset, Decl], bool], view: Callable[[], Context]) -> tuple[dict | None, str]:
+         changed: Callable[[Dataset, Decl], bool], view: Callable[[], Context]) -> tuple[dict | list[dict] | None, str]:
     """The record an `Approve:`, `Write:`, `Edit:` or `Restore:` line asks for, or why it cannot be made: an AI
-    agent's accept, or a person's comment. The declaration is looked up in `ctx` first, and only one the latest dataset
-    has is read against the store, as of the line (`view`, which makes `as_of`'s context): a line waiting for a declaration
-    costs no pass over the store. `changed` says whether the comment changes a declaration's review in another line.
-    Raises `DatasetMissing`, as evidence-store's `record_for` does, and `NotInDataset` for a declaration the latest dataset
-    does not have."""
+    agent's accept, or a person's comment; for a `Withdraw:` line, its `withdrawn` statuses (`withdrawal`). The
+    declaration is looked up in `ctx` first, and only one the latest dataset has is read against the store, as of the line (`view`,
+    which makes `as_of`'s context): a line waiting for a declaration costs no pass over the store. An account that is
+    one of the declaration's authors (`authorship`) is refused an approval, a write and an edit. `changed` says whether
+    the comment changes a declaration's review in another line. Raises `DatasetMissing`, as evidence-store's
+    `record_for` does, and `NotInDataset` for a declaration the latest dataset does not have."""
     agent = by["kind"] == "agent"
     refusal = may(cmd.keyword, agent, maintainer)
     if refusal:
@@ -399,8 +481,64 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
         if name:
             raise NotInDataset(intake.not_found(name, ds))
         return None, intake.not_found(name, ds)  # no dataset will have it
+    if cmd.keyword in OWN_WORK:
+        refusal = own_work(name, by, authorship.authors_of(ds, decl) or [])
+        if refusal:
+            return None, refusal
     ctx = view()
     mine = records_of(ctx, ds, decl)
+    if cmd.keyword == "Withdraw":
+        return withdrawal(f, name, by, at, origin, ctx, mine, lambda: changed(ds, decl))
+    return standard_record(cmd, f, name, by, agent, at, origin, ctx, ds, decl, mine, changed)
+
+
+#: What a reply says, once, when the latest dataset records no authors (`authorship.known`): nothing was checked.
+UNCHECKED = ("Authorship was not checked: the dataset of Tau Ceti at `{commit}` does not record who wrote its "
+             "declarations. Never approve, write or edit the standard review of your own work (AI-REVIEWS.md, Rules).")
+#: What a reply says of a roadmap-line edit (`standard.scope`).
+ROADMAP_EDIT = ("recorded as a roadmap-line edit: it adds or removes only roadmap references, and does not count as a "
+                "correction of the text")
+
+
+def unchecked(made: list[dict], ctx: Context) -> list[str]:
+    """What a reply says once of the approvals, writes and edits it records when the latest dataset records no authors
+    (`UNCHECKED`)."""
+    if not any(standard.kind_of(r) and standard.act(r) in ("approved", "wrote", "edited") for r in made):
+        return []
+    try:
+        ds = ctx.dataset("")
+    except Exception:  # noqa: BLE001 - no dataset: the lines wait, and say so
+        return []
+    return [] if authorship.known(ds) else [UNCHECKED.format(commit=ds.commit[:12])]
+
+
+def remarks(r: dict, ctx: Context) -> list[str]:
+    """What a reply says of a record of the standard review besides what it is (`said`), each time it says it: that its
+    declaration's authors could not all be checked (`authorship_notes`, for an approval, a write or an edit, against the
+    latest dataset), that its text is longer than the guide asks (`length_notes`), that it is a roadmap-line edit."""
+    kind = standard.kind_of(r)
+    if kind is None:
+        return []
+    out = []
+    if standard.act(r) in ("approved", "wrote", "edited"):
+        try:
+            ds = ctx.dataset("")
+        except Exception:  # noqa: BLE001 - no dataset: nothing to say of its authors
+            ds = None
+        decl = ds.by_name.get((r.get("subject") or {}).get("name", "")) if ds is not None else None
+        out += authorship_notes(ds, decl) if decl is not None else []
+    if kind == "version":
+        out += length_notes(r["text"])
+    if r["standard"].get("scope") == "roadmap":
+        out.append(ROADMAP_EDIT)
+    return out
+
+
+def standard_record(cmd: Command, f: dict, name: str, by: dict, agent: bool, at: str, origin: dict, ctx: Context,
+                    ds: Dataset, decl: Decl, mine: list[dict], changed: Callable[[Dataset, Decl], bool]
+                    ) -> tuple[dict | None, str]:
+    """The record an `Approve:`, `Write:`, `Edit:` or `Restore:` line asks for (`ours`), against the declaration's
+    records as of the line (`mine`), or why it cannot be made."""
     versions = [r for r in mine if standard.kind_of(r) == "version"]
     now = current(ctx, versions)
     full = standard.version_of(now["text"]) if now else ""
@@ -413,11 +551,13 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
         if full not in named(version, {full}):
             return None, (f"`{version}` is not the current version of the standard review of `{name}`, which is "
                           f"`{full}`: read that text, then {cmd.keyword.lower()} it")
-    rubric, exists = ctx.store.rubric, ds.by_name.__contains__
+    rubric, exists, roadmap = ctx.store.rubric, ds.by_name.__contains__, roadmap_names(ds)
     cells, why = standard.cells(f["cells"], rubric.names) if agent else (None, "")
     problems = [why] if why else []
     if cmd.keyword == "Approve":
         text, s = f"Approves the standard review `{full}`.", {"approves": full}
+        problems += [f"{p}; this is the text you approve: edit it instead"
+                     for p in standard.target_problems(now["text"], roadmap)]
     elif cmd.keyword == "Restore":
         earlier, why = restored(f["earlier version"], versions, name, full)
         if earlier is None:
@@ -431,11 +571,14 @@ def ours(cmd: Command, by: dict, maintainer: bool, at: str, origin: dict, ctx: C
         return None, "; ".join(problems + [TEXT])
     elif cmd.keyword == "Write":
         text, s = cmd.block, {}
-        problems += standard.check(text, exists=exists)
+        problems += standard.check(text, exists=exists, roadmap=roadmap)
     else:
         text = cmd.block
         s = {"parent": full, "note": f["note"], "dropped": [{"item": item, "why": why} for item, why in cmd.dropped]}
-        problems += standard.check(text, parent=now["text"], dropped=cmd.dropped, exists=exists, note=f["note"])
+        problems += standard.check(text, parent=now["text"], dropped=cmd.dropped, exists=exists, note=f["note"],
+                                   roadmap=roadmap)
+        if standard.scope(now["text"], text) == "roadmap":
+            s["scope"] = "roadmap"
     if problems:
         return None, "; ".join(problems)
     if cmd.keyword != "Approve" and changed(ds, decl):
@@ -491,7 +634,9 @@ def noted(text: str, r: dict, repo: str) -> str:
 
 
 def said(r: dict) -> str:
-    """What a reply says of a record made: what it is to the standard review, or evidence-store's words."""
+    """What a reply says of a record made: what it is to the standard review, a withdrawal, or evidence-store's words."""
+    if r.get("kind") == "status":
+        return f"Recorded the withdrawal `{r['id']}` of `{r['target']}`, by {rec.who(r['by'])}."
     kind = standard.kind_of(r)
     if kind is None:
         return intake.describe(r)
@@ -546,14 +691,16 @@ def marker(comment: int | str, deferred: Sequence[int] = ()) -> str:
 
 
 def reply(made: list[dict], refused: list[tuple[int, str, str]], lines: int, comment: dict, repo: str,
-          deferred: Sequence[int] = ()) -> str:
+          deferred: Sequence[int] = (), notes: dict[str, list[str]] | None = None, closing: Sequence[str] = ()) -> str:
     """One reply to a comment, worded as evidence-store's bulk handler words it: what was recorded and what was not,
     from each refused (line, declaration, reason). Then the note on the earlier form once, and the line naming the
     comment it answers and the lines `deferred`, last (`marker`). It holds at most `CAP` characters: GitHub refuses a
     comment over 65,536, and the reply to the oldest comment unanswered is made first on every run. So each list shows
     what fits, what was not recorded first, since its lines are to be posted again, and then says how many more there
-    are."""
-    done = [(f"- {said(r)}", 1) for r in made]
+    are. A record made is said with what `notes` (by its id) say of it besides, each on a line under it; `closing` is
+    said once, after the lists."""
+    notes = notes or {}
+    done = [(f"- {said(r)}" + "".join(f"\n  - {x}" for x in notes.get(r.get("id"), [])), 1) for r in made]
     rows = refusals(refused)
 
     def text(shown: list[str], unshown: int, rows_shown: list[str], rows_unshown: int) -> str:
@@ -565,6 +712,7 @@ def reply(made: list[dict], refused: list[tuple[int, str, str]], lines: int, com
             more = [f"- … and {rows_unshown} more not recorded"] if rows_unshown else []
             parts.append("Not recorded:\n\n" + "\n".join(rows_shown + more) +
                          "\n\nPost the corrected lines in a new comment.")
+        parts.extend(closing)
         if any(map(earlier_form, made)):
             parts.append(EARLIER_FORM.format(repo=repo))
         if comment.get("id") is not None:
@@ -669,16 +817,23 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
         if r is None:
             refused.append((cmd.line, name, why))
             continue
-        out.records.append(r)
-        ctx.store.add([r])
-        index.setdefault(ref, []).append(r)
-        made.append(r)
-        if standard.kind_of(r) == "version":
-            versions.append(r)
+        for x in r if isinstance(r, list) else [r]:
+            out.records.append(x)
+            ctx.store.add([x])
+            index.setdefault(ref, []).append(x)
+            made.append(x)
+            if standard.kind_of(x) == "version":
+                versions.append(x)
+            elif x.get("kind") == "status":  # a version withdrawn changes the review as a new one does
+                target = next((t for t in ctx.store.records if t.get("id") == x.get("target")), None)
+                if target is not None and standard.kind_of(target) == "version":
+                    versions.append(target)
     if deferred is not None:
         refused = [x for x in refused if x[0] not in waiting or unread and x[2] != NO_DATASET]
     if announce and (made or refused):
-        out.replies.append((issue["number"], reply(made, refused, len(cmds), comment, ctx.repo, waiting)))
+        notes = {r["id"]: remarks(r, ctx) for r in made}
+        out.replies.append((issue["number"], reply(made, refused, len(cmds), comment, ctx.repo, waiting, notes,
+                                                   unchecked(made, ctx))))
     return out
 
 

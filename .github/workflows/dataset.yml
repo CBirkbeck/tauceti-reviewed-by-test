@@ -133,12 +133,26 @@ jobs:
           echo "::error::the dataset's signatures differ from the docs: not published"
           exit 1
       # Each declaration's roadmap, which the Reviewed page filters by (asked for on 2026-10-29): of the PRs that
-      # last changed its lines, by their roadmap labels. Without it the dataset is published all the same.
-      - name: Each declaration's roadmap
+      # last changed its lines, by their roadmap labels; and the names TauCetiRoadmap has at its main now, which the
+      # intake checks a review's roadmap targets against (asked for on 2026-11-17). Without them the dataset is
+      # published all the same.
+      - name: Each declaration's roadmap, and TauCetiRoadmap's names
         if: steps.published.outputs.done != 'true'
         run: |
-          python3 scripts/roadmaps.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti" \
+          git clone -q --depth 1 https://github.com/TauCetiProject/TauCetiRoadmap "$RUNNER_TEMP/TauCetiRoadmap" \
+            || echo "::warning::TauCetiRoadmap could not be cloned: this dataset records no roadmap names"
+          roadmap=()
+          if [ -d "$RUNNER_TEMP/TauCetiRoadmap/.git" ]; then roadmap=(--roadmap "$RUNNER_TEMP/TauCetiRoadmap"); fi
+          python3 scripts/roadmaps.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti" "${roadmap[@]}" \
             || echo "::warning::this dataset has no roadmaps: scripts/roadmaps.py failed"
+      # Who wrote each declaration, co-authors included (asked for on 2026-11-17): the intake refuses an author's
+      # approval, write or edit of its standard review, and the site counts no author's yes. Without it the dataset is
+      # published all the same, and the intake says it could not check.
+      - name: Each declaration's authors
+        if: steps.published.outputs.done != 'true'
+        run: |
+          python3 scripts/authors.py --dataset "$RUNNER_TEMP/dataset" --source "$RUNNER_TEMP/TauCeti" \
+            || echo "::warning::this dataset records no authors: scripts/authors.py failed"
       - name: Publish
         if: steps.published.outputs.done != 'true'
         run: |

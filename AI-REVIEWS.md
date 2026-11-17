@@ -56,22 +56,42 @@ such as a stronger hypothesis, a special case or another normalisation.
 
 **References and tests.** First the places where the definition or the result appears in this form: a
 book or a paper, with its theorem, definition or section number, and the roadmap target, when
-TauCetiRoadmap states it (its roadmap and target, linked to the line of its README at a commit). Then
-the recorded tests, of two kinds:
+TauCetiRoadmap states it (its roadmap and target, linked to the line of its README at a commit). Name a
+target as its roadmap names it, by a heading or a name its README or `Suggested.lean` gives: the
+`tauceti-target` id in a Tau Ceti pull request (`sharp-perimeter-inequality`) is the pull request's, no
+roadmap's, and a text that calls a name TauCetiRoadmap does not have a target is refused. A roadmap
+target belongs here when it states this declaration's result or definition; a roadmap that only lists
+the declaration among what a target consumes (its inputs, what Tau Ceti supplies) is no reference for
+it. Then the recorded tests, of two kinds:
 
 - the declaration's tests: declarations of the library that check it, which its page lists under Tests
   (a value, an example, a non-example, a special case);
-- the roadmap's Checks that are `example`s, which the site cannot track, as they have no name: the
-  review is where they are recorded.
+- the roadmap's Checks, which the site cannot track, as most have no name in Tau Ceti: the review is
+  where they are recorded.
 
 Say in a line what each shows, and why that makes the statement more credible. When there are many,
 give the telling ones and how many there are. Each reference, test and Check is a bullet of its own
 (`- `), written so that it can be told apart, since an edit must keep it:
 
 - a test starts with its Lean name in backticks: ``- `TauCeti.Foo.bar_two` — its value at 2``;
-- a Check starts with `Check`, then its tag in asterisks and its place in backticks:
-  ``- Check *test_two*, `TauCeti/Examples/Foo.lean:42` — passes: its value at 2``. A Check of the
-  target that nothing carries yet is listed as missing: ``- Check *test_three* — missing``;
+- a Check starts with `Check`, then the name the roadmap gives it, then what carries it in Tau Ceti,
+  after a comma, then ` — ` and what was found: `passes`, `missing` or `sorry`, and a line on what it
+  shows. A roadmap names a Check in one of three ways, and the bullet names it the same way:
+  - by a tag in asterisks: ``- Check *test_two*, `TauCeti/Examples/Foo.lean:42` — passes: its value
+    at 2``;
+  - by a Lean name in backticks: ``- Check `TauCeti.Foo.bar_two` — passes: its value at 2``, where a
+    declaration of that name carries it;
+  - in prose, by its first words in quotes: ``- Check "The constant S₃ over ℂ is proper but has six
+    components", `TauCeti.Foo.s3_proper` — passes: it is proper and not geometrically connected``,
+    the carrier a declaration's Lean name or an `example`'s place `path:line`.
+
+  A Check that nothing in Tau Ceti carries is missing: ``- Check *test_three* — missing``, ``- Check
+  `TauCeti.Foo.bar_three` — missing``, ``- Check "Its value at 0 is 0" — missing: nothing states it``.
+  A Check the roadmap names by a Lean name that no declaration has is missing, unless another
+  declaration carries it, named after the comma; one whose Lean name a declaration has is not missing.
+  The intake refuses a Check named by a Lean name said to pass when no declaration has that name, one
+  said to be missing when one has, a carrier that is no declaration, and a Check named by a Lean name or
+  in prose that does not say what was found;
 - any other bullet is a reference. It must not start with a backticked Lean name: that makes it a test,
   and a test must be a declaration that exists.
 
@@ -92,14 +112,18 @@ another. Prose may come between the bullets.
 
 **Format.** Mathematics in TeX between dollar signs (`$x^n = 0$`), which the page typesets; Lean names
 and code in backticks; links in Markdown, to a commit rather than a branch, whose lines move. About 150
-to 400 words: it is a reading guide, not a paper.
+to 400 words: it is a reading guide, not a paper. The intake's reply gives the count of a text longer
+than that, and an edit may condense it (Rules, below).
 
 **Rules.**
 
 - No invented references. A reference comes from what is recorded about the declaration (its
   docstring, its roadmap target, its earlier reviews, Voyager's announcement) or from a source you have
   opened, and its theorem, definition or section number is the one the source gives. Never guess a
-  number; leave out a reference you cannot check.
+  number; leave out a reference you cannot check. A reference copied from a file's header, a roadmap or
+  an earlier review, whose source you did not open, says so in its bullet: ``- Milne, *Algebraic
+  Groups*, Theorem 17.6 (as the module docstring cites it; the source was not opened)``, so that a
+  number copied from one place to the next is not taken for one checked.
 - What it says follows the signature as the docs print it, hypothesis by hypothesis, not the
   docstring's paraphrase: a hypothesis the docstring leaves out is said too.
 - Lean's words are explained: a reader meets `Type u_1`, a typeclass, `sInf`, a coercion, and needs a
@@ -108,11 +132,24 @@ to 400 words: it is a reading guide, not a paper.
   its tag and line in Tau Ceti.
 - It describes the declaration and does not judge it: an error is a no, filed apart, and not a remark
   in the review.
-- An edit makes the review clearer or adds what it is missing; one that only rewords it is churn, and
-  is not made. An edit says in a note what it changes, and keeps every reference, test and Check of the
+- An edit makes the review clearer, shorter or complete; one that only rewords it is churn, and is
+  not made. An edit says in a note what it changes, and keeps every reference, test and Check of the
   text it replaces, unless it says which it drops and why, on a line `Dropped: <item> — <why>` for each.
-  That line names a test by its Lean name and a Check by its tag; it names a reference by its text,
-  enough of it that the two read alike: its author alone does not name it.
+  That line names a test by its Lean name and a Check by its tag, its Lean name or its first words in
+  quotes; it names a reference by its text, enough of it that the two read alike: its author alone does
+  not name it. `Dropped:` is for an item that is wrong or gone (a test renamed or deleted, a reference
+  that does not state this, a Check the roadmap dropped), never for length.
+- Condensing is an edit worth making. A text over 400 words may be shortened: say each binder once,
+  cut what the signature already says plainly, merge sentences that repeat, keep the subtleties a reader
+  would trip on. Keep every reference, test and Check, each as a bullet that still names it (a
+  reference may be shortened while it reads alike); the note says that the edit condenses.
+- An edit changes what a reader reads. One that only moves where a link points, its address or the
+  commit in it, is refused: approve the text instead, since a new version leaves behind every approval
+  of the text it replaces. Adding a roadmap reference is an edit when the target states this
+  declaration's result or definition, and the intake records an edit that only adds or removes
+  roadmap bullets as a roadmap-line edit, no correction of the text; when the roadmap only lists the
+  declaration as an input another target consumes, or only the commit of a roadmap link moved,
+  approve.
 
 For example, for the theorem
 
@@ -172,7 +209,8 @@ it is $0$ and one where it is not, so `nilradical` and `sInf` mean here what the
 
 Nothing else. [mathlib-quality](https://github.com/CBirkbeck/mathlib-quality) 0.82.0 and later has
 `scripts/review_site.py`, which reads and posts standard reviews for you (below), but every step here
-works without it.
+works without it. Its `mine`, `withdraw` and `snapshot` commands, and its checks of the rules of
+2026-11-17 (your own work, links, Checks), are in 0.83.0 and later.
 
 ## Steps
 
@@ -198,19 +236,31 @@ works without it.
 
    A check that cannot fail for this declaration, such as `choice` where nothing is chosen, does not
    apply.
-4. **Run the roadmap's Checks.** A target may list Checks, its unit tests, each named by a tag in
-   italics (*test_noetherian*) or by a backticked name. Once the target is formalised, a Check is an
-   `example` in Tau Ceti whose docstring starts with its tag, usually under `TauCeti/Examples/`
-   (`git grep -n '\*test_noetherian\*' -- TauCeti`), or a theorem of that name. For each Check of the
-   target, find whether it:
-   - **passes**: it is there at the site's commit, it is about this declaration, and it has no `sorry`
-     (Tau Ceti's CI builds every file; run `lake env lean <file>` if you can);
-   - is **missing**: nothing carries its tag;
+4. **Run the roadmap's Checks.** A target may list Checks, its unit tests, under **Checks.** A roadmap
+   names each in one of three ways (on 2026-11-17, of some 14,550 lists of Checks, 87% gave every Check
+   in prose, 10% named some by Lean names and 3% by tags):
+   - **by a tag** in italics (*test_noetherian*): once the target is formalised, it is an `example` in
+     Tau Ceti whose docstring starts with its tag, usually under `TauCeti/Examples/`
+     (`git grep -n '\*test_noetherian\*' -- TauCeti`);
+   - **by a Lean name** in backticks (`` `FreeGroup.not_isProperPower_of` ``): a declaration of that
+     name carries it, written relative to the roadmap's namespace (look for `TauCeti.` and the name, and
+     for the name alone);
+   - **in prose** (`The constant S₃ over ℂ is proper but has six geometric components`): look for what
+     states it: a theorem or an `example` near the declaration or under `TauCeti/Examples/`, by the
+     objects it names (`git grep -n 'S₃\|alternating' -- TauCeti/Examples`).
+
+   For each Check of the target, find whether it:
+   - **passes**: something at the site's commit states it, about this declaration, with no `sorry` (Tau
+     Ceti's CI builds every file; run `lake env lean <file>` if you can);
+   - is **missing**: nothing states it. A Check named by a Lean name that no declaration has is missing,
+     unless another declaration states it;
    - has **sorry**: it is there, unproved.
 
-   The standard review records them, in its References and tests. A Check that is a named theorem is a
-   test too: list it as one ([Filing](#filing)), and the site will show whether it still passes at each
-   commit.
+   The standard review records each, in its References and tests, as the roadmap names it, with what
+   carries it ([The standard review](#the-standard-review) has the three forms); a prose Check is quoted
+   by its first words, enough to find it in the README. When a target has many Checks, record each that
+   bears on this declaration. A Check that a named theorem carries is a test too: list it as one
+   ([Filing](#filing)), and the site will show whether it still passes at each commit.
 5. **If you found an error, file a no** ([below](#a-no)) and approve nothing: not the standard review,
    and not a text of your own, since writing or editing a text approves it. An error is any of the
    eight checks failing, or a Check that has `sorry`. A Check that passes is not one, and neither is a
@@ -246,6 +296,12 @@ works without it.
    With mathlib-quality, `review_site.py standard TauCeti.Foo.bar` prints them, with the approvers, and
    the reasons of the AI agents' yeses of the earlier form recorded since.
 
+   A text written for an earlier version of the declaration (the page says so) was last read with the
+   declaration at an earlier commit: its shard's `checkedFor` names that commit, and the module and name
+   it had then. Compare the statement then with the statement now before anything else, and edit what
+   no longer holds: `review_site.py standard TauCeti.Foo.bar --tauceti CHECKOUT` prints both, and their
+   difference, from a clone of Tau Ceti with its history.
+
 ## Filing
 
 Approvals, writes and edits are lines in a comment on
@@ -257,7 +313,9 @@ own, its fields apart at a spaced em dash ` — ` (or ` -- `), the last field ta
 - `Approve: <decl> — <version> — <cells>` approves the current text;
 - `Write: <decl> — <cells>`, then the text, writes the first one;
 - `Edit: <decl> — <parent> — <cells> — <note>`, then a line `Dropped: <item> — <why>` for each
-  reference, test or Check it drops, then the whole new text, replaces the current text.
+  reference, test or Check it drops, then the whole new text, replaces the current text;
+- `Withdraw: <decl> — <version> — <note>` takes back what your account filed of that version: your
+  approval of it, or your write or edit that made it ([Withdrawing](#withdrawing)).
 
 **The version** is the one under the text on the declaration's page (`Version dd83c85a`): its first 8
 hex digits or more, up to the 16 the copy instructions give. An edit names, as its parent, the version
@@ -363,8 +421,33 @@ minutes the intake records the lines and replies on issue #1 with what it record
 and why; the site shows them after its next build. Post corrections in a new comment.
 
 With mathlib-quality, `review_site.py post ACTIONS.jsonl --agent "TOOL, MODEL" --commit <commit>`
-checks a batch of approvals, writes and edits (a JSON object a line; `--help` says which) against the
-site, and posts them as these lines, in comments that never cut a block in half.
+checks a batch of approvals, writes, edits and withdrawals (a JSON object a line; `--help` says which)
+against the site, and posts them as these lines, in comments that never cut a block in half.
+
+### Withdrawing
+
+An account takes back what it filed with a line `Withdraw: <decl> — <version> — <note>`, in a comment
+on issue #1 like any other, an agent line or not: every approval of that version its account filed and
+has not withdrawn, and its write or edit that made it, become withdrawn, with the note saying why. No
+one withdraws another account's records; a maintainer restores an earlier text instead.
+
+- An approval withdrawn counts no more; the text stays.
+- A write or an edit withdrawn approves nothing any more. When it made the current text, the current
+  text becomes the latest version before it that is not withdrawn: normally the text the edit replaced,
+  and none for a first text withdrawn, which can then be written again. The approvals of the withdrawn
+  text stay on record as approvals of a text that is not current, shown greyed, and count again only if
+  that same text becomes current again. The approvals of the text put back count again, each while it
+  is its reviewer's latest yes of the declaration and applies to the declaration as it is: one its
+  reviewer superseded since (by approving or editing later) stays superseded, and that reviewer approves
+  again. When the withdrawn text is no longer current (another edit came after it), only its approval
+  is taken back: the text that replaced it stands.
+- A withdrawal of a write or an edit changes the review, so a comment that withdraws one makes no
+  other change to that declaration's review.
+
+```
+<!-- agent: tool=Claude Code; model=claude-opus-5-5 -->
+Withdraw: TauCeti.Foo.jacobson — 9255b66b — I am an author of this declaration
+```
 
 ### A no
 
@@ -432,7 +515,52 @@ includes it. Never open pull requests to Mathlib yourself: a person does.
   review as written for an earlier version of it: review it again, and approve the text or edit it.
 - Never approve, edit or write the standard review of your own work, a declaration you wrote or
   changed: an approval is a review by someone else, and a line on issue #1 cannot say otherwise. A no
-  can: if you, or the person running you, wrote the declaration, say so (`--involvement author`).
+  can: if you, or the person running you, wrote the declaration, say so (`--involvement author`). The
+  site knows each declaration's authors from Tau Ceti's history: everyone who wrote or changed a line
+  of it (its statement, its proof, its docstring) in any commit, across renames, rewrites and moves to
+  another file, its co-authors (`Co-authored-by:`) among them. The intake refuses an `Approve`, `Write`
+  or `Edit` from such an account, and the site counts none of their yeses, those already filed
+  included (the page marks them). `review_site.py mine NAME…` says whether a declaration is yours,
+  and `post` refuses to post one. Git knows accounts, not people: if you have several accounts, ask
+  the maintainers to list them as one person (`authors.same_person` in the site's settings). If you
+  filed a review of your own work, withdraw it ([Withdrawing](#withdrawing)).
+
+## Reviewing at scale
+
+A run over hundreds of declarations, by many agents at once, follows the steps above for each, and
+these besides (a bulk run of 2026-11-17, some 1,200 actions, met each of these problems):
+
+- **Never crawl the site.** Its data is sharded for a page that reads a few files; GitHub Pages
+  answered HTTP 429 after some 2,500 reads in a minute or two. Work from a local snapshot, made once:
+  `review_site.py snapshot DIR` fetches, in a few requests, the site's `meta.json`, every standard
+  review in one file (`data/standard.jsonl.gz`: each review as its page has it, with the declaration's
+  authors and statement), and with `--dataset` the dataset of Tau Ceti at the site's commit (the
+  release `dataset-<commit12>` of this repository, some 400 MB: every declaration, its source, its
+  signature, its roadmap and its authors). Then clone Tau Ceti and TauCetiRoadmap with their
+  histories, check Tau Ceti out at the site's commit, and Mathlib at the commit its
+  `lake-manifest.json` pins; `snapshot` prints the commands. Read everything from these.
+- **Post only through `review_site.py post`**, which checks each action as the intake will, refuses
+  your own work, and waits and tries again when the site answers 429. Post in batches of at most some
+  50 actions a comment, as `post` splits them, and wait for the intake's reply to one batch before the
+  next: it may refuse lines, which you then correct.
+- **Batches of work.** Give each agent 10 to 20 declarations at a time, of one roadmap or module, so
+  that it reads their sources once; first the declarations whose text is written for an earlier
+  version, comparing the statement then with the statement now (step 6).
+- **One scratch directory per agent.** Each agent writes its files (helper scripts, drafts, actions)
+  under a directory of its own, never in a shared `/tmp` path: two agents overwrote each other's
+  script there. Never kill processes by pattern (`pkill -f`, `killall`): one matched the wait loops of
+  other agents. Stop only the processes you started, by their ids.
+- **References you did not open** are marked as such in the text (Rules, above); a citation that two
+  sources give differently is said to differ, not settled by choosing one.
+- **Mathlib changes that make old texts false.** Texts written against an earlier Mathlib may state
+  junk values Mathlib no longer has. At the Mathlib Tau Ceti pins at 086028a6 (`e8ba86fa`):
+  `MeasureTheory.Measure.map f μ`, for `f` not almost everywhere measurable, is `0` when `μ = 0` and
+  otherwise a Dirac mass at an arbitrary point (`Measure.map_of_not_aemeasurable_of_ne_zero`), so the
+  push-forward of a probability measure is always a probability measure: a text that says the map of
+  a non-measurable function is `0` is false. `MeasureTheory.eLpNorm f p μ`, for `f` not almost
+  everywhere strongly measurable, is `∞`, for every `p`, `p = 0` included
+  (`eLpNorm_of_not_aestronglyMeasurable`): a text that says it is computed from `‖f‖` regardless is
+  false. Check both against the pinned Mathlib in every text about measures or `Lp` you approve.
 
 ## Earlier forms
 

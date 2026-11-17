@@ -516,7 +516,8 @@ class SummaryTests(StandardTests):
     def test_what_a_summary_holds(self):
         v1, v2 = wrote(1, "A", V1), wrote(2, "A", V2, parent=VER1)
         s = standard.summary([seen(v1, superseded=True), seen(v2)])
-        self.assertEqual(set(s), {"text", "version", "record", "approving", "current", "approvers", "earlier", "earlier_approvals"})
+        self.assertEqual(set(s), {"text", "version", "record", "approving", "current", "approvers", "earlier", "earlier_approvals",
+                                  "by_authors", "checked_for"})
         self.assertEqual((s["text"], s["version"]), (V2, VER2))
         self.assertIs(s["record"], v2)
         self.assertEqual((s["approving"], s["current"], s["earlier"], s["earlier_approvals"]), (True, True, 0, []))
@@ -657,6 +658,76 @@ class SummaryTests(StandardTests):
         for r in people[1:]:
             s = standard.summary([seen(r), seen(held(5, "M"))])
             self.assertEqual((s["approvers"], s["earlier"]), ([], 0))
+
+
+class RulesOf2026_11_17Tests(StandardTests):
+    """What the bulk run of 2026-11-17 asked of the text's checks: Checks the roadmap gives by a Lean name or in prose,
+    the roadmap targets a text names, its length, and edits that move only links."""
+
+    def test_checks_by_tag_by_lean_name_and_in_prose(self):
+        text = review(SAYS, refs(REFERENCE, CHECK, "- Check `Foo.bar_two` — missing: nothing has that name",
+                                 '- Check "The constant S₃ over ℂ is proper", `Foo.s3_proper` — passes: it is',
+                                 "- Check “Its value at 0 is 0” — sorry: `Foo.zero` is not proved",
+                                 "- Check the roadmap"), SUBTLE)
+        got = standard.checks_of(text)
+        self.assertEqual([(c.kind, c.key, c.result, c.carrier) for c in got], [
+            ("tag", "test_two", "passes", "TauCeti/Examples/Fixture.lean:42"),
+            ("name", "Foo.bar_two", "missing", None),
+            ("prose", "The constant S₃ over ℂ is proper", "passes", "Foo.s3_proper"),
+            ("prose", "Its value at 0 is 0", "sorry", None)])
+        self.assertEqual(standard.items(text).references, [REFERENCE[2:], "Check the roadmap"])
+        exists = {"Foo.s3_proper"}.__contains__
+        self.assertEqual(standard.check(text, exists=exists), [])
+        self.assertEqual(standard.check(text), [])  # with no names to check them against, none is said
+
+    def test_what_a_check_must_say(self):
+        def problems(bullet, names=()):
+            return standard.check(review(SAYS, refs(bullet), SUBTLE), exists=set(names).__contains__)
+        self.assertNamed(problems('- Check "Its value at 0 is 0": it is'), "says nothing of what was found")
+        self.assertNamed(problems("- Check `Foo.bar` — passes"), "`Foo.bar` is not a declaration that exists")
+        self.assertNamed(problems("- Check `Foo.bar` — missing", ["Foo.bar"]), "is a declaration of the library")
+        self.assertNamed(problems('- Check "Zero", `Foo.zero` — passes'), "carried by `Foo.zero`")
+        # A Check that something else carries names it after a comma, and is no longer missing for its own name.
+        self.assertEqual(problems("- Check `Foo.bar`, `Foo.baz` — passes: it does", ["Foo.baz"]),
+                         ["the Check `Foo.bar` is said to be there, but `Foo.bar` is not a declaration that exists: if "
+                          "nothing carries it, it is missing; if something else does, name that after a comma"])
+
+    def test_an_edit_keeps_a_prose_check(self):
+        old = review(SAYS, refs('- Check "The constant S₃ over ℂ is proper but has six components" — missing: none'),
+                     SUBTLE)
+        reworded = old.replace("but has six components", "but has six geometric components")
+        self.assertEqual(standard.check(reworded, parent=old, note="n"), [])
+        gone = review(SAYS, refs(REFERENCE), SUBTLE)
+        self.assertNamed(standard.check(gone, parent=old, note="n"), "drops the Check")
+        said = [('"The constant S₃ over ℂ is proper but has six components"', "the roadmap dropped it")]
+        self.assertEqual(standard.check(gone, parent=old, note="n", dropped=said), [])
+
+    def test_the_roadmap_targets_a_text_names(self):
+        text = review(SAYS, refs("- Roadmap: [Arithmetic, Layer 1](https://example.org/a#L3), target `sharp-bound`.",
+                                 "- TauCetiRoadmap, Lattices, the target `vanDerBlij`", REFERENCE),
+                      "## Lean subtleties\nIts target `X ⟶ Y` is a map's, and so is the target `Y` of `f`.")
+        self.assertEqual(standard.targets(text), ["sharp-bound", "vanDerBlij"])
+        self.assertNamed(standard.check(text, roadmap={"vanDerBlij"}.__contains__), "`sharp-bound`", "tauceti-target")
+        self.assertEqual(standard.check(text, roadmap={"vanDerBlij", "sharp-bound"}.__contains__), [])
+        self.assertEqual(standard.check(text), [])  # no names: not checked
+
+    def test_words(self):
+        self.assertEqual(standard.words(GOOD), 17)  # the headings and the bullets' dashes are not counted
+        linked = GOOD.replace("Fixture documentation, §1.", "[Fixture documentation](https://example.org/a/b/c#L1), §1.")
+        self.assertEqual(standard.words(linked), 17)  # nor a link's address
+        self.assertEqual(standard.WORDS, (150, 400))
+
+    def test_an_edit_that_moves_only_links(self):
+        old = review(SAYS, refs("- [Fixture, §1](https://github.com/o/r/blob/0123abcd/docs.md#L3)."), SUBTLE)
+        moved = old.replace("0123abcd", "89abcdef0123").replace("#L3", "#L9")
+        self.assertEqual(standard.scope(old, moved), "links")
+        self.assertNamed(standard.check(moved, parent=old, note="the link at the current commit"),
+                         "approve the text instead")
+        added = old.replace("#L3).", "#L3).\n- Roadmap: Arithmetic, Layer 1, which states it.")
+        self.assertEqual(standard.scope(old, added), "roadmap")
+        self.assertEqual(standard.check(added, parent=old, note="adds the roadmap target"), [])
+        self.assertIsNone(standard.scope(old, old.replace("3n", "2n")))
+        self.assertIsNone(standard.scope(old, moved.replace("[Fixture, §1]", "[Fixture, §2]")))  # a link's words are read
 
 
 if __name__ == "__main__":

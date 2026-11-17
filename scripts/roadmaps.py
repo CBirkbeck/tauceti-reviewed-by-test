@@ -10,12 +10,19 @@ dependencies, cross-cutting work) and `roadmap/Unknown` (an attribution missing 
 nor does a commit that names no PR, so a declaration none of whose lines is credited has no row. Each row:
 `roadmap`, and `lines`, [how many of its lines are credited to it, how many it has].
 
-  python3 scripts/roadmaps.py --dataset DIR --source CLONE [--jobs N]
+  python3 scripts/roadmaps.py --dataset DIR --source CLONE [--roadmap ROADMAP_CLONE] [--jobs N]
 
 `--source` is a clone of the library with its history, not a shallow one; its commit graph is written,
 with the paths each commit changed (`git commit-graph write --changed-paths`), which makes blaming a file
 seven times faster. The labels are read with `gh` (GitHub's GraphQL API, a request for every hundred PRs:
 about 220 for Tau Ceti's).
+
+With `--roadmap CLONE`, a clone of TauCetiRoadmap, it also records the names TauCetiRoadmap has at the commit the
+clone is at, which the intake checks a review's roadmap targets against (scripts/standard_intake.py): a review named
+TauCeti pull requests' `tauceti-target` ids as roadmap targets (asked for on 2026-11-17). They are the file
+`roadmap-names.json` of the dataset, `{"repo", "commit", "names"}`, every word of the roadmaps' Markdown, Lean and TOML
+files (`names_in`: a Lean name, a heading's word, a kebab-case label), and the meta's `roadmap`, `{"repo", "commit",
+"names": "roadmap-names.json", "count"}`. Some 285,000 names, 6 MB, on 2026-11-17.
 
 Exit 0 when the facet is written; 1 when the labels could not be read, and then nothing is written; 2 on bad
 input.
@@ -53,8 +60,64 @@ QUERY = """query($owner: String!, $name: String!, $after: String) {
       nodes { number labels(first: 50) { nodes { name } } } } } }"""
 
 
+#: The roadmap repository, whose names `--roadmap` records.
+ROADMAP_REPO = "TauCetiProject/TauCetiRoadmap"
+NAMES_FILE = "roadmap-names.json"
+#: A word of a roadmap, as a name is written: a Lean name (`Foo.bar_two'`), a word, a kebab-case label (`SSP-D16`).
+NAME = re.compile(r"[^\W][\w'!?.\-]*[\w'!?]|[^\W]")
+#: The files of TauCetiRoadmap whose words are names: its roadmaps' READMEs, plans, Lean and metadata.
+NAMED_FILES = re.compile(r"^(?:TauCetiRoadmap|Completed)/.*\.(?:md|lean|toml)$")
+
+
 class LabelsUnread(RuntimeError):
     pass
+
+
+def names_in(text: str) -> set[str]:
+    """The names a text has (`NAME`)."""
+    return set(NAME.findall(text))
+
+
+def roadmap_names(clone: Path) -> tuple[str, list[str]]:
+    """The commit a clone of TauCetiRoadmap is at, and the names of its roadmaps' files there, sorted."""
+    commit = subprocess.run(["git", "-C", str(clone), "rev-parse", "HEAD"], check=True, capture_output=True,
+                            text=True).stdout.strip()
+    paths = subprocess.run(["git", "-C", str(clone), "ls-tree", "-r", "-z", "--name-only", commit], check=True,
+                           capture_output=True).stdout.decode("utf-8", "replace").split("\0")
+    names: set[str] = set()
+    for path in paths:
+        if NAMED_FILES.match(path):
+            blob = subprocess.run(["git", "-C", str(clone), "show", f"{commit}:{path}"], capture_output=True).stdout
+            names |= names_in(blob.decode("utf-8", "replace"))
+    return commit, sorted(names)
+
+
+def write_names(dataset: Path, commit: str, names: list[str]) -> None:
+    """Put TauCetiRoadmap's names into ``dataset``: `roadmap-names.json`, and the meta's `roadmap`."""
+    (dataset / NAMES_FILE).write_text(json.dumps({"repo": ROADMAP_REPO, "commit": commit, "names": names},
+                                                 ensure_ascii=False), encoding="utf-8")
+    meta = json.loads((dataset / "meta.json").read_text(encoding="utf-8"))
+    meta["roadmap"] = {"repo": ROADMAP_REPO, "commit": commit, "names": NAMES_FILE, "count": len(names)}
+    (dataset / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def read_names(root: Path | str, meta: dict) -> frozenset[str] | None:
+    """The names a dataset recorded of TauCetiRoadmap (`write_names`), or None when it recorded none."""
+    entry = meta.get("roadmap") or {}
+    path = Path(root) / entry["names"] if entry.get("names") else None
+    if path is None or not path.exists():
+        return None
+    return frozenset(json.loads(path.read_text(encoding="utf-8")).get("names") or [])
+
+
+def has_name(names: frozenset[str], name: str) -> bool:
+    """Whether a roadmap target a review names is among TauCetiRoadmap's names: the name as given, or without the
+    library's `TauCeti.` (a roadmap writes its names short); a name of several words, each word."""
+    name = name.strip()
+    if name in names or name.removeprefix("TauCeti.") in names:
+        return True
+    words = NAME.findall(name)
+    return len(words) > 1 and all(w in names for w in words)
 
 
 def pr_of(subject: str) -> int | None:
@@ -217,6 +280,7 @@ def main(argv: list[str]) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dataset", required=True, type=Path)
     ap.add_argument("--source", required=True, type=Path)
+    ap.add_argument("--roadmap", type=Path, help="a clone of TauCetiRoadmap: record its names (`roadmap-names.json`)")
     ap.add_argument("--jobs", type=int, default=os.cpu_count() or 4)
     a = ap.parse_args(argv)
     if not (a.dataset / "meta.json").exists():
@@ -231,6 +295,10 @@ def main(argv: list[str]) -> int:
     if subprocess.run(["git", "-C", str(a.source), "cat-file", "-e", f"{commit}^{{commit}}"], capture_output=True).returncode:
         print(f"{a.source} does not have the dataset's commit {commit}", file=sys.stderr)
         return 2
+    if a.roadmap is not None:
+        commit, names = roadmap_names(a.roadmap)
+        write_names(a.dataset, commit, names)
+        print(f"Roadmap names: {len(names)} names of TauCetiRoadmap at {commit[:12]}.")
     r = run(a.dataset, a.source, load_settings(), jobs=a.jobs)
     if not r["written"]:
         print(f"the PRs' labels could not be read ({r['error']}): nothing written", file=sys.stderr)

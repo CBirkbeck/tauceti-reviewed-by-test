@@ -20,6 +20,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "scripts"))
+import authors  # noqa: E402
 import build_site  # noqa: E402
 import roadmaps  # noqa: E402
 import standard  # noqa: E402
@@ -58,6 +59,10 @@ ASTRA = {"kind": "agent", "identity": {"kind": "github", "id": "example"}, "agen
 #: The roadmaps of some declarations, as scripts/roadmaps.py credits them: the others have none.
 ROADMAPS = {"Fixture.triple": "Arithmetic", "Fixture.triple_pos": "Arithmetic", "Fixture.triple_comm": "Arithmetic",
             "Fixture.double": "Doubling", "Fixture.double_triple": "Doubling"}
+#: Who wrote some declarations, as scripts/authors.py records it: accounts that review nothing in the fixture's own
+#: records, so that a test adds an author's review to see it marked.
+AUTHORS = {"Fixture.triple": {"authors": ["writer", "Co-Writer"], "commits": 2},
+           "Fixture.double": {"authors": ["writer"], "commits": 1, "unknown": 1}}
 
 
 #: Why the no on `Fixture.one` was closed: two paragraphs, as an answer to a no can run.
@@ -218,9 +223,11 @@ def imported_store(ds: Dataset, cache: Path) -> None:
 
 
 def with_roadmaps(dataset: Path, out: Path) -> Path:
-    """A copy of ``dataset`` with the facet `roadmap` as scripts/roadmaps.py writes it, of ROADMAPS."""
+    """A copy of ``dataset`` with the facet `roadmap` as scripts/roadmaps.py writes it, of ROADMAPS, and the facet
+    `authors` as scripts/authors.py writes it, of AUTHORS."""
     shutil.copytree(dataset, out)
     roadmaps.write(out, [{"decl": d, "roadmap": r, "lines": [2, 2]} for d, r in sorted(ROADMAPS.items())])
+    authors.write(out, [{"decl": d, **row} for d, row in sorted(AUTHORS.items())], [])
     return out
 
 

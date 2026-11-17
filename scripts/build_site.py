@@ -5,11 +5,14 @@
                                 [--out _site] [--budget-mb 950]
 
 `--imports` is where `evidence-store fetch-imports` fetched the stores this one imports. The build
-fails when the site is larger than its budget: GitHub Pages serves at most 1 GB.
+fails when the site is larger than its budget: GitHub Pages serves at most 1 GB. Besides the files the pages read, it
+writes data/standard.jsonl.gz, every standard review in one file, which a run over many declarations reads once in
+place of the shards (`review_site.py snapshot`).
 """
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import shutil
 import sys
@@ -19,6 +22,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import ROOT, load_settings  # noqa: E402
 import site_data  # noqa: E402
+
+
+#: The file of every standard review (`Site.standard_export`), under data/.
+EXPORT = "standard.jsonl.gz"
 
 
 class SiteTooLarge(RuntimeError):
@@ -46,6 +53,10 @@ def build(dataset: Path, store: Path, out: Path, settings: dict, source: Path | 
         write(data / "names" / f"{k}.json", rows)
     for k, reviews in site.standard_shards().items():
         write(data / "standard" / f"{k}.json", reviews)
+    # Every standard review in one file, for a run over many declarations (`review_site.py snapshot`): JSON lines,
+    # gzipped, written the same way each time (no time in the gzip header).
+    rows = "".join(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n" for r in site.standard_export())
+    (data / EXPORT).write_bytes(gzip.compress(rows.encode("utf-8"), mtime=0))
     for mi in range(site.project_modules):
         write(data / "m" / f"{mi}.json", site.module_file(mi))
     for mi in range(site.project_modules, len(site.modules)):

@@ -151,6 +151,8 @@
   function standardLine(v) {
     const box = el('article', 'thread std' + (applies(v) ? '' : ' old')), head = el('div', 'thread-head'), did = el('span');
     did.append(who(v.by), ` ${v.std} the AI review`);
+    if (v.state === 'withdrawn') did.append(el('span', 'note', 'withdrawn'));
+    if (byAuthor(v)) did.append(el('span', 'note', 'an author of it: not counted'));
     head.append(did, el('span', 'faint', date(v.at)));
     if (v.url) head.append(ext(v.url, 'comment', 'faint'));
     box.append(head);
@@ -632,7 +634,10 @@
     const records = project ? (e.records || []) : (up.records || []);
     const read = !answerable ? null : project ? {url: URLS.docs(meta, name, modName), label: 'Read it in the API docs ↗'}
       : {url: URLS.mathlib(name, modName), label: "Read it in Mathlib's docs ↗", from: home};
-    parts.push(reviewCard(meta, name, read, records, e.tests || [], questionWord(n.kind, e.kw), std));
+    // Who wrote it: its entry names its authors by their places in its module's table of logins (`people`).
+    const people = (d.module && d.module.people) || [];
+    const authors = {logins: (e.au || []).map(i => people[i]).filter(Boolean), unknown: e.auU || 0};
+    parts.push(reviewCard(meta, name, read, records, e.tests || [], questionWord(n.kind, e.kw), std, authors));
     // The map; then, as lists, how it is proved and what rests on it beyond the map's first level.
     const mapHost = el('div');
     if (project) {
@@ -671,7 +676,7 @@
      agents', the latest first in each, each answer a twisty under its answerer's name that opens to what they said;
      then the AI review, the one text of the declaration, in a twisty; then what could be better, people's
      suggestions for it when it is correct; and what tests it, with a test to suggest (laid out so on 2026-11-02). */
-  function reviewCard(meta, name, read, records, tests, word, std) {
+  function reviewCard(meta, name, read, records, tests, word, std, authors = {logins: [], unknown: 0}) {
     const card = el('section', 'review'), open = !!read;
     card.id = 'review';
     if (open) {
@@ -704,6 +709,11 @@
     const yes = reviews('accept'), people = yes.filter(v => v.by.kind !== 'agent');
     const earlier = open ? earlierYeses(std, yes.filter(v => v.by.kind === 'agent' && !v.std)) : [];
     card.append(el('p', 'sub', 'Reviews'), reviewList([...people, ...reviews('problem')], open && std ? std.approvers : [], earlier, byId));
+    // Who wrote it, from Tau Ceti's history (co-authors too): their reviews of it count in nothing (asked 2026-11-17).
+    if (open && authors.logins.length) {
+      const unknown = authors.unknown ? ` and ${plural(authors.unknown, 'person', 'people')} with no GitHub account the site knows` : '';
+      card.append(el('p', 'faint small authors', `Written by ${authors.logins.map(a => '@' + a).join(', ')}${unknown}, by Tau Ceti's history: their reviews of it do not count.`));
+    }
     if (open) card.append(aiReview(std));
     // A line offering a form: what it is for, and its button.
     const offer = (text, spec) => {
@@ -743,6 +753,7 @@
     }
     const n = std.approvers.length, version = el('p', 'std-version');
     version.append(`Version ${std.version.slice(0, 8)} · `, std.url ? ext(std.url, date(std.at)) : date(std.at), ' · ', markWho(std.by));
+    if (std.byAuthor) version.append(' · by an author of the declaration: it approves nothing');
     // Its line flows as text, each "·" held to the words either side by no-break spaces: it wraps between words, and
     // never leaves a "·" at the end of a line (asked for on 2026-11-02).
     const dot = () => el('span', 'sep', ' · ');
@@ -764,7 +775,10 @@
   function earlierYeses(std, form) {
     const approvals = ((std && std.earlierApprovals) || []).map(a =>
       ({...a, note: a.version === std.version ? 'on an earlier version of the declaration' : 'on an earlier version of the AI review'}));
-    return [...approvals, ...form.map(v => ({...v, note: std && v.at <= std.at ? 'before the AI review' : 'earlier form'}))];
+    // An author's approval, of this text or another, is listed so that no one takes it for a review, and counts in nothing.
+    const own = ((std && std.byAuthors) || []).map(a => ({...a, note: 'an author of it: not counted'}));
+    const earlierForm = v => byAuthor(v) ? 'an author of it: not counted' : std && v.at <= std.at ? 'before the AI review' : 'earlier form';
+    return [...approvals, ...own, ...form.map(v => ({...v, note: earlierForm(v)}))];
   }
   /* An AI agent that approved the AI review, as a mark (the tick of an AI agent's yes: blue), linking to the comment
      that approved it; on hover, the checks it made, those that did not apply to this declaration, and when. One that
@@ -1018,7 +1032,10 @@
   /* Whether a record speaks for the declaration as it is now; and an answer, whether it still stands: a yes
      of this version, a no still open. */
   const applies = v => v.inForce && v.applies !== false;
-  const stands = v => v.verdict === 'problem' ? v.state === 'open' : applies(v);
+  /* Whether a record is by an author of its declaration (the build marks those, from Tau Ceti's history): a yes of an
+     author's is no review, and counts in nothing (asked for on 2026-11-17). */
+  const byAuthor = v => (v.by || {}).involvement === 'author';
+  const stands = v => v.verdict === 'problem' ? v.state === 'open' : applies(v) && !byAuthor(v);
   /* A no decided in the declaration's favour: fixed since, behaving as intended, or not a problem. Its mark is
      a green tick, as a yes's is, saying which (asked for on 2026-10-25). */
   const RESOLVED = new Set(['fixed', 'intended', 'invalid']);
@@ -1053,7 +1070,8 @@
     m.append(sign(answer), markWho(v.by));
     const note = !v.inForce && v.state === 'withdrawn' ? 'withdrawn'
       : v.verdict === 'problem' && v.state !== 'open' ? (STATE_WORDS[v.state] || v.state).toLowerCase()
-      : !v.inForce ? 'superseded' : MARK_NOTE[v.status] && MARK_NOTE[v.status](v);
+      : !v.inForce ? 'superseded' : v.verdict === 'accept' && byAuthor(v) ? 'an author of it: not counted'
+      : MARK_NOTE[v.status] && MARK_NOTE[v.status](v);
     if (note) m.append(el('span', 'note', note));
     if (v.source) m.append(el('span', 'note', `from the ${v.source.name} store`));
     if ((v.replies || []).length) m.append(el('span', 'note', plural(v.replies.length, 'reply', 'replies')));
