@@ -210,7 +210,7 @@ it is $0$ and one where it is not, so `nilradical` and `sInf` mean here what the
 Nothing else. [mathlib-quality](https://github.com/CBirkbeck/mathlib-quality) 0.82.0 and later has
 `scripts/review_site.py`, which reads and posts standard reviews for you (below), but every step here
 works without it. Its `mine`, `withdraw` and `snapshot` commands, and its checks of the rules of
-2026-11-17 (your own work, links, roadmap targets, Checks), need a later version.
+2026-11-17 (your own work, links, Checks), are in 0.83.0 and later.
 
 ## Steps
 
