@@ -167,5 +167,47 @@ class RunTests(unittest.TestCase):
         self.assertFalse((d / "facets" / "roadmap.jsonl").exists())
 
 
+class NamesTests(unittest.TestCase):
+    """TauCetiRoadmap's names, which the intake checks a review's roadmap targets against."""
+
+    def test_the_names_a_text_has(self):
+        text = "### Layer 8 — `IntegralLattice.vanDerBlij` and *test_two*; see SSP-D16, `Foo.bar'` and x."
+        self.assertTrue({"Layer", "8", "IntegralLattice.vanDerBlij", "test_two", "SSP-D16", "Foo.bar'", "x"}
+                        <= roadmaps.names_in(text))
+        self.assertNotIn("x.", roadmaps.names_in(text))  # a sentence's full stop is no part of a name
+
+    def test_a_target_is_a_name_of_the_roadmap(self):
+        names = frozenset({"vanDerBlij", "IntegralLattice.vanDerBlij", "Layer", "8"})
+        for name in ("vanDerBlij", "IntegralLattice.vanDerBlij", "TauCeti.IntegralLattice.vanDerBlij", "Layer 8"):
+            self.assertTrue(roadmaps.has_name(names, name), name)
+        # A Tau Ceti pull request's target id, which no roadmap has.
+        for name in ("sharp-perimeter-inequality", "Layer 9", "TauCeti.vanDerBlij_two"):
+            self.assertFalse(roadmaps.has_name(names, name), name)
+
+    def test_the_names_of_a_clone_go_into_the_dataset(self):
+        tmp = Path(tempfile.mkdtemp(prefix="roadmap-names-"))
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        clone = tmp / "roadmap"
+        (clone / "TauCetiRoadmap" / "Lattices").mkdir(parents=True)
+        (clone / "TauCetiRoadmap" / "Lattices" / "README.md").write_text("## L1. `vanDerBlij`\n", encoding="utf-8")
+        (clone / "TauCetiRoadmap" / "Lattices" / "Suggested.lean").write_text("theorem lattice_eq : True := sorry\n")
+        (clone / "README.md").write_text("Words outside the roadmaps are none of theirs.\n", encoding="utf-8")
+        git(clone, "init", "-q", "-b", "main")
+        git(clone, "add", "-A")
+        git(clone, "commit", "-q", "-m", "roadmaps")
+        commit, names = roadmaps.roadmap_names(clone)
+        self.assertEqual(commit, git(clone, "rev-parse", "HEAD").strip())
+        self.assertEqual(names, ["L1", "True", "lattice_eq", "sorry", "theorem", "vanDerBlij"])
+        d = tmp / "dataset"
+        d.mkdir()
+        (d / "meta.json").write_text(json.dumps({"library": {"commit": "x"}}), encoding="utf-8")
+        roadmaps.write_names(d, commit, names)
+        meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["roadmap"], {"repo": "TauCetiProject/TauCetiRoadmap", "commit": commit,
+                                           "names": "roadmap-names.json", "count": 6})
+        self.assertEqual(roadmaps.read_names(d, meta), frozenset(names))
+        self.assertIsNone(roadmaps.read_names(d, {"library": {}}))  # a dataset that recorded none
+
+
 if __name__ == "__main__":
     unittest.main()
