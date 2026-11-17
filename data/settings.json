@@ -33,5 +33,9 @@
  "signin": {
   "client_id": "Iv23lij5SsHpRaq0Wglg",
   "exchange": "https://tauceti-review-signin.cd-birkbeck.workers.dev/token"
+ },
+ "authors": {
+  "emails": {},
+  "same_person": []
  }
 }
