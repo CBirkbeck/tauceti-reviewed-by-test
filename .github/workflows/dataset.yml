@@ -30,7 +30,7 @@ concurrency:
 jobs:
   extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 350
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -99,14 +99,40 @@ jobs:
           [ -x "$bin" ] || { echo "::error::no trust-extract in release $tag"; exit 1; }
           echo "EXTRACTOR_TAG=$tag" >> "$GITHUB_ENV"
           echo "EXTRACTOR_BIN=$bin" >> "$GITHUB_ENV"
+      # Since Tau Ceti's Mathlib bump of 2026-11-19 the extraction no longer fits the runner's memory: two runs
+      # ended with "the hosted runner lost communication with the server", two hours and three and a half hours
+      # into the next step, where the one before the bump took 118 minutes. Swap on whichever of the runner's
+      # disks has the room turns a runner that dies into a step that is slower; the job's limit is raised with it.
+      - name: Swap for the extraction
+        if: steps.published.outputs.done != 'true'
+        run: |
+          where=/
+          if [ -d /mnt ] && [ "$(df --output=avail -BG /mnt | tail -1 | tr -dc 0-9)" -gt "$(df --output=avail -BG / | tail -1 | tr -dc 0-9)" ]; then where=/mnt; fi
+          room=$(df --output=avail -BG "$where" | tail -1 | tr -dc 0-9)
+          if [ "$room" -ge 45 ]; then
+            file="${where%/}/extract.swap"
+            sudo fallocate -l 24G "$file" || sudo dd if=/dev/zero of="$file" bs=1M count=24576 status=none
+            sudo chmod 600 "$file" && sudo mkswap -q "$file" && sudo swapon "$file"
+          else
+            echo "::warning::only ${room}G free on $where: no swap added for the extraction"
+          fi
+          free -h | sed -n 1,3p; df -h "$where" | tail -1
       - name: Extract
         if: steps.published.outputs.done != 'true'
         working-directory: ${{ runner.temp }}/TauCeti
         run: |
           sudo sysctl -q -w vm.max_map_count=262144 || true
-          lake env "$EXTRACTOR_BIN" extract --root TauCeti --repo TauCetiProject/TauCeti --out "$RUNNER_TEMP/dataset" \
+          # what the extraction needs is printed, so that the next change is sized from a measurement
+          ( while sleep 600; do echo "memory $(date -u +%H:%M): $(free -m | awk 'NR==2{printf "used %d MB, available %d MB", $3, $7} NR==3{printf ", swap used %d MB", $3}')"; done ) &
+          watch=$!
+          timed=""
+          if [ -x /usr/bin/time ]; then timed="/usr/bin/time -v -o $RUNNER_TEMP/extract.time"; fi
+          $timed lake env "$EXTRACTOR_BIN" extract --root TauCeti --repo TauCetiProject/TauCeti --out "$RUNNER_TEMP/dataset" \
             --parts 8 --jobs 1 --skip-modules-file "$RUNNER_TEMP/unbuilt.txt" \
-            --no-statements --no-upstream-docs
+            --no-statements --no-upstream-docs || { pkill -P $watch 2>/dev/null; kill $watch 2>/dev/null; cat "$RUNNER_TEMP/extract.time" 2>/dev/null; exit 1; }
+          pkill -P $watch 2>/dev/null || true
+          kill $watch 2>/dev/null || true
+          grep -E "Maximum resident set size|Elapsed \(wall clock\)" "$RUNNER_TEMP/extract.time" 2>/dev/null || true
           attributes=$(find "$RUNNER_TEMP/extractor" -type f -name attributes.py | head -1)
           if [ -n "$attributes" ]; then python3 "$attributes" --dataset "$RUNNER_TEMP/dataset" --source .; fi
           du -sh "$RUNNER_TEMP/dataset"
