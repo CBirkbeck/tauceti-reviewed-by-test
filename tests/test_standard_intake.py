@@ -1188,7 +1188,8 @@ class OldFormTests(IntakeCase):
                            person(3, "Reviewed-by: Fixture.one", login="alice"))
         bare, reasons, persons = [text for _, text in out.replies]
         self.assertIn("Approve:", bare)
-        self.assertIn(self.bulk_reply(), bare)  # where the approval goes
+        # On the bulk issue itself the reply names that issue (the fixture's is #1).
+        self.assertIn("in a comment on issue #1 (https://github.com/o/r/issues/1)", bare)  # where the approval goes
         self.assertNotIn("needs its text", bare)
         old, yes = out.records
         self.assertEqual((old["by"]["kind"], old["text"]), ("agent", "Matches the fixture's docs, §2."))
