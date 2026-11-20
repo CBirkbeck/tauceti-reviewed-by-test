@@ -807,3 +807,8 @@ def install() -> None:
     intake.process_issue = process_issue
     intake.issue_number = issue_number
     intake.process_comment = pr_links.process_comment
+    # Who may set a status on anyone's record, or write and edit a standard review as a maintainer. evidence-store
+    # counts every member of the organisation that owns the repository (MEMBER); in a personal repository that was
+    # nobody, and in an organisation it is everyone in it. Maintainers stay the owners, the collaborators and the
+    # logins listed in evidence/store.json (`maintainers`), as before the repository moved to an organisation.
+    intake.MAINTAINER_ASSOCIATIONS = ("OWNER", "COLLABORATOR")

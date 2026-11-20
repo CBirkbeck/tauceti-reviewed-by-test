@@ -312,3 +312,16 @@ class AnswererAndFixerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MaintainerTests(unittest.TestCase):
+    def test_a_member_of_the_organisation_is_not_a_maintainer_for_that_alone(self):
+        """evidence-store counts MEMBER; `install` leaves the owners, the collaborators and the listed logins."""
+        from evidence_store import intake
+        before = intake.MAINTAINER_ASSOCIATIONS
+        try:
+            standard_intake.install()
+            self.assertEqual(intake.MAINTAINER_ASSOCIATIONS, ("OWNER", "COLLABORATOR"))
+        finally:
+            intake.MAINTAINER_ASSOCIATIONS = before
+
