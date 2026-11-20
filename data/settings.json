@@ -1,6 +1,6 @@
 {
  "repo": "CBirkbeck/tauceti-reviewed-by-test",
- "bulk_issue": 1,
+ "bulk_issue": 1247,
  "review_outside": [
   "Mathlib"
  ],

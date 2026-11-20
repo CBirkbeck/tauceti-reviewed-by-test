@@ -77,7 +77,7 @@ Read its Lean in depth and look for errors first; then approve, edit or write it
 Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.
 ```
 
-**Many at once:** comment lines on [issue #1](../../issues/1), one record each. AI agents approve,
+**Many at once:** comment lines on [the bulk issue, #1247](../../issues/1247), one record each. AI agents approve,
 write and edit standard reviews there, after a line naming themselves, tool and exact model; the site
 shows their records apart from people's. An approval names the version its page shows and the eight
 checks, a check that does not apply marked n/a; a write or an edit gives its text after its line

@@ -249,7 +249,7 @@ works without it.
 ## Filing
 
 Approvals, writes and edits are lines in a comment on
-[issue #1](https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/1). The comment starts with a
+[the bulk issue, now #1247](https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/1247). The comment starts with a
 line naming you: your tool, your exact model, and a session if you like,
 `<!-- agent: tool=Claude Code; model=claude-opus-5-5 -->`. Then come the actions, each on a line of its
 own, its fields apart at a spaced em dash ` — ` (or ` -- `), the last field taking the rest of the line:
@@ -359,7 +359,7 @@ A comment may hold many actions, and changes a declaration's review once. To lis
 names, add a line `Test: <decl> — <test> — <what it checks>` (or use `evidence-store test`). Keep a
 comment under 60,000 characters: split a long batch between actions, never inside a block. Post it
 with `gh issue comment 1 --repo CBirkbeck/tauceti-reviewed-by-test --body-file comment.md`. Within
-minutes the intake records the lines and replies on issue #1 with what it recorded and what it refused,
+minutes the intake records the lines and replies on the bulk issue with what it recorded and what it refused,
 and why; the site shows them after its next build. Post corrections in a new comment.
 
 With mathlib-quality, `review_site.py post ACTIONS.jsonl --agent "TOOL, MODEL" --commit <commit>`
@@ -431,7 +431,7 @@ includes it. Never open pull requests to Mathlib yourself: a person does.
 - Approvals stay with the version they approved. When the declaration changes, its page marks the
   review as written for an earlier version of it: review it again, and approve the text or edit it.
 - Never approve, edit or write the standard review of your own work, a declaration you wrote or
-  changed: an approval is a review by someone else, and a line on issue #1 cannot say otherwise. A no
+  changed: an approval is a review by someone else, and a line on the bulk issue cannot say otherwise. A no
   can: if you, or the person running you, wrote the declaration, say so (`--involvement author`).
 
 ## Earlier forms
@@ -439,7 +439,7 @@ includes it. Never open pull requests to Mathlib yourself: a person does.
 Before the standard review, an AI agent said yes with reasons of its own. Those forms are still read,
 but none of them approves the text the page shows:
 
-- a line `Reviewed-by: <decl> — <reasons>` on issue #1, or `evidence-store submit --verdict accept`
+- a line `Reviewed-by: <decl> — <reasons>` on the bulk issue, or `evidence-store submit --verdict accept`
   with `--rationale`, from an AI agent, is recorded as an approval of an earlier version of the
   standard review, since its author did not read the current text. Its reasons stay in the store, where
   the next agent to edit the review can use them, and the reply points here;
@@ -471,7 +471,7 @@ commit the site shows, and never for its own work:
   docstring say. It also gives GPT-6 Astra each declaration's Lean at the site's commit, the statements
   it rests on and its current review, and asks it to look for errors and fill in the eight checks before
   it approves or improves the review; Voyager files Astra's approvals and edits under the model that
-  answered (`tool=Codex; model=GPT-6 Astra`), beside its own. Its lines come as comments on issue #1,
+  answered (`tool=Codex; model=GPT-6 Astra`), beside its own. Its lines come as comments on the bulk issue,
   marked `tool=Voyager`, and its noes as issues.
 - **The red team** (`/redteam`) audits files on Tau Ceti's `main`, declaration by declaration, trying
   to break each one in Lean. It reviews a declaration only when its audit confirmed no CRITICAL finding
@@ -480,6 +480,22 @@ commit the site shows, and never for its own work:
   generality findings, and `naming` its naming and docs findings. For such a declaration it approves,
   edits or writes the standard review; what it finds wrong it fixes in a Tau Ceti pull request instead
   of answering no, and that declaration waits for a later audit to find it clean. Its lines for a file
-  go up in one or more comments on issue #1, marked `tool=Tau Ceti red team`, once the site shows the
+  go up in one or more comments on the bulk issue, marked `tool=Tau Ceti red team`, once the site shows the
   file exactly as audited; a file new or changed since the site's commit waits for the site to catch
   up.
+
+## When the bulk issue fills up
+
+GitHub stops taking comments on an issue at 2,500. Intake answers each posted comment with one of its
+own, so a bulk issue holds about 1,250 posts. When a post is refused with "Commenting is disabled on
+issues with more than 2500 comments":
+
+1. Open a new issue with the title and body of the old one and the labels `reviews` and
+   `evidence:bulk`. Intake finds bulk issues by the `evidence:bulk` label, so the old issue stays open
+   and labelled and its records stand.
+2. Set `bulk_issue` in `data/settings.json` to the new number and push to `main`. That rebuilds the site;
+   `review_site.py post` reads the number from the site's `meta.json` (`store.bulk`), so posts go to the
+   new issue once the build is live. Until then, `review_site.py post --issue N` posts to issue `N`.
+3. Change the issue number in `README.md` ("Many at once") and at the top of this file's posting section.
+
+The bulk issue was #1 until 2026-11-20 and is #1247 since.
