@@ -1,8 +1,10 @@
-"""What the scripts share: where things are, the settings, and the hash that shards names."""
+"""What the scripts share: where things are, the settings, how records' origins compare, and the hash that shards
+names."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Callable, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS = ROOT / "data" / "settings.json"
@@ -14,6 +16,37 @@ def load_settings(path: Path = SETTINGS) -> dict:
 
 def save_settings(settings: dict, path: Path = SETTINGS) -> None:
     Path(path).write_text(json.dumps(settings, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def origin_key(repo: str, settings: dict | None = None) -> Callable[[str], str]:
+    """How a run for the store's repository, which GitHub now names `repo` (intake's `--repo`), compares the origins
+    of records (`origin.ref`): the key of a ref names the repository `repo` where the ref names it by any name it has
+    had, the settings' `repo` and the names it had before (`formerly`), in either form intake writes, a link
+    `https://github.com/<name>/…` or `<name>#<n>…`, and ignoring case, as GitHub's names do. Any other ref is its own
+    key. A repository moved or renamed keeps its issues, their numbers and their comments' ids, and GitHub names them
+    under the new name from then on, while the records made before name them under the old one: compared by key, an
+    issue, comment or line recorded under either name is found recorded, and none is recorded twice. `settings` is
+    data/settings.json unless given."""
+    settings = load_settings() if settings is None else settings
+    names = dict.fromkeys(n.lower() for n in [repo, settings["repo"], *settings.get("formerly", [])] if n)
+    heads = [(head, to) for n in names for head, to in ((f"https://github.com/{n}/", f"https://github.com/{repo}/"),
+                                                        (f"{n}#", f"{repo}#"))]
+    longest = max((len(head) for head, _ in heads), default=0)
+
+    def key(ref: str) -> str:
+        start = ref[:longest].lower()
+        for head, to in heads:
+            if start.startswith(head):
+                return to + ref[len(head):]
+        return ref
+    return key
+
+
+def from_origin(records: Iterable[dict], ref: str, key: Callable[[str], str]) -> list[dict]:
+    """The records made from one issue, comment, line or event, as evidence-core's `Store.from_origin` finds them, by
+    the key of their origin (`origin_key`)."""
+    want = key(ref)
+    return [r for r in records if key((r.get("origin") or {}).get("ref") or "") == want]
 
 
 def fnv_shard(name: str, shards: int) -> int:

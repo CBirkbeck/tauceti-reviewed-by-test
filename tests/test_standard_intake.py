@@ -1228,6 +1228,7 @@ class InstallTests(IntakeCase):
                 mock.patch.object(github, "comments", lambda repo, n: said), \
                 mock.patch.object(cli, "process", cli.process), \
                 mock.patch.object(intake, "process_issue", intake.process_issue), \
+                mock.patch.object(intake, "issue_number", intake.issue_number), \
                 contextlib.redirect_stdout(io.StringIO()):
             code = evidence_intake.main(["intake", "--repo", "o/r", "--store", str(self.dir / "evidence"),
                                          "--dataset", str(DATASET), *args, "--outcome", str(self.dir / "outcome.json")])
@@ -1253,7 +1254,8 @@ class InstallTests(IntakeCase):
 
     def test_install_reaches_the_forms_too(self):
         with mock.patch.object(cli, "process", cli.process), \
-                mock.patch.object(intake, "process_issue", intake.process_issue):
+                mock.patch.object(intake, "process_issue", intake.process_issue), \
+                mock.patch.object(intake, "issue_number", intake.issue_number):
             standard_intake.install()
             out = cli.process(form(8, rationale="Matches §1."), [], self.ctx)
         (n, said), = out.replies

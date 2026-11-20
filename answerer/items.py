@@ -8,6 +8,7 @@ reading the site makes. People's items come first, then AI agents', the oldest f
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Sequence
 
 from evidence_core import views
 from evidence_core.coverage import Evidence
@@ -39,16 +40,22 @@ class Item:
         return self.record.get("at", "")
 
 
-def issue_of(r: dict, repo: str) -> int | None:
-    """The number of the record's own issue, when it came from an issue of `repo`."""
+def issue_of(r: dict, repo: str, formerly: Sequence[str] = ()) -> int | None:
+    """The number of the record's own issue, when it came from an issue of `repo`, under its name now or a name it had
+    (`formerly`, settings.json's): a repository moved keeps its issues and their numbers. Names are compared ignoring
+    case, as GitHub's are."""
     origin = r.get("origin") or {}
     ref = origin.get("ref", "")
-    if origin.get("kind") == "issue" and ref.startswith(repo + "#") and ref.split("#", 1)[1].isdigit():
-        return int(ref.split("#", 1)[1])
+    if origin.get("kind") != "issue":
+        return None
+    for name in (repo, *formerly):
+        head = name + "#"
+        if ref[:len(head)].lower() == head.lower() and ref[len(head):].isdigit():
+            return int(ref[len(head):])
     return None
 
 
-def open_items(ev: Evidence, repo: str) -> list[Item]:
+def open_items(ev: Evidence, repo: str, formerly: Sequence[str] = ()) -> list[Item]:
     seen, items = set(), []
     for name, rows in ev.by_decl.items():
         for r, s in rows:
@@ -57,7 +64,7 @@ def open_items(ev: Evidence, repo: str) -> list[Item]:
             seen.add(r["id"])
             v = views.record_view(ev, r, s, name)
             if v["inForce"] and v["state"] == "open":
-                items.append(Item(r["id"], r["verdict"], name, v, r, issue_of(r, repo)))
+                items.append(Item(r["id"], r["verdict"], name, v, r, issue_of(r, repo, formerly)))
     return sorted(items, key=lambda i: (i.by_agent, i.at, i.id))
 
 

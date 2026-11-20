@@ -314,6 +314,7 @@ class IntakeTests(unittest.TestCase):
                 mock.patch.object(github, "recent_issues", lambda repo, since: []), \
                 mock.patch.object(cli, "process", cli.process), \
                 mock.patch.object(intake, "process_issue", intake.process_issue), \
+                mock.patch.object(intake, "issue_number", intake.issue_number), \
                 mock.patch.object(intake, "process_comment", intake.process_comment), \
                 mock.patch.object(pr_links, "follow_into", follow_into):
             code = evidence_intake.main(["intake", "--repo", "o/r", "--store", str(self.dir / "evidence"), *extra,
@@ -329,7 +330,8 @@ class IntakeTests(unittest.TestCase):
     def test_intake_reads_addressed_through_pr_links(self):
         with mock.patch.object(intake, "process_comment", intake.process_comment), \
                 mock.patch.object(cli, "process", cli.process), \
-                mock.patch.object(intake, "process_issue", intake.process_issue):  # put back as they were
+                mock.patch.object(intake, "process_issue", intake.process_issue), \
+                mock.patch.object(intake, "issue_number", intake.issue_number):  # put back as they were
             evidence_intake.standard_intake.install()
             self.assertIs(intake.process_comment, pr_links.process_comment)
 

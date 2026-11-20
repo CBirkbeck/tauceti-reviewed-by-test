@@ -72,7 +72,8 @@ class IntakeTests(unittest.TestCase):
         with mock.patch.object(github, "gh_json", gh_json), mock.patch.object(github, "issue", issue), \
                 mock.patch.object(github, "recent_issues", github.recent_issues), \
                 mock.patch.object(cli, "process", cli.process), \
-                mock.patch.object(intake, "process_issue", intake.process_issue):
+                mock.patch.object(intake, "process_issue", intake.process_issue), \
+                mock.patch.object(intake, "issue_number", intake.issue_number):
             return evidence_intake.main(["intake", "--repo", "o/r", "--store", str(self.dir / "evidence"),
                                          "--event", str(self.event), "--event-name", "issues", *sweep,
                                          "--outcome", str(self.dir / "outcome.json")])

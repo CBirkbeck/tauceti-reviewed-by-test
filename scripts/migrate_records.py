@@ -74,7 +74,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import ROOT  # noqa: E402
+from common import ROOT, from_origin, load_settings, origin_key  # noqa: E402
 import migrate_check  # noqa: E402
 import migrate_inputs  # noqa: E402
 import standard  # noqa: E402
@@ -143,9 +143,11 @@ def read_rows(path: Path) -> tuple[list[tuple[int, str, str]], list[str]]:
 def voyager_refused(rows: list[tuple[int, str, str]], ds: Dataset, store: Store, url: str, at: str,
                     session: str) -> tuple[list[dict], list[str]]:
     """The records of Voyager's refused lines, from (line, declaration, reasons) rows: each made at `at`, from line k
-    of the comment at `url`, keyed in `ds`. Also what is wrong with the rows that make none."""
+    of the comment at `url`, keyed in `ds`. Also what is wrong with the rows that make none. A line is recorded already
+    under any name the repository has had (common.origin_key)."""
     by = voyager(session)
     rubric = store.rubric
+    key = origin_key(load_settings()["repo"])
     out, problems, seen = [], [], set()
     for k, name, reasons in rows:
         ref = f"{url}/line/{k}"
@@ -154,7 +156,7 @@ def voyager_refused(rows: list[tuple[int, str, str]], ds: Dataset, store: Store,
             problems.append(f"line {k} (`{name}`): the line is given twice")
             continue
         seen.add(k)
-        if store.from_origin(ref):
+        if from_origin(store.records, ref, key):
             problems.append(f"line {k} (`{name}`): the store has the line recorded already")
             continue
         if not reasons.strip():

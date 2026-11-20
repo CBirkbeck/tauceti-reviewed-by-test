@@ -5,6 +5,7 @@ oldest first. Whether the answerer has answered one does not matter: an answer i
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Sequence
 
 from answerer.items import issue_of
 
@@ -54,8 +55,9 @@ def answerer_busy(path) -> set[str]:
     return {k for k, e in items.items() if (e.get("pr") or e.get("upstream") or e.get("outside")) and not e.get("done")}
 
 
-def reviews(records: list[dict], repo: str) -> list[Review]:
-    """People's noes and suggestions from issues of `repo`, in force, with their threads, the oldest first."""
+def reviews(records: list[dict], repo: str, formerly: Sequence[str] = ()) -> list[Review]:
+    """People's noes and suggestions from issues of `repo` (under its name now, or one it had: `formerly`), in force,
+    with their threads, the oldest first."""
     statuses: dict[str, list[dict]] = {}
     replies: dict[str, list[dict]] = {}
     superseded = set()
@@ -77,7 +79,7 @@ def reviews(records: list[dict], repo: str) -> list[Review]:
         said = sorted(statuses.get(r["id"], []), key=at)
         if said and said[-1].get("state") == "withdrawn":
             continue
-        issue = issue_of(r, repo)
+        issue = issue_of(r, repo, formerly)
         if issue is None:
             continue
         out.append(Review(r["id"], r["verdict"], r, issue, sorted(replies.get(r["id"], []) + said, key=at)))

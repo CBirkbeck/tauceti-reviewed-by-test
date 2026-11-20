@@ -63,7 +63,7 @@ def run(a: argparse.Namespace) -> int:
             return 1
         ds = Dataset.load(ready.dataset)
         ev = Evidence.resolve(store.records, ds)
-        items = open_items(ev, settings["repo"])
+        items = open_items(ev, settings["repo"], settings.get("formerly", ()))
         if a.only:
             if not a.dry_run:
                 print("--only is for a dry run", file=sys.stderr)
