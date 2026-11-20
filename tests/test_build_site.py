@@ -33,9 +33,10 @@ def tearDownModule():
 
 
 def data(path: str, root: Path | None = None):
-    """A file of the built site's data, parsed. A module's file (`m/`, `u/`) is on disk gzipped, as `<path>.gz`."""
+    """A file of the built site's data, parsed. The file of a module outside the library (`u/`) is on disk
+    gzipped, as `<path>.gz`."""
     file = (root or OUT / "site") / "data" / path
-    if path.startswith(("m/", "u/")):
+    if path.startswith("u/"):
         return json.loads(gzip.decompress(file.with_name(file.name + ".gz").read_bytes()))
     return json.loads(file.read_text(encoding="utf-8"))
 
@@ -78,13 +79,16 @@ class MetaTests(unittest.TestCase):
         self.assertEqual([(i["name"], i["commit"]) for i in m["imports"]], [("Test imports", "c0ffee")])
         self.assertEqual(m["areas"], [["Basic", 15, 1], ["Uses", 4, 1], ["Notation", 2, 0]])
 
-    def test_only_the_module_files_are_gzipped(self):
-        # (2026-11-20) The per-module files were 553 MB of a 958 MB site, over the budget; gzipped they are an
-        # eighth. Only the site's own pages read them. What other readers fetch by its URL stays plain JSON.
+    def test_only_the_files_of_outside_modules_are_gzipped(self):
+        # (2026-11-20) Over the budget, the site was built with data/m/ and data/u/ gzipped: mathlib-quality's
+        # scripts/review_site.py, which reads a declaration's records from data/m/<n>.json, answered 404 for three
+        # hours. What other readers fetch by its URL stays plain JSON, the library's module files among it.
         root = OUT / "site" / "data"
         packed = sorted(p.relative_to(root).as_posix() for p in root.rglob("*.gz"))
-        self.assertTrue(packed and all(p.startswith(("m/", "u/")) and p.endswith(".json.gz") for p in packed), packed[:5])
-        self.assertEqual([p.name for d in ("m", "u") for p in (root / d).iterdir() if p.suffix != ".gz"], [])
+        self.assertTrue(packed and all(p.startswith("u/") and p.endswith(".json.gz") for p in packed), packed[:5])
+        self.assertEqual([p.name for p in (root / "u").iterdir() if p.suffix != ".gz"], [])
+        self.assertTrue(list((root / "m").glob("*.json")) and not list((root / "m").glob("*.gz")))
+        self.assertIn("decls", json.loads(next(iter(sorted((root / "m").glob("*.json")))).read_text(encoding="utf-8")))
         for plain in ("meta.json", "modules.json", "names/0.json", "nodes/0.json", "standard/0.json"):
             json.loads((root / plain).read_text(encoding="utf-8"))
         first = root / packed[0]
