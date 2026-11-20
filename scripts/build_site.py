@@ -10,6 +10,7 @@ fails when the site is larger than its budget: GitHub Pages serves at most 1 GB.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import shutil
 import sys
@@ -30,6 +31,18 @@ def write(path: Path, data) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
+def write_packed(path: Path, data) -> Path:
+    """A file that only the site's own pages read, gzipped at `<path>.gz` (web/data.js unpacks it): GitHub Pages
+    serves at most 1 GB, and the per-module files were 553 MB of a 958 MB site on 2026-11-20, eight times what
+    they are gzipped. The files other readers fetch by their URL (meta.json, names/, nodes/, standard/ and the
+    rest) stay plain JSON. The gzip carries no time, so that the same data gives the same file."""
+    path = path.with_name(path.name + ".gz")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    path.write_bytes(gzip.compress(raw, compresslevel=9, mtime=0))
+    return path
+
+
 def build(dataset: Path, store: Path, out: Path, settings: dict, source: Path | None = None,
           imports: Path | None = None, web: Path = ROOT / "web", budget_mb: int = 950,
           cap: int = site_data.CAP) -> dict:
@@ -47,9 +60,9 @@ def build(dataset: Path, store: Path, out: Path, settings: dict, source: Path | 
     for k, reviews in site.standard_shards().items():
         write(data / "standard" / f"{k}.json", reviews)
     for mi in range(site.project_modules):
-        write(data / "m" / f"{mi}.json", site.module_file(mi))
+        write_packed(data / "m" / f"{mi}.json", site.module_file(mi))
     for mi in range(site.project_modules, len(site.modules)):
-        write(data / "u" / f"{mi}.json", site.outside_module_file(mi))
+        write_packed(data / "u" / f"{mi}.json", site.outside_module_file(mi))
     write(data / "modules.json", site.modules)
     names, titles = site.search()
     write(data / "search.json", names)

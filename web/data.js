@@ -7,10 +7,19 @@
     if (!cache.has(path)) {
       cache.set(path, fetch('data/' + path).then(r => {
         if (!r.ok) throw new Error(`data/${path}: ${r.status}`);
-        return r.json();
+        return path.endsWith('.gz') ? unpacked(r) : r.json();
       }).catch(e => { cache.delete(path); throw e; }));
     }
     return cache.get(path);
+  }
+  /* A module's file is gzipped by the build (scripts/build_site.py, write_packed): the host serves it as a file,
+     not as an encoding, so it is unpacked here. The bytes say which they are: a server that does send it as an
+     encoding, or a test that answers with plain JSON, has already left JSON text. */
+  async function unpacked(r) {
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return JSON.parse(new TextDecoder().decode(bytes));
+    if (typeof DecompressionStream !== 'function') throw new Error('this browser cannot unpack the site\'s data (no DecompressionStream)');
+    return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json();
   }
   const KINDS = {t: 'theorem', d: 'definition', s: 'structure', c: 'class', n: 'inductive', i: 'instance', a: 'axiom', o: 'opaque'};
   const FLAG = Object.freeze({PROJECT: 1, NAMED: 2, BASIC: 4, ROUTINE: 8, DOCUMENTED: 16, AUX: 32, SORRY: 64});
@@ -42,15 +51,15 @@
     const hit = rows.find(r => r[1] === name);
     return hit ? hit[0] : null;
   }
-  /* A declaration: its node, its entry and its module's file (data/m/<n>.json for one of the library's,
-     data/u/<n>.json for one outside it). */
+  /* A declaration: its node, its entry and its module's file (data/m/<n>.json.gz for one of the library's,
+     data/u/<n>.json.gz for one outside it). */
   async function decl(name) {
     const id = await idOf(name);
     if (id == null) return null;
     const n = await node(id);
     if (n.mod < 0) return {node: n, entry: null, module: null};
     // One outside the library is in its module's file in data/u/, with its signature only.
-    const module = await json(`${n.flags & FLAG.PROJECT ? 'm' : 'u'}/${n.mod}.json`);
+    const module = await json(`${n.flags & FLAG.PROJECT ? 'm' : 'u'}/${n.mod}.json.gz`);
     return {node: n, entry: module.decls.find(e => e.id === id) || null, module};
   }
   /* A declaration's standard review: its entry in the shard of its name in data/standard/, or null while it has
@@ -71,7 +80,7 @@
   async function moduleByName(name) {
     const rows = await json('modules.json');
     const n = rows.findIndex(r => r[0] === name);
-    return n < 0 ? null : {index: n, row: rows[n], file: n < (await meta()).counts.modules ? await json(`m/${n}.json`) : null};
+    return n < 0 ? null : {index: n, row: rows[n], file: n < (await meta()).counts.modules ? await json(`m/${n}.json.gz`) : null};
   }
   window.TauData = Object.freeze({
     json, meta, node, nodes, idOf, decl, standard, moduleByName, fnv, KINDS, FLAG, STATES,

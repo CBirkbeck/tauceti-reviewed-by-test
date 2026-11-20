@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import base64
 import functools
+import gzip
 import hashlib
 import http.server
 import json
@@ -370,15 +371,22 @@ def review(browser, url, errors):
     expect("AI review" not in page.locator(".review").text_content(), "and has no AI review to say it lacks")
 
 
+def parsed(resp):
+    """The JSON of a file of the site as the server gave it: a module's file comes gzipped (data.js unpacks it)."""
+    body = resp.body()
+    return json.loads(gzip.decompress(body) if body[:2] == b"\x1f\x8b" else body)
+
+
 def edited(*changes):
     """A `before` for `visit`: files of the site as the page gets them, but changed, to make a case the fixture lacks.
-    Each change is a glob and a function that changes the file's parsed JSON in place."""
+    Each change is a glob and a function that changes the file's parsed JSON in place. A changed file is answered
+    as plain JSON, which the page reads as well as the gzipped file it asked for."""
     def answering(change):
         def answer(route):
             resp = route.fetch()
-            data = resp.json()
+            data = parsed(resp)
             change(data)
-            route.fulfill(response=resp, json=data)
+            route.fulfill(status=resp.status, content_type="application/json", body=json.dumps(data, ensure_ascii=False))
         return answer
 
     def before(page):
@@ -497,7 +505,7 @@ def standard_review_states(browser, url, errors):
         astra = next(v for v in e["records"] if v["kind"] == "review" and v["by"]["kind"] == "agent")
         e["records"].append({**astra, "id": astra["id"] + "-later", "at": "2026-10-28T08:00:00Z"})
     page = visit(browser, url, "#/d/Fixture.triple_pos", errors,
-                 before=edited(("**/data/standard/*.json", approval), ("**/data/m/*.json", in_module("Fixture.triple_pos", later))))
+                 before=edited(("**/data/standard/*.json", approval), ("**/data/m/*.json.gz", in_module("Fixture.triple_pos", later))))
     rows = page.locator(".review .reviews-list .mark.agent.stale").evaluate_all(
         "ms => ms.map(m => [m.querySelector('.who').textContent, m.querySelector('.note').textContent, m.parentElement.querySelector('time').dateTime])")
     expect(rows == [["Codex, GPT-6 Astra AI via @example", "earlier form", "2026-10-28T08:00:00Z"],
@@ -600,7 +608,7 @@ def without_standard(name: str, extra_yeses: int = 0):
         yes = next(v for v in e["records"] if v["kind"] == "review" and v["verdict"] == "accept" and v["by"]["kind"] == "agent")
         e["records"] += [{**yes, "id": f"{yes['id']}-{i}"} for i in range(extra_yeses)]
     return edited(("**/data/standard/*.json", lambda data: data.pop(name, None)),
-                  *([("**/data/m/*.json", in_module(name, more))] if extra_yeses else []))
+                  *([("**/data/m/*.json.gz", in_module(name, more))] if extra_yeses else []))
 
 
 @check
@@ -640,7 +648,7 @@ def with_answers(name: str, *answers: dict):
     def add(e):
         first = next(v for v in e["records"] if v["kind"] == "review")
         e["records"] += [{**first, "id": f"{first['id']}-{i}", "reference": None, "checked": {}, **a} for i, a in enumerate(answers)]
-    return edited(("**/data/m/*.json", in_module(name, add)))
+    return edited(("**/data/m/*.json.gz", in_module(name, add)))
 
 
 @check
@@ -735,7 +743,7 @@ def noes_are_every_ones(browser, url, errors):
         no["by"] = {"kind": "agent", "login": "example", "agent": {"tool": "Codex", "model": "GPT-6 Astra"},
                     "label": "Codex (GPT-6 Astra) via example", "involvement": "unknown"}
     page = visit(browser, url, "#/d/Fixture.triple_comm", errors,
-                 before=edited(("**/data/m/*.json", in_module("Fixture.triple_comm", astra))))
+                 before=edited(("**/data/m/*.json.gz", in_module("Fixture.triple_comm", astra))))
     box = page.locator(".review")
     expect(box.locator(".mark.tally.no .who").inner_text() == "1 AI" and box.locator(".reviews-list .mark.no.agent").count() == 1
            and box.locator(".reviews-list .mark.yes.person").count() == 1,
@@ -1274,7 +1282,7 @@ def fields(browser, url, errors):
     def give(page):
         def answer(route):
             resp = route.fetch()
-            data = resp.json()
+            data = parsed(resp)
             names = data["names"]
             if "Nat" not in names:
                 names.append("Nat")
@@ -1283,8 +1291,8 @@ def fields(browser, url, errors):
                     e["fields"] = [{"t": "carrier : Type", "r": [], "i": 1}, {"t": "val : Nat", "r": [[6, 9, names.index("Nat")]]},
                                    {"t": "pos : 0 < self.val", "r": [], "d": "It is `positive`."}]
                     e.pop("rest", None)
-            route.fulfill(response=resp, json=data)
-        page.route("**/data/m/*.json", answer)
+            route.fulfill(status=resp.status, content_type="application/json", body=json.dumps(data, ensure_ascii=False))
+        page.route("**/data/m/*.json.gz", answer)
     page = visit(browser, url, "#/d/Fixture.Pos", errors, before=give)
     box = page.locator(".lean details[open]", has_text="Fields")
     expect(box.count() == 1, "the fields, open under the header")

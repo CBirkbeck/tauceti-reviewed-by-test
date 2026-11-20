@@ -1,3 +1,4 @@
+import gzip
 import json
 import shutil
 import sys
@@ -32,7 +33,11 @@ def tearDownModule():
 
 
 def data(path: str, root: Path | None = None):
-    return json.loads(((root or OUT / "site") / "data" / path).read_text(encoding="utf-8"))
+    """A file of the built site's data, parsed. A module's file (`m/`, `u/`) is on disk gzipped, as `<path>.gz`."""
+    file = (root or OUT / "site") / "data" / path
+    if path.startswith(("m/", "u/")):
+        return json.loads(gzip.decompress(file.with_name(file.name + ".gz").read_bytes()))
+    return json.loads(file.read_text(encoding="utf-8"))
 
 
 def node_id(name: str, root: Path | None = None) -> int:
@@ -72,6 +77,21 @@ class MetaTests(unittest.TestCase):
         self.assertEqual(m["store"], {"repo": "example/fixture-store", "name": "Fixture", "bulk": 1})
         self.assertEqual([(i["name"], i["commit"]) for i in m["imports"]], [("Test imports", "c0ffee")])
         self.assertEqual(m["areas"], [["Basic", 15, 1], ["Uses", 4, 1], ["Notation", 2, 0]])
+
+    def test_only_the_module_files_are_gzipped(self):
+        # (2026-11-20) The per-module files were 553 MB of a 958 MB site, over the budget; gzipped they are an
+        # eighth. Only the site's own pages read them. What other readers fetch by its URL stays plain JSON.
+        root = OUT / "site" / "data"
+        packed = sorted(p.relative_to(root).as_posix() for p in root.rglob("*.gz"))
+        self.assertTrue(packed and all(p.startswith(("m/", "u/")) and p.endswith(".json.gz") for p in packed), packed[:5])
+        self.assertEqual([p.name for d in ("m", "u") for p in (root / d).iterdir() if p.suffix != ".gz"], [])
+        for plain in ("meta.json", "modules.json", "names/0.json", "nodes/0.json", "standard/0.json"):
+            json.loads((root / plain).read_text(encoding="utf-8"))
+        first = root / packed[0]
+        self.assertEqual(first.read_bytes()[:2], b"\x1f\x8b")
+        self.assertIn("decls", json.loads(gzip.decompress(first.read_bytes())))
+        again = build_site.write_packed(OUT / "again" / "x.json", {"a": 1})
+        self.assertEqual(again.read_bytes(), build_site.write_packed(OUT / "again2" / "x.json", {"a": 1}).read_bytes())
 
     def test_every_node_is_found_by_its_name(self):
         rows = [json.loads(l) for l in (fixture_site.DATASET / "decls.jsonl").read_text().splitlines() if l.strip()]
