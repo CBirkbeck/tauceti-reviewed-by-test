@@ -17,7 +17,7 @@ class StoreTests(unittest.TestCase):
         c = self.store.config
         self.assertEqual(c["name"], "Tau Ceti")
         self.assertEqual(c["library"], {"repo": "TauCetiProject/TauCeti", "root": "TauCeti"})
-        self.assertEqual(c["datasets"], {"repo": "CBirkbeck/tauceti-reviewed-by-test",
+        self.assertEqual(c["datasets"], {"repo": "TauCetiProject/TauCetiReviewSite",
                                          "tag": "dataset-{commit12}", "asset": "dataset.tar.gz"})
         self.assertEqual(c["imports"], [])
         self.assertEqual(c["maintainers"], ["CBirkbeck"])

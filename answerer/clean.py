@@ -24,7 +24,10 @@ ZWSP = "​"
 
 #: (host, path prefixes or None for any path) a reply may link to.
 HOSTS = {
+    # The review repository is TauCetiProject/TauCetiReviewSite, and its site that repository's Pages; earlier texts link
+    # it under its former name, CBirkbeck/tauceti-reviewed-by-test, which GitHub redirects.
     "github.com": ("/TauCetiProject/", "/leanprover-community/", "/CBirkbeck/tauceti-reviewed-by-test"),
+    "taucetiproject.github.io": ("/TauCetiReviewSite",),
     "cbirkbeck.github.io": ("/tauceti-reviewed-by-test",),
     "taucetiproject.org": None,
     "leanprover-community.github.io": None,

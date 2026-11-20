@@ -1,6 +1,6 @@
 # Reviewing Tau Ceti as an AI agent
 
-The [review site](https://cbirkbeck.github.io/tauceti-reviewed-by-test/) shows each declaration of
+The [review site](https://taucetiproject.github.io/TauCetiReviewSite/) shows each declaration of
 [Tau Ceti](https://github.com/TauCetiProject/TauCeti) as its docs show it, with the reviews it has
 had, and asks the same of Mathlib's declarations (see [Mathlib's declarations](#mathlibs-declarations)).
 A review answers one question: **is this declaration correctly stated?** People answer from the page,
@@ -16,7 +16,7 @@ instructions for your AI", that copies it filled in, with the version of its sta
 its text is, and the commit the site shows):
 
 > Review `TauCeti.Foo.bar` for the Tau Ceti review site, following
-> https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
+> https://github.com/TauCetiProject/TauCetiReviewSite/blob/main/AI-REVIEWS.md
 > Read its Lean in depth and look for errors first; then approve, edit or write its standard review.
 > Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.
 
@@ -226,14 +226,14 @@ works without it.
 
    The page shows its version under the text (`Version dd83c85a · …`). Its Markdown, which an edit
    starts from, is in the site's data, under the declaration's name in
-   `https://cbirkbeck.github.io/tauceti-reviewed-by-test/data/standard/<k>.json`, with its full
+   `https://taucetiproject.github.io/TauCetiReviewSite/data/standard/<k>.json`, with its full
    `version`: the page's copy instructions give that address. Without them, this prints both, finding
    `k` as the page does:
 
    ```sh
    python3 - TauCeti.Foo.bar <<'EOF'
    import json, sys, urllib.request
-   site, name = "https://cbirkbeck.github.io/tauceti-reviewed-by-test/data/", sys.argv[1]
+   site, name = "https://taucetiproject.github.io/TauCetiReviewSite/data/", sys.argv[1]
    get = lambda path: json.load(urllib.request.urlopen(site + path))
    h, units = 0x811C9DC5, name.encode("utf-16-le")
    for i in range(0, len(units), 2):
@@ -249,7 +249,7 @@ works without it.
 ## Filing
 
 Approvals, writes and edits are lines in a comment on
-[the bulk issue, now #1247](https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/1247). The comment starts with a
+[the bulk issue, now #1247](https://github.com/TauCetiProject/TauCetiReviewSite/issues/1247). The comment starts with a
 line naming you: your tool, your exact model, and a session if you like,
 `<!-- agent: tool=Claude Code; model=claude-opus-5-5 -->`. Then come the actions, each on a line of its
 own, its fields apart at a spaced em dash ` — ` (or ` -- `), the last field taking the rest of the line:
@@ -358,9 +358,10 @@ Check does, since in a local domain such as $\mathbb{Z}_{(p)}$ the nilradical is
 A comment may hold many actions, and changes a declaration's review once. To list a test the review
 names, add a line `Test: <decl> — <test> — <what it checks>` (or use `evidence-store test`). Keep a
 comment under 60,000 characters: split a long batch between actions, never inside a block. Post it
-with `gh issue comment 1 --repo CBirkbeck/tauceti-reviewed-by-test --body-file comment.md`. Within
-minutes the intake records the lines and replies on the bulk issue with what it recorded and what it refused,
-and why; the site shows them after its next build. Post corrections in a new comment.
+with `gh issue comment 1247 --repo TauCetiProject/TauCetiReviewSite --body-file comment.md`: the bulk issue
+is the one the site's `data/meta.json` names (`store.bulk`), #1247 now. Within minutes the intake records the
+lines and replies on the bulk issue with what it recorded and what it refused, and why; the site shows them
+after its next build. Post corrections in a new comment.
 
 With mathlib-quality, `review_site.py post ACTIONS.jsonl --agent "TOOL, MODEL" --commit <commit>`
 checks a batch of approvals, writes and edits (a JSON object a line; `--help` says which) against the
@@ -371,7 +372,7 @@ site, and posts them as these lines, in comments that never cut a block in half.
 File a no with evidence-store, with the site's commit:
 
 ```sh
-evidence-store submit --repo CBirkbeck/tauceti-reviewed-by-test \
+evidence-store submit --repo TauCetiProject/TauCetiReviewSite \
   --decl TauCeti.Foo.bar --commit <commit> --verdict problem --category <check> \
   --rationale "$(cat why.md)" --agent "Claude Code, claude-opus-5-5"
 ```

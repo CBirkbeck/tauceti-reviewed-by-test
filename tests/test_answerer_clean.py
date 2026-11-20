@@ -44,6 +44,16 @@ class CleanTests(unittest.TestCase):
         # Another account's repository on GitHub is not a known host.
         self.assertEqual(clean("[here](https://github.com/someone/thing)"), "here")
 
+    def test_links_to_the_review_site_under_its_name_now_and_before(self):
+        for link in ["[the no](https://github.com/TauCetiProject/TauCetiReviewSite/issues/1244)",
+                     "[the site](https://taucetiproject.github.io/TauCetiReviewSite/#/d/TauCeti.Foo.bar)",
+                     "[the no](https://github.com/CBirkbeck/tauceti-reviewed-by-test/issues/978)",
+                     "[the site](https://cbirkbeck.github.io/tauceti-reviewed-by-test/#/d/TauCeti.Foo.bar)",
+                     "[the site](https://taucetiproject.org/review/#/d/TauCeti.Foo.bar)"]:
+            self.assertEqual(clean(link), link)
+        self.assertEqual(clean("[x](https://taucetiproject.github.io/elsewhere/)"), "x")
+        self.assertEqual(clean("[x](https://cbirkbeck.github.io/tauceti-explorer/)"), "x")
+
     def test_images_go(self):
         self.assertEqual(clean("before ![a diagram](https://github.com/TauCetiProject/x.png) after"),
                          "before a diagram after")

@@ -3,9 +3,9 @@ import {test, beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
 import worker from './worker.js';
 
-const SITE = 'https://cbirkbeck.github.io';
+const SITE = 'https://taucetiproject.github.io';
 const ENV = {CLIENT_ID: 'Iv23test', CLIENT_SECRET: 's3cret', ALLOWED_ORIGINS: `${SITE}, http://127.0.0.1:8000`};
-const VERIFIER = 'v'.repeat(43), CALLBACK = 'https://cbirkbeck.github.io/tauceti-reviewed-by-test/';
+const VERIFIER = 'v'.repeat(43), CALLBACK = 'https://taucetiproject.github.io/TauCetiReviewSite/';
 const GOOD = {code: 'abc123', code_verifier: VERIFIER, redirect_uri: CALLBACK};
 
 let sent;
@@ -52,7 +52,7 @@ test('answers the preflight of an allowed site, and of no other', async () => {
 });
 
 test('refuses other sites, without asking GitHub', async () => {
-  for (const origin of ['https://evil.example', 'https://cbirkbeck.github.io.evil.example', '']) {
+  for (const origin of ['https://evil.example', 'https://taucetiproject.github.io.evil.example', 'https://cbirkbeck.github.io.evil.example', '']) {
     const r = await ask(GOOD, {origin});
     assert.equal(r.status, 403, origin);
     assert.equal(r.headers.get('Access-Control-Allow-Origin'), null, origin);

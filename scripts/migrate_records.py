@@ -93,8 +93,8 @@ TRANSCRIBED = " (Reasons transcribed from Voyager's run notes; the line it poste
 TIME = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 #: Where the files of records stand in the repository, as an origin links them (`<file>#L<n>`), and the site, where the
 #: held list links each declaration.
-RECORDS_URL = "https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/evidence/records/"
-SITE_URL = "https://cbirkbeck.github.io/tauceti-reviewed-by-test/"
+RECORDS_URL = "https://github.com/TauCetiProject/TauCetiReviewSite/blob/main/evidence/records/"
+SITE_URL = "https://taucetiproject.github.io/TauCetiReviewSite/"
 #: What JavaScript's `encodeURIComponent`, which the page addresses a declaration by, leaves as it is besides letters,
 #: digits and `-_.`.
 URI_SAFE = "!~*'()"

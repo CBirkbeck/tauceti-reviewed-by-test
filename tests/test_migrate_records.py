@@ -32,8 +32,8 @@ MIGRATION = {"kind": "agent", "identity": {"kind": "github", "id": "CBirkbeck"},
 #: The same reviewer in an earlier run.
 MIGRATION_BEFORE = {**MIGRATION, "agent": {**MIGRATION["agent"], "session": "standard-migration-pilot"}}
 #: Where the records files are in the repository, as an origin links them.
-ORIGIN = "https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/evidence/records/"
-SITE = "https://cbirkbeck.github.io/tauceti-reviewed-by-test/"
+ORIGIN = "https://github.com/TauCetiProject/TauCetiReviewSite/blob/main/evidence/records/"
+SITE = "https://taucetiproject.github.io/TauCetiReviewSite/"
 HELD_NOTE = "Written in the migration; held for the owner."
 #: An AI's cells: every axis looked at, one not applicable.
 CELLS = {**fixture_site.CELLS, "choice": "na"}

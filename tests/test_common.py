@@ -26,7 +26,10 @@ class SettingsTests(unittest.TestCase):
 
     def test_the_repository_settings(self):
         s = common.load_settings()
-        self.assertEqual(s["repo"], "CBirkbeck/tauceti-reviewed-by-test")
+        self.assertEqual(s["repo"], "TauCetiProject/TauCetiReviewSite")
+        self.assertEqual(s["formerly"], ["CBirkbeck/tauceti-reviewed-by-test"])  # its name before the move
+        self.assertEqual(s["bulk_issue"], 1247)
+        self.assertEqual(s["site"]["url"], "https://taucetiproject.github.io/TauCetiReviewSite/")
         self.assertEqual(s["library"]["repo"], "TauCetiProject/TauCeti")
         # The fork carries 0.13.2 (signatures with binders' types) until LeanTrustBuilders/extractor does.
         self.assertEqual(s["extractor"], {"repo": "CBirkbeck/extractor", "series": "0.13"})
