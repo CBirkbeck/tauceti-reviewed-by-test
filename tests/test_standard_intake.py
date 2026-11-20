@@ -1175,13 +1175,20 @@ class AsOfTests(IssueCase):
 
 
 class OldFormTests(IntakeCase):
+    @staticmethod
+    def bulk_reply() -> str:
+        """Where a reply sends an approval: the bulk issue the site's settings name, whatever its number (it was #1
+        until that issue filled up on 2026-11-20)."""
+        n = standard_intake.bulk_issue()
+        return f"in a comment on issue #{n} (https://github.com/o/r/issues/{n})"
+
     def test_old_forms_say_what_to_do_now(self):
         out = self.process(comment(1, A, "Reviewed-by: Fixture.triple"),
                            comment(2, A, "Reviewed-by: Fixture.double — Matches the fixture's docs, §2."),
                            person(3, "Reviewed-by: Fixture.one", login="alice"))
         bare, reasons, persons = [text for _, text in out.replies]
         self.assertIn("Approve:", bare)
-        self.assertIn("in a comment on issue #1 (https://github.com/o/r/issues/1)", bare)  # where the approval goes
+        self.assertIn(self.bulk_reply(), bare)  # where the approval goes
         self.assertNotIn("needs its text", bare)
         old, yes = out.records
         self.assertEqual((old["by"]["kind"], old["text"]), ("agent", "Matches the fixture's docs, §2."))
@@ -1195,7 +1202,7 @@ class OldFormTests(IntakeCase):
         (n, said), = out.replies
         self.assertIn("Approve:", said)
         # The bulk issue, as the site's settings give it: the form's issue is not it.
-        self.assertIn("in a comment on issue #1 (https://github.com/o/r/issues/1)", said)
+        self.assertIn(self.bulk_reply(), said)
         self.assertNotIn("needs its text", said)
         out, r = standard_intake.process_issue(form(8, rationale="Matches §1."), self.ctx)
         (n, said), = out.replies
