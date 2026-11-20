@@ -6,7 +6,7 @@
   "root": "TauCeti"
  },
  "datasets": {
-  "repo": "CBirkbeck/tauceti-reviewed-by-test",
+  "repo": "TauCetiProject/TauCetiReviewSite",
   "tag": "dataset-{commit12}",
   "asset": "dataset.tar.gz"
  },

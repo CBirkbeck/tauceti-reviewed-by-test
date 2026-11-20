@@ -11,5 +11,6 @@ workers_dev = true
 [vars]
 # The GitHub App's client ID: not secret, as every sign-in address carries it.
 CLIENT_ID = "Iv23lij5SsHpRaq0Wglg"
-# The sites whose pages may ask, comma-separated.
-ALLOWED_ORIGINS = "https://cbirkbeck.github.io"
+# The sites whose pages may ask, comma-separated: the site's Pages (data/settings.json's site.url) since the move to
+# TauCetiProject/TauCetiReviewSite, its Pages before it, and the public address, taucetiproject.org/review/.
+ALLOWED_ORIGINS = "https://taucetiproject.github.io,https://cbirkbeck.github.io,https://taucetiproject.org"

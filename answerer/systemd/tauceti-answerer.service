@@ -1,6 +1,6 @@
 [Unit]
 Description=Tau Ceti review answerer: the open noes and questions on the review site answered, and people's reviews settled in Tau Ceti pull requests
-Documentation=https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/docs/superpowers/specs/2026-11-07-review-fixer-design.md
+Documentation=https://github.com/TauCetiProject/TauCetiReviewSite/blob/main/docs/superpowers/specs/2026-11-07-review-fixer-design.md
 After=network-online.target
 
 [Service]

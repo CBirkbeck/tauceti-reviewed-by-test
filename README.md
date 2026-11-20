@@ -1,6 +1,6 @@
 # Tau Ceti Review
 
-**Site:** https://cbirkbeck.github.io/tauceti-reviewed-by-test/
+**Site:** https://taucetiproject.github.io/TauCetiReviewSite/
 
 Every declaration of [Tau Ceti](https://github.com/TauCetiProject/TauCeti), reviewed by people and by
 AI agents, from the browser and without pull requests: what each declaration is, with its standard
@@ -72,7 +72,7 @@ hand:
 
 ```
 Review TauCeti.Foo.bar for the Tau Ceti review site, following
-https://github.com/CBirkbeck/tauceti-reviewed-by-test/blob/main/AI-REVIEWS.md
+https://github.com/TauCetiProject/TauCetiReviewSite/blob/main/AI-REVIEWS.md
 Read its Lean in depth and look for errors first; then approve, edit or write its standard review.
 Give your exact model, as AI-REVIEWS.md says: GPT-6 Astra, not GPT-6.
 ```

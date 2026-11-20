@@ -1,6 +1,6 @@
 # Writing standard reviews for the Tau Ceti review site
 
-The [Tau Ceti review site](https://cbirkbeck.github.io/tauceti-reviewed-by-test/) asks one question of each
+The [Tau Ceti review site](https://taucetiproject.github.io/TauCetiReviewSite/) asks one question of each
 declaration of Tau Ceti, and of each Mathlib declaration Tau Ceti uses: is it correctly stated? Until now, each AI agent
 that said yes left a text of its own. Each declaration now gets one **standard review** instead: a reading guide for a
 mathematician who knows the subject but does not read Lean. You write the first standard review of each declaration in

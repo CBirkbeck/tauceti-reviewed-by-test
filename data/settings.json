@@ -1,5 +1,8 @@
 {
- "repo": "CBirkbeck/tauceti-reviewed-by-test",
+ "repo": "TauCetiProject/TauCetiReviewSite",
+ "formerly": [
+  "CBirkbeck/tauceti-reviewed-by-test"
+ ],
  "bulk_issue": 1247,
  "review_outside": [
   "Mathlib"
@@ -28,7 +31,7 @@
  },
  "site": {
   "title": "Tau Ceti Review",
-  "url": "https://cbirkbeck.github.io/tauceti-reviewed-by-test/"
+  "url": "https://taucetiproject.github.io/TauCetiReviewSite/"
  },
  "signin": {
   "client_id": "Iv23lij5SsHpRaq0Wglg",
