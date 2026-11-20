@@ -285,7 +285,9 @@ without the facet, and the Reviewed page has no roadmap filter until the next on
 - `evidence/`: the store (`store.json`, `records/*.jsonl`).
 - `data/settings.json`: the pin, the library, the packages outside it the site also asks about
   (`review_outside`: Mathlib), the extractor series, dataset retention, Voyager's topic, signing in
-  (`signin`).
+  (`signin`), and the names this repository had before (`formerly`): a repository moved keeps its issues
+  and comments, the records made before name them under the old name, and intake, the answerer and the
+  fixer find them under either (`scripts/common.py`, `origin_key`), so that none is recorded twice.
 - `data/voyager.jsonl`: every announcement Voyager has made.
 - `scripts/`: `pin.py`, `extractor.py`, `prune.py`, `voyager.py`, `label_issue.py`; `site_data.py`
   (everything a page shows, from evidence-core) and `build_site.py` (writes `_site/`);

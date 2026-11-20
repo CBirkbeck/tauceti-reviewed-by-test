@@ -60,7 +60,11 @@ replies say the same (`process_issue`), with the bulk issue the site's settings 
 
 A comment's records are made whenever it is read, each added to the store at once so that later lines see it, and
 none twice, since a record's origin names its comment and line; a run finds a line's records in a map of the store by
-origin that it makes once (`origins`). It looks the latest dataset up once too, a failure included (`latest_once`):
+origin that it makes once (`origins`). It compares origins by their keys (common.origin_key), under any name the
+repository has had: a repository moved keeps its issues and comments, and GitHub names them under its new name from
+then on, so a line recorded under the old name is found recorded all the same. The rest of the intake finds records
+so too, evidence-store's reading included (`keyed`). It looks the latest dataset up once too, a failure included
+(`latest_once`):
 every line of a run is decided against one outcome, and a line waiting for a declaration is looked up before the store
 is read as of its comment, so it costs neither a request nor a pass over the store. Every run is given the whole issue
 again, and evidence-store read all of it, saying the refusals of every old comment again each time. So a reply ends with
@@ -83,12 +87,13 @@ from typing import Callable, Sequence
 from evidence_core import records as rec
 from evidence_core.dataset import Dataset, Decl
 from evidence_core.status import classify
+from evidence_core.store import Store
 from evidence_store import cli, forms, intake
 from evidence_store.intake import Context, Outcome
 
 import pr_links
 import standard
-from common import load_settings
+from common import from_origin, load_settings, origin_key
 
 OURS = ("Approve", "Write", "Edit", "Restore")
 #: A command line: ours, or evidence-store's. A block ends before the next one.
@@ -133,7 +138,7 @@ BARE_YES = ("an AI agent's yes is now an approval of the standard review: the li
             "`Approve: <decl> — <version> — <cells>` in a comment on issue #{bulk} "
             "(https://github.com/{repo}/issues/{bulk}), see AI-REVIEWS.md.")
 #: evidence-store's own, kept before `install` puts ours in their place.
-THEIR_PROCESS, THEIR_PROCESS_ISSUE = intake.process, intake.process_issue
+THEIR_PROCESS, THEIR_PROCESS_ISSUE, THEIR_ISSUE_NUMBER = intake.process, intake.process_issue, intake.issue_number
 
 
 class NotInDataset(LookupError):
@@ -577,13 +582,34 @@ def reply(made: list[dict], refused: list[tuple[int, str, str]], lines: int, com
     return text(shown, unshown, rows_shown, rows_unshown)
 
 
-def origins(records: list[dict]) -> dict[str, list[dict]]:
-    """The records by the ref of their origin, as evidence-store's `Store.from_origin` finds them; a run makes this
-    once, and adds to it each record it makes, since `from_origin` reads the whole store, some 25,000 records, at each
-    call, and a comment of some hundreds of lines asked it once a line."""
+@dataclass
+class KeyedStore(Store):
+    """The store, finding the records of an origin by its key (common.origin_key): under any name its repository has
+    had. It holds the records of the store it was made from, the list itself, so that what either adds the other has."""
+    key: Callable[[str], str] = field(default=lambda ref: ref, repr=False)
+
+    def from_origin(self, ref: str) -> list[dict]:
+        return from_origin(self.records, ref, self.key)
+
+
+def keyed(store: Store, repo: str) -> KeyedStore:
+    """`store`, for a run of the intake for the repository GitHub now names `repo`: evidence-store finds an issue, a
+    comment or an event recorded (`Store.from_origin`) under any name the repository has had."""
+    return KeyedStore(root=store.root, config=store.config, records=store.records, key=origin_key(repo))
+
+
+def key_of(ctx: Context) -> Callable[[str], str]:
+    """The key a run compares origins by: its store's, or the one for its repository."""
+    return ctx.store.key if isinstance(ctx.store, KeyedStore) else origin_key(ctx.repo)
+
+
+def origins(records: list[dict], key: Callable[[str], str]) -> dict[str, list[dict]]:
+    """The records by the key of their origin (common.origin_key), as `KeyedStore.from_origin` finds them; a run makes
+    this once, and adds to it each record it makes, since `from_origin` reads the whole store, some 50,000 records, at
+    each call, and a comment of some hundreds of lines asked it once a line."""
     out: dict[str, list[dict]] = {}
     for r in records:
-        out.setdefault((r.get("origin") or {}).get("ref", ""), []).append(r)
+        out.setdefault(key((r.get("origin") or {}).get("ref") or ""), []).append(r)
     return out
 
 
@@ -623,7 +649,8 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
     user = comment.get("user", {})
     if user.get("login") in intake.BOTS:
         return out
-    index = origins(ctx.store.records) if index is None else index
+    key = key_of(ctx)
+    index = origins(ctx.store.records, key) if index is None else index
     base = comment.get("html_url") or f"{ctx.repo}#{issue['number']}/comment/{comment.get('id')}"
     text = comment.get("body") or ""
     by = intake.author_of(user, intake.parse_agent_mark(naming(text)))
@@ -632,7 +659,8 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
     maintainer = intake.is_maintainer(ctx, comment)
     cmds = commands(text)
     comment_id = int(comment.get("id") or 0)
-    versions = [r for cmd in cmds for r in index.get(f"{base}/line/{cmd.line}", []) if standard.kind_of(r) == "version"]
+    versions = [r for cmd in cmds for r in index.get(key(f"{base}/line/{cmd.line}"), [])
+                if standard.kind_of(r) == "version"]
 
     def changed(ds: Dataset, decl: Decl) -> bool:
         """Whether a line of the comment recorded a version of `decl`'s review, now or on an earlier run, on the
@@ -647,7 +675,7 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
         if deferred is not None and cmd.line not in deferred:
             continue
         ref = f"{base}/line/{cmd.line}"
-        had = index.get(ref)
+        had = index.get(key(ref))
         if had:
             made += had  # said again if the comment is answered now: the reply that said them was refused
             continue
@@ -671,7 +699,7 @@ def process_bulk_comment(comment: dict, issue: dict, ctx: Context, announce: boo
             continue
         out.records.append(r)
         ctx.store.add([r])
-        index.setdefault(ref, []).append(r)
+        index.setdefault(key(ref), []).append(r)
         made.append(r)
         if standard.kind_of(r) == "version":
             versions.append(r)
@@ -707,7 +735,9 @@ def process(issue: dict, comments: list[dict], ctx: Context, announce: bool = Tr
     before the replies named any, is read whole and answered. One a reply names is read again only for the lines its
     latest reply deferred, and one older than those replies, decided and answered then, is not read again. The latest
     dataset is looked up once for the call (`latest_once`), which is the issue's part of a run of the intake: every line
-    sees the one outcome, and the next run looks again."""
+    sees the one outcome, and the next run looks again. Every issue's store finds records by the key of their origin
+    (`keyed`), evidence-store's reading of the other issues included."""
+    ctx = replace(ctx, store=keyed(ctx.store, ctx.repo))
     if not intake.is_bulk(issue):
         return THEIR_PROCESS(issue, comments, ctx, announce, events)
     ctx = replace(ctx, dataset=latest_once(ctx.dataset))  # one look-up of the latest dataset for this run, a failure too
@@ -723,7 +753,7 @@ def process(issue: dict, comments: list[dict], ctx: Context, announce: bool = Tr
                 unread.update(these)
             if not these:
                 legacy = max(legacy, c.get("created_at", ""))
-    index = origins(ctx.store.records)
+    index = origins(ctx.store.records, ctx.store.key)
     out = Outcome()
     for c in sorted(comments, key=when):
         if (c.get("user") or {}).get("login") in intake.BOTS:
@@ -760,10 +790,20 @@ def process_issue(issue: dict, ctx: Context, announce: bool = True) -> tuple[Out
     return out, r
 
 
+def issue_number(target: dict, repo: str) -> int | None:
+    """evidence-store's `issue_number`, the number of the issue of `repo` that a record came from, read from the key of
+    its origin (common.origin_key): an issue recorded under a name the repository had is its issue still. A status
+    asked for with the status form is said on the record's own issue, and a linked pull request that merged closes it
+    (pr_links.follow), whichever name the record gives the repository."""
+    origin = target.get("origin") or {}
+    return THEIR_ISSUE_NUMBER({**target, "origin": {**origin, "ref": origin_key(repo)(origin.get("ref") or "")}}, repo)
+
+
 def install() -> None:
-    """Puts this module in place of evidence-store's reading: its command line's `process`, and the `process_issue`
-    that its own `process` calls; and `pr_links` in place of its `process_comment`, for the pull request that
-    addresses a no or a suggestion."""
+    """Puts this module in place of evidence-store's reading: its command line's `process`, the `process_issue` that
+    its own `process` calls, and the `issue_number` its status form and pr_links.follow find a record's issue with; and
+    `pr_links` in place of its `process_comment`, for the pull request that addresses a no or a suggestion."""
     cli.process = process
     intake.process_issue = process_issue
+    intake.issue_number = issue_number
     intake.process_comment = pr_links.process_comment

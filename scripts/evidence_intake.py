@@ -81,7 +81,8 @@ def unfinished(repo: str, store: Store, swept: list[dict], outcome: dict, commen
                events_of: Callable[[int], list[dict]]) -> None:
     """Adds to `outcome` the reply, label and close that intake gives a review, test or named result it
     records, for each open issue swept whose record the store has from an earlier run: its reply only if
-    the bot never posted one. An issue closed once and reopened since is left open, as intake leaves it."""
+    the bot never posted one. An issue closed once and reopened since is left open, as intake leaves it.
+    `store` finds an issue's record under any name the repository has had (standard_intake.keyed)."""
     closing = {n for n, _ in outcome.get("close", [])}
     for i in swept:
         n = i["number"]
@@ -208,7 +209,7 @@ def sweep_open(argv: list[str], repo: str, outcome_file: str) -> int:
     if code != 0:
         return code
     outcome = json.loads(Path(outcome_file).read_text(encoding="utf-8"))
-    unfinished(repo, Store.load(value(argv, "--store", "evidence")), swept, outcome,
+    unfinished(repo, standard_intake.keyed(Store.load(value(argv, "--store", "evidence")), repo), swept, outcome,
                comments_of=lambda n: said[n] if n in said else fetch(repo, n),
                events_of=lambda n: github.events(repo, n))
     Path(outcome_file).write_text(json.dumps(outcome, indent=1), encoding="utf-8")

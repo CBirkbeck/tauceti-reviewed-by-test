@@ -62,7 +62,8 @@ def setup(p: Paths, state: State, dry: bool, commit: str | None = None):
     publisher = Publisher(p.work, settings["library"]["repo"], settings["repo"], settings["site"]["url"], roadmaps,
                           gh=run_gh, comment=poster.comment, dry=dry)
     cfg = Config(review_repo=settings["repo"], library_repo=settings["library"]["repo"], site=settings["site"]["url"],
-                 commit=ready.commit, root=settings["library"]["root"], log=log)
+                 commit=ready.commit, root=settings["library"]["root"],
+                 review_formerly=tuple(settings.get("formerly", ())), log=log)
     return store, tools, poster, publisher, cfg
 
 
@@ -96,7 +97,7 @@ def cmd_run(a: argparse.Namespace) -> int:
             cfg.max_items = a.max
         if a.budget is not None:
             cfg.item_budget = a.budget
-        found = reviews(store.records, cfg.review_repo)
+        found = reviews(store.records, cfg.review_repo, cfg.review_formerly)
         picked = choose(found, state.items if not a.only else {}, state.since, cfg.max_items, a.only,
                         busy=answerer_busy(p.answerer_state))
         log(f"{len(picked)} review(s) to take, of {len(found)} by people; since {state.since}")
@@ -116,7 +117,8 @@ def cmd_run(a: argparse.Namespace) -> int:
             if a.dry_run:
                 print(json.dumps(entry, ensure_ascii=False, indent=1))
         if not a.dry_run:
-            lines = flag_lines(reviews(Store.load(p.review / "evidence").records, cfg.review_repo), state, cfg)
+            lines = flag_lines(reviews(Store.load(p.review / "evidence").records, cfg.review_repo,
+                                       cfg.review_formerly), state, cfg)
             if lines or state.flag_issue:
                 state.flag_issue = poster.flags(lines, state.flag_issue, title=FLAG_TITLE, intro=FLAG_INTRO)
             state.save()
@@ -152,7 +154,7 @@ def cmd_follow(a: argparse.Namespace) -> int:
             return 0
         store, tools, poster, publisher, cfg = setup(p, state, a.dry_run)
         cfg.item_budget = a.budget if a.budget is not None else 15.0
-        by_id = {v.id: v for v in reviews(store.records, cfg.review_repo)}
+        by_id = {v.id: v for v in reviews(store.records, cfg.review_repo, cfg.review_formerly)}
         client = anthropic.Anthropic(api_key=p.key.read_text(encoding="utf-8").strip(), timeout=1800, max_retries=3)
         today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
         done = following.follow_all(state, by_id, client, tools, github(), cfg, following.system_prompt(Path(__file__).parent),
@@ -161,7 +163,8 @@ def cmd_follow(a: argparse.Namespace) -> int:
             for d in done:
                 print(json.dumps(d, ensure_ascii=False, indent=1))
         else:
-            lines = flag_lines(reviews(Store.load(p.review / "evidence").records, cfg.review_repo), state, cfg)
+            lines = flag_lines(reviews(Store.load(p.review / "evidence").records, cfg.review_repo,
+                                       cfg.review_formerly), state, cfg)
             if lines or state.flag_issue:
                 state.flag_issue = poster.flags(lines, state.flag_issue, title=FLAG_TITLE, intro=FLAG_INTRO)
             state.save()
@@ -181,7 +184,8 @@ def cmd_publish(a: argparse.Namespace) -> int:
             print(f"no draft for {a.record}", file=sys.stderr)
             return 2
         store, tools, poster, publisher, cfg = setup(p, state, dry=False, commit=draft["base"])
-        review = next((v for v in reviews(store.records, cfg.review_repo) if v.id == a.record), None)
+        found = reviews(store.records, cfg.review_repo, cfg.review_formerly)
+        review = next((v for v in found if v.id == a.record), None)
         if review is None:
             print(f"{a.record} is not a review by a person in force", file=sys.stderr)
             return 2
